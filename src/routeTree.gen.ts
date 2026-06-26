@@ -26,6 +26,7 @@ import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppTransactionsIndexRouteImport } from './routes/_app.transactions.index'
 import { Route as AppTransactionsNewRouteImport } from './routes/_app.transactions.new'
 import { Route as AppTransactionsIdRouteImport } from './routes/_app.transactions.$id'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppAdminRegistrationsRouteImport } from './routes/_app.admin.registrations'
 import { Route as AppAdminComplianceRouteImport } from './routes/_app.admin.compliance'
 import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
@@ -114,6 +115,11 @@ const AppTransactionsIdRoute = AppTransactionsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AppTransactionsRoute,
 } as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminRegistrationsRoute = AppAdminRegistrationsRouteImport.update({
   id: '/registrations',
   path: '/registrations',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/compliance': typeof AppAdminComplianceRoute
   '/admin/registrations': typeof AppAdminRegistrationsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/transactions/$id': typeof AppTransactionsIdRoute
   '/transactions/new': typeof AppTransactionsNewRoute
   '/transactions/': typeof AppTransactionsIndexRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/admin/audit': typeof AppAdminAuditRoute
   '/admin/compliance': typeof AppAdminComplianceRoute
   '/admin/registrations': typeof AppAdminRegistrationsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/transactions/$id': typeof AppTransactionsIdRoute
   '/transactions/new': typeof AppTransactionsNewRoute
   '/transactions': typeof AppTransactionsIndexRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_app/admin/audit': typeof AppAdminAuditRoute
   '/_app/admin/compliance': typeof AppAdminComplianceRoute
   '/_app/admin/registrations': typeof AppAdminRegistrationsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/transactions/$id': typeof AppTransactionsIdRoute
   '/_app/transactions/new': typeof AppTransactionsNewRoute
   '/_app/transactions/': typeof AppTransactionsIndexRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/compliance'
     | '/admin/registrations'
+    | '/admin/users'
     | '/transactions/$id'
     | '/transactions/new'
     | '/transactions/'
@@ -233,6 +243,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/compliance'
     | '/admin/registrations'
+    | '/admin/users'
     | '/transactions/$id'
     | '/transactions/new'
     | '/transactions'
@@ -255,6 +266,7 @@ export interface FileRouteTypes {
     | '/_app/admin/audit'
     | '/_app/admin/compliance'
     | '/_app/admin/registrations'
+    | '/_app/admin/users'
     | '/_app/transactions/$id'
     | '/_app/transactions/new'
     | '/_app/transactions/'
@@ -387,6 +399,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionsIdRouteImport
       parentRoute: typeof AppTransactionsRoute
     }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/registrations': {
       id: '/_app/admin/registrations'
       path: '/registrations'
@@ -415,12 +434,14 @@ interface AppAdminRouteChildren {
   AppAdminAuditRoute: typeof AppAdminAuditRoute
   AppAdminComplianceRoute: typeof AppAdminComplianceRoute
   AppAdminRegistrationsRoute: typeof AppAdminRegistrationsRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAuditRoute: AppAdminAuditRoute,
   AppAdminComplianceRoute: AppAdminComplianceRoute,
   AppAdminRegistrationsRoute: AppAdminRegistrationsRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
 }
 
 const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
