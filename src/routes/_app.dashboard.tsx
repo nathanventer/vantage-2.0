@@ -20,7 +20,9 @@ export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
 });
 
-const COLORS = ["#0B2545", "#1B9AAA", "#1A7F4B", "#C97A0A", "#2D6CDF"];
+const COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)", "var(--color-chart-5)"];
+const GRID = "color-mix(in oklab, var(--color-border) 100%, transparent)";
+const AXIS = "var(--color-muted-foreground)";
 
 function Dashboard() {
   const { role } = useRole();
