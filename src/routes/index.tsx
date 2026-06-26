@@ -64,7 +64,7 @@ function Landing() {
             ))}
           </div>
         </div>
-        <div className="relative text-[10px] uppercase tracking-[0.22em] text-primary-foreground/60">Insight · Intelligence · Opportunity · Growth</div>
+        <div className="relative text-sm text-primary-foreground/80">Insight · Intelligence · Opportunity · Growth</div>
       </div>
 
       {/* Auth + role selection */}
