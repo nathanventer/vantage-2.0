@@ -109,7 +109,7 @@ function Dashboard() {
               <Pie data={series?.routeCosts ?? []} dataKey="cost" nameKey="route" outerRadius={90}>
                 {(series?.routeCosts ?? []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip formatter={(v: number) => fmt(v)} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
