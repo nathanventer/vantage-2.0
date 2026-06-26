@@ -9,38 +9,279 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppWarehouseRouteImport } from './routes/_app.warehouse'
+import { Route as AppTransportRouteImport } from './routes/_app.transport'
+import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
+import { Route as AppRequestsRouteImport } from './routes/_app.requests'
+import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
+import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppContainersRouteImport } from './routes/_app.containers'
+import { Route as AppCargoRouteImport } from './routes/_app.cargo'
+import { Route as AppAdminRouteImport } from './routes/_app.admin'
+import { Route as AppTransactionsIndexRouteImport } from './routes/_app.transactions.index'
+import { Route as AppTransactionsNewRouteImport } from './routes/_app.transactions.new'
+import { Route as AppTransactionsIdRouteImport } from './routes/_app.transactions.$id'
+import { Route as AppAdminRegistrationsRouteImport } from './routes/_app.admin.registrations'
+import { Route as AppAdminComplianceRouteImport } from './routes/_app.admin.compliance'
+import { Route as AppAdminAuditRouteImport } from './routes/_app.admin.audit'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppWarehouseRoute = AppWarehouseRouteImport.update({
+  id: '/warehouse',
+  path: '/warehouse',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTransportRoute = AppTransportRouteImport.update({
+  id: '/transport',
+  path: '/transport',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTransactionsRoute = AppTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppRequestsRoute = AppRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPaymentsRoute = AppPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocumentsRoute = AppDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContainersRoute = AppContainersRouteImport.update({
+  id: '/containers',
+  path: '/containers',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCargoRoute = AppCargoRouteImport.update({
+  id: '/cargo',
+  path: '/cargo',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTransactionsIndexRoute = AppTransactionsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppTransactionsNewRoute = AppTransactionsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppTransactionsIdRoute = AppTransactionsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppAdminRegistrationsRoute = AppAdminRegistrationsRouteImport.update({
+  id: '/registrations',
+  path: '/registrations',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminComplianceRoute = AppAdminComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/register': typeof RegisterRoute
+  '/admin': typeof AppAdminRouteWithChildren
+  '/cargo': typeof AppCargoRoute
+  '/containers': typeof AppContainersRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/documents': typeof AppDocumentsRoute
+  '/payments': typeof AppPaymentsRoute
+  '/reports': typeof AppReportsRoute
+  '/requests': typeof AppRequestsRoute
+  '/transactions': typeof AppTransactionsRouteWithChildren
+  '/transport': typeof AppTransportRoute
+  '/warehouse': typeof AppWarehouseRoute
+  '/admin/audit': typeof AppAdminAuditRoute
+  '/admin/compliance': typeof AppAdminComplianceRoute
+  '/admin/registrations': typeof AppAdminRegistrationsRoute
+  '/transactions/$id': typeof AppTransactionsIdRoute
+  '/transactions/new': typeof AppTransactionsNewRoute
+  '/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/register': typeof RegisterRoute
+  '/admin': typeof AppAdminRouteWithChildren
+  '/cargo': typeof AppCargoRoute
+  '/containers': typeof AppContainersRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/documents': typeof AppDocumentsRoute
+  '/payments': typeof AppPaymentsRoute
+  '/reports': typeof AppReportsRoute
+  '/requests': typeof AppRequestsRoute
+  '/transport': typeof AppTransportRoute
+  '/warehouse': typeof AppWarehouseRoute
+  '/admin/audit': typeof AppAdminAuditRoute
+  '/admin/compliance': typeof AppAdminComplianceRoute
+  '/admin/registrations': typeof AppAdminRegistrationsRoute
+  '/transactions/$id': typeof AppTransactionsIdRoute
+  '/transactions/new': typeof AppTransactionsNewRoute
+  '/transactions': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/register': typeof RegisterRoute
+  '/_app/admin': typeof AppAdminRouteWithChildren
+  '/_app/cargo': typeof AppCargoRoute
+  '/_app/containers': typeof AppContainersRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/documents': typeof AppDocumentsRoute
+  '/_app/payments': typeof AppPaymentsRoute
+  '/_app/reports': typeof AppReportsRoute
+  '/_app/requests': typeof AppRequestsRoute
+  '/_app/transactions': typeof AppTransactionsRouteWithChildren
+  '/_app/transport': typeof AppTransportRoute
+  '/_app/warehouse': typeof AppWarehouseRoute
+  '/_app/admin/audit': typeof AppAdminAuditRoute
+  '/_app/admin/compliance': typeof AppAdminComplianceRoute
+  '/_app/admin/registrations': typeof AppAdminRegistrationsRoute
+  '/_app/transactions/$id': typeof AppTransactionsIdRoute
+  '/_app/transactions/new': typeof AppTransactionsNewRoute
+  '/_app/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/register'
+    | '/admin'
+    | '/cargo'
+    | '/containers'
+    | '/dashboard'
+    | '/documents'
+    | '/payments'
+    | '/reports'
+    | '/requests'
+    | '/transactions'
+    | '/transport'
+    | '/warehouse'
+    | '/admin/audit'
+    | '/admin/compliance'
+    | '/admin/registrations'
+    | '/transactions/$id'
+    | '/transactions/new'
+    | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/register'
+    | '/admin'
+    | '/cargo'
+    | '/containers'
+    | '/dashboard'
+    | '/documents'
+    | '/payments'
+    | '/reports'
+    | '/requests'
+    | '/transport'
+    | '/warehouse'
+    | '/admin/audit'
+    | '/admin/compliance'
+    | '/admin/registrations'
+    | '/transactions/$id'
+    | '/transactions/new'
+    | '/transactions'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/register'
+    | '/_app/admin'
+    | '/_app/cargo'
+    | '/_app/containers'
+    | '/_app/dashboard'
+    | '/_app/documents'
+    | '/_app/payments'
+    | '/_app/reports'
+    | '/_app/requests'
+    | '/_app/transactions'
+    | '/_app/transport'
+    | '/_app/warehouse'
+    | '/_app/admin/audit'
+    | '/_app/admin/compliance'
+    | '/_app/admin/registrations'
+    | '/_app/transactions/$id'
+    | '/_app/transactions/new'
+    | '/_app/transactions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +289,195 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/warehouse': {
+      id: '/_app/warehouse'
+      path: '/warehouse'
+      fullPath: '/warehouse'
+      preLoaderRoute: typeof AppWarehouseRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/transport': {
+      id: '/_app/transport'
+      path: '/transport'
+      fullPath: '/transport'
+      preLoaderRoute: typeof AppTransportRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/transactions': {
+      id: '/_app/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof AppTransactionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/requests': {
+      id: '/_app/requests'
+      path: '/requests'
+      fullPath: '/requests'
+      preLoaderRoute: typeof AppRequestsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/payments': {
+      id: '/_app/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof AppPaymentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/documents': {
+      id: '/_app/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof AppDocumentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/containers': {
+      id: '/_app/containers'
+      path: '/containers'
+      fullPath: '/containers'
+      preLoaderRoute: typeof AppContainersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cargo': {
+      id: '/_app/cargo'
+      path: '/cargo'
+      fullPath: '/cargo'
+      preLoaderRoute: typeof AppCargoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/transactions/': {
+      id: '/_app/transactions/'
+      path: '/'
+      fullPath: '/transactions/'
+      preLoaderRoute: typeof AppTransactionsIndexRouteImport
+      parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/transactions/new': {
+      id: '/_app/transactions/new'
+      path: '/new'
+      fullPath: '/transactions/new'
+      preLoaderRoute: typeof AppTransactionsNewRouteImport
+      parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/transactions/$id': {
+      id: '/_app/transactions/$id'
+      path: '/$id'
+      fullPath: '/transactions/$id'
+      preLoaderRoute: typeof AppTransactionsIdRouteImport
+      parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/admin/registrations': {
+      id: '/_app/admin/registrations'
+      path: '/registrations'
+      fullPath: '/admin/registrations'
+      preLoaderRoute: typeof AppAdminRegistrationsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/compliance': {
+      id: '/_app/admin/compliance'
+      path: '/compliance'
+      fullPath: '/admin/compliance'
+      preLoaderRoute: typeof AppAdminComplianceRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/audit': {
+      id: '/_app/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AppAdminAuditRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
   }
 }
 
+interface AppAdminRouteChildren {
+  AppAdminAuditRoute: typeof AppAdminAuditRoute
+  AppAdminComplianceRoute: typeof AppAdminComplianceRoute
+  AppAdminRegistrationsRoute: typeof AppAdminRegistrationsRoute
+}
+
+const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminAuditRoute: AppAdminAuditRoute,
+  AppAdminComplianceRoute: AppAdminComplianceRoute,
+  AppAdminRegistrationsRoute: AppAdminRegistrationsRoute,
+}
+
+const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
+  AppAdminRouteChildren,
+)
+
+interface AppTransactionsRouteChildren {
+  AppTransactionsIdRoute: typeof AppTransactionsIdRoute
+  AppTransactionsNewRoute: typeof AppTransactionsNewRoute
+  AppTransactionsIndexRoute: typeof AppTransactionsIndexRoute
+}
+
+const AppTransactionsRouteChildren: AppTransactionsRouteChildren = {
+  AppTransactionsIdRoute: AppTransactionsIdRoute,
+  AppTransactionsNewRoute: AppTransactionsNewRoute,
+  AppTransactionsIndexRoute: AppTransactionsIndexRoute,
+}
+
+const AppTransactionsRouteWithChildren = AppTransactionsRoute._addFileChildren(
+  AppTransactionsRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppAdminRoute: typeof AppAdminRouteWithChildren
+  AppCargoRoute: typeof AppCargoRoute
+  AppContainersRoute: typeof AppContainersRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppDocumentsRoute: typeof AppDocumentsRoute
+  AppPaymentsRoute: typeof AppPaymentsRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppRequestsRoute: typeof AppRequestsRoute
+  AppTransactionsRoute: typeof AppTransactionsRouteWithChildren
+  AppTransportRoute: typeof AppTransportRoute
+  AppWarehouseRoute: typeof AppWarehouseRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAdminRoute: AppAdminRouteWithChildren,
+  AppCargoRoute: AppCargoRoute,
+  AppContainersRoute: AppContainersRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppDocumentsRoute: AppDocumentsRoute,
+  AppPaymentsRoute: AppPaymentsRoute,
+  AppReportsRoute: AppReportsRoute,
+  AppRequestsRoute: AppRequestsRoute,
+  AppTransactionsRoute: AppTransactionsRouteWithChildren,
+  AppTransportRoute: AppTransportRoute,
+  AppWarehouseRoute: AppWarehouseRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
