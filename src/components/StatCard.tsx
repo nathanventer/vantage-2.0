@@ -17,16 +17,16 @@ export function StatCard({
     info: "bg-info/10 text-info",
   }[tone];
   return (
-    <div className="rounded-xl border bg-card p-5">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
-          <div className="mt-2 font-display text-2xl font-semibold text-foreground">{value}</div>
-          {delta && <div className="mt-1 text-xs text-muted-foreground">{delta}</div>}
+    <div className="group rounded-2xl border bg-card p-5 shadow-xs transition hover:shadow-md">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
+          <div className="mt-2 font-display text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums">{value}</div>
+          {delta && <div className="mt-2 text-xs text-muted-foreground">{delta}</div>}
         </div>
         {Icon && (
-          <div className={cn("rounded-lg p-2", toneClasses)}>
-            <Icon className="h-5 w-5" />
+          <div className={cn("rounded-xl p-2.5", toneClasses)}>
+            <Icon className="h-4 w-4" />
           </div>
         )}
       </div>

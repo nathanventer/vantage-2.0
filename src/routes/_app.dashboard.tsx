@@ -20,7 +20,9 @@ export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
 });
 
-const COLORS = ["#0B2545", "#1B9AAA", "#1A7F4B", "#C97A0A", "#2D6CDF"];
+const COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)", "var(--color-chart-5)"];
+const GRID = "color-mix(in oklab, var(--color-border) 100%, transparent)";
+const AXIS = "var(--color-muted-foreground)";
 
 function Dashboard() {
   const { role } = useRole();
@@ -90,12 +92,12 @@ function Dashboard() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={series?.monthlySpend ?? []}>
-              <CartesianGrid stroke="#E3E8EF" strokeDasharray="3 3" />
-              <XAxis dataKey="month" stroke="#5B6B7C" fontSize={12} />
-              <YAxis stroke="#5B6B7C" fontSize={12} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Line type="monotone" dataKey="spend" stroke="#0B2545" strokeWidth={2.5} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="shipments" stroke="#1B9AAA" strokeWidth={2} dot={{ r: 3 }} yAxisId={0} />
+              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
+              <Line type="monotone" dataKey="spend" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="shipments" stroke="var(--color-accent)" strokeWidth={2} dot={{ r: 3 }} yAxisId={0} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -107,7 +109,7 @@ function Dashboard() {
               <Pie data={series?.routeCosts ?? []} dataKey="cost" nameKey="route" outerRadius={90}>
                 {(series?.routeCosts ?? []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip formatter={(v: number) => fmt(v)} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ResponsiveContainer>
@@ -148,11 +150,11 @@ function Dashboard() {
           <h3 className="mb-4 font-display font-semibold">Lifecycle stage distribution</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={["Vessel","Port","Clearing","Transport","Warehouse","Delivery"].map((stage) => ({ stage, count: txs.filter(t => t.currentStage === stage).length }))}>
-              <CartesianGrid stroke="#E3E8EF" strokeDasharray="3 3" />
-              <XAxis dataKey="stage" stroke="#5B6B7C" fontSize={12} />
-              <YAxis stroke="#5B6B7C" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#1B9AAA" radius={[6, 6, 0, 0]} />
+              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="stage" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
+              <Bar dataKey="count" fill="var(--color-accent)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

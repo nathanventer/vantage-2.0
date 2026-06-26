@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, FileBox, Inbox, Warehouse, Container, Boxes,
-  Truck, FileText, CreditCard, BarChart3, ShieldCheck, ScrollText, UserCheck,
+  Truck, FileText, CreditCard, BarChart3, ShieldCheck, ScrollText, UserCheck, Users,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -31,6 +31,7 @@ const SOURCE: Item[] = [
 const ADMIN: Item[] = [
   { title: "Registrations", url: "/admin/registrations", icon: UserCheck },
   { title: "Compliance", url: "/admin/compliance", icon: ShieldCheck },
+  { title: "Users", url: "/admin/users", icon: Users },
   { title: "Audit Log", url: "/admin/audit", icon: ScrollText },
 ];
 
