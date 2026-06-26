@@ -1,45 +1,49 @@
 import { cn } from "@/lib/utils";
 import type { StatusLabel } from "@/types";
 
-const MAP: Record<string, string> = {
-  Verified: "bg-success/10 text-success ring-success/20",
-  Approved: "bg-success/10 text-success ring-success/20",
-  Completed: "bg-success/10 text-success ring-success/20",
-  Paid: "bg-success/10 text-success ring-success/20",
-  Delivered: "bg-success/10 text-success ring-success/20",
-  Confirmed: "bg-success/10 text-success ring-success/20",
-  Accepted: "bg-success/10 text-success ring-success/20",
-  Active: "bg-success/10 text-success ring-success/20",
+type Tone = "success" | "warning" | "info" | "destructive" | "neutral";
 
-  Pending: "bg-warning/10 text-warning ring-warning/20",
-  "Under Review": "bg-warning/10 text-warning ring-warning/20",
-  "In Progress": "bg-warning/10 text-warning ring-warning/20",
-  "In Transit": "bg-warning/10 text-warning ring-warning/20",
-  Submitted: "bg-warning/10 text-warning ring-warning/20",
-  Scheduled: "bg-warning/10 text-warning ring-warning/20",
-
-  Failed: "bg-destructive/10 text-destructive ring-destructive/20",
-  Rejected: "bg-destructive/10 text-destructive ring-destructive/20",
-  Overdue: "bg-destructive/10 text-destructive ring-destructive/20",
-  Cancelled: "bg-destructive/10 text-destructive ring-destructive/20",
-
-  Open: "bg-info/10 text-info ring-info/20",
-  Quoted: "bg-info/10 text-info ring-info/20",
-  Draft: "bg-info/10 text-info ring-info/20",
-  Unpaid: "bg-info/10 text-info ring-info/20",
-
-  Closed: "bg-neutral/10 text-neutral ring-neutral/20",
+const TONE: Record<string, Tone> = {
+  Verified: "success", Approved: "success", Completed: "success", Paid: "success",
+  Delivered: "success", Confirmed: "success", Accepted: "success", Active: "success",
+  Pending: "warning", "Under Review": "warning", "In Progress": "warning",
+  "In Transit": "warning", Submitted: "warning", Scheduled: "warning",
+  Failed: "destructive", Rejected: "destructive", Overdue: "destructive", Cancelled: "destructive",
+  Open: "info", Quoted: "info", Draft: "info", Unpaid: "info",
+  Closed: "neutral",
 };
 
-export function StatusBadge({ status, className }: { status: StatusLabel | string; className?: string }) {
+const STYLES: Record<Tone, string> = {
+  success: "bg-success/10 text-success ring-success/20",
+  warning: "bg-warning/10 text-warning ring-warning/20",
+  info: "bg-info/10 text-info ring-info/20",
+  destructive: "bg-destructive/10 text-destructive ring-destructive/20",
+  neutral: "bg-neutral/10 text-neutral ring-neutral/20",
+};
+
+const DOT: Record<Tone, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  info: "bg-info",
+  destructive: "bg-destructive",
+  neutral: "bg-neutral",
+};
+
+export function StatusBadge({
+  status, className, dot = true,
+}: { status: StatusLabel | string; className?: string; dot?: boolean }) {
+  const tone = TONE[status] ?? "neutral";
   return (
     <span
+      role="status"
+      aria-label={String(status)}
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap",
-        MAP[status] ?? "bg-neutral/10 text-neutral ring-neutral/20",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset whitespace-nowrap",
+        STYLES[tone],
         className,
       )}
     >
+      {dot && <span aria-hidden="true" className={cn("h-1.5 w-1.5 rounded-full", DOT[tone])} />}
       {status}
     </span>
   );
