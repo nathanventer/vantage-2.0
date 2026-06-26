@@ -9,38 +9,135 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
+import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
+import { Route as AppTransactionsIndexRouteImport } from './routes/_app.transactions.index'
+import { Route as AppTransactionsNewRouteImport } from './routes/_app.transactions.new'
+import { Route as AppTransactionsIdRouteImport } from './routes/_app.transactions.$id'
 
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppTransactionsRoute = AppTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTransactionsIndexRoute = AppTransactionsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppTransactionsNewRoute = AppTransactionsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppTransactionsIdRoute = AppTransactionsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AppTransactionsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/register': typeof RegisterRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/transactions': typeof AppTransactionsRouteWithChildren
+  '/transactions/$id': typeof AppTransactionsIdRoute
+  '/transactions/new': typeof AppTransactionsNewRoute
+  '/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/register': typeof RegisterRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/transactions/$id': typeof AppTransactionsIdRoute
+  '/transactions/new': typeof AppTransactionsNewRoute
+  '/transactions': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/register': typeof RegisterRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/transactions': typeof AppTransactionsRouteWithChildren
+  '/_app/transactions/$id': typeof AppTransactionsIdRoute
+  '/_app/transactions/new': typeof AppTransactionsNewRoute
+  '/_app/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/register'
+    | '/dashboard'
+    | '/transactions'
+    | '/transactions/$id'
+    | '/transactions/new'
+    | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/register'
+    | '/dashboard'
+    | '/transactions/$id'
+    | '/transactions/new'
+    | '/transactions'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/register'
+    | '/_app/dashboard'
+    | '/_app/transactions'
+    | '/_app/transactions/$id'
+    | '/_app/transactions/new'
+    | '/_app/transactions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +145,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/transactions': {
+      id: '/_app/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof AppTransactionsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/transactions/': {
+      id: '/_app/transactions/'
+      path: '/'
+      fullPath: '/transactions/'
+      preLoaderRoute: typeof AppTransactionsIndexRouteImport
+      parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/transactions/new': {
+      id: '/_app/transactions/new'
+      path: '/new'
+      fullPath: '/transactions/new'
+      preLoaderRoute: typeof AppTransactionsNewRouteImport
+      parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/transactions/$id': {
+      id: '/_app/transactions/$id'
+      path: '/$id'
+      fullPath: '/transactions/$id'
+      preLoaderRoute: typeof AppTransactionsIdRouteImport
+      parentRoute: typeof AppTransactionsRoute
+    }
   }
 }
 
+interface AppTransactionsRouteChildren {
+  AppTransactionsIdRoute: typeof AppTransactionsIdRoute
+  AppTransactionsNewRoute: typeof AppTransactionsNewRoute
+  AppTransactionsIndexRoute: typeof AppTransactionsIndexRoute
+}
+
+const AppTransactionsRouteChildren: AppTransactionsRouteChildren = {
+  AppTransactionsIdRoute: AppTransactionsIdRoute,
+  AppTransactionsNewRoute: AppTransactionsNewRoute,
+  AppTransactionsIndexRoute: AppTransactionsIndexRoute,
+}
+
+const AppTransactionsRouteWithChildren = AppTransactionsRoute._addFileChildren(
+  AppTransactionsRouteChildren,
+)
+
+interface AppRouteChildren {
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppTransactionsRoute: typeof AppTransactionsRouteWithChildren
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppDashboardRoute: AppDashboardRoute,
+  AppTransactionsRoute: AppTransactionsRouteWithChildren,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
