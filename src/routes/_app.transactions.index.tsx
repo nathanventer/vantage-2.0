@@ -55,6 +55,8 @@ function TxList() {
       <div className="rounded-xl border bg-card">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : filtered.length === 0 ? (
+          <div className="px-6 py-16 text-center text-sm text-muted-foreground">No transactions match your filters.</div>
         ) : (
           <Table>
             <TableHeader>
@@ -70,7 +72,7 @@ function TxList() {
             </TableHeader>
             <TableBody>
               {filtered.map((t) => (
-                <TableRow key={t.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { window.location.href = `/transactions/${t.id}`; }}>
+                <TableRow key={t.id} className="h-14 cursor-pointer hover:bg-muted/40">
                   <TableCell className="font-medium">
                     <Link to="/transactions/$id" params={{ id: t.id }} className="text-accent hover:underline">{t.reference}</Link>
                   </TableCell>
@@ -78,7 +80,7 @@ function TxList() {
                   <TableCell className="text-muted-foreground">{t.sourceProvider}</TableCell>
                   <TableCell className="text-muted-foreground">{t.origin} → {t.destination}</TableCell>
                   <TableCell><StatusBadge status={t.currentStage} /></TableCell>
-                  <TableCell className="text-right">{fmt(t.valueZAR)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmt(t.valueZAR)}</TableCell>
                   <TableCell><StatusBadge status={t.status} /></TableCell>
                 </TableRow>
               ))}
