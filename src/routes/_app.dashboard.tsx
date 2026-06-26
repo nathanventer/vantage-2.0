@@ -92,12 +92,12 @@ function Dashboard() {
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <LineChart data={series?.monthlySpend ?? []}>
-              <CartesianGrid stroke="#E3E8EF" strokeDasharray="3 3" />
-              <XAxis dataKey="month" stroke="#5B6B7C" fontSize={12} />
-              <YAxis stroke="#5B6B7C" fontSize={12} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Line type="monotone" dataKey="spend" stroke="#0B2545" strokeWidth={2.5} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="shipments" stroke="#1B9AAA" strokeWidth={2} dot={{ r: 3 }} yAxisId={0} />
+              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="month" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
+              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
+              <Line type="monotone" dataKey="spend" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="shipments" stroke="var(--color-accent)" strokeWidth={2} dot={{ r: 3 }} yAxisId={0} />
             </LineChart>
           </ResponsiveContainer>
         </div>
