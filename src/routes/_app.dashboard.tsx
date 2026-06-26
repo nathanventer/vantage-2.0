@@ -150,11 +150,11 @@ function Dashboard() {
           <h3 className="mb-4 font-display font-semibold">Lifecycle stage distribution</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={["Vessel","Port","Clearing","Transport","Warehouse","Delivery"].map((stage) => ({ stage, count: txs.filter(t => t.currentStage === stage).length }))}>
-              <CartesianGrid stroke="#E3E8EF" strokeDasharray="3 3" />
-              <XAxis dataKey="stage" stroke="#5B6B7C" fontSize={12} />
-              <YAxis stroke="#5B6B7C" fontSize={12} />
-              <Tooltip />
-              <Bar dataKey="count" fill="#1B9AAA" radius={[6, 6, 0, 0]} />
+              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="stage" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
+              <Bar dataKey="count" fill="var(--color-accent)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
