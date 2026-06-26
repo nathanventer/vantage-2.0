@@ -31,6 +31,7 @@ const SOURCE: Item[] = [
 const ADMIN: Item[] = [
   { title: "Registrations", url: "/admin/registrations", icon: UserCheck },
   { title: "Compliance", url: "/admin/compliance", icon: ShieldCheck },
+  { title: "Users", url: "/admin/users", icon: Users },
   { title: "Audit Log", url: "/admin/audit", icon: ScrollText },
 ];
 
