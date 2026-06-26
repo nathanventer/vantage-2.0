@@ -120,11 +120,12 @@
   --sidebar-primary: #1E5BB8;
   --sidebar-primary-foreground: #FFFFFF;
 
-  --sidebar-accent: oklch(0.30 0.06 258);
-  --sidebar-accent-foreground: oklch(0.99 0 0);
-  --sidebar-border: oklch(0.30 0.05 258);
-  --sidebar-ring: oklch(0.66 0.10 200);
+  --sidebar-accent: #1E5BB8;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255,255,255,0.08);
+  --sidebar-ring: #1E5BB8;
 }
+
 
 .dark {
   --background: oklch(0.16 0.03 256);
