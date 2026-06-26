@@ -13,7 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-dvh w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col">
-          <header className="glass sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4">
+          <header className="sticky top-0 z-30 flex h-14 flex-nowrap items-center gap-3 border-b bg-card px-4 sm:px-6">
             <SidebarTrigger aria-label="Toggle sidebar" />
             <div className="relative hidden flex-1 max-w-md md:block">
               <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

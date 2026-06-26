@@ -64,18 +64,23 @@ function Landing() {
             ))}
           </div>
         </div>
-        <div className="relative text-[10px] uppercase tracking-[0.22em] text-primary-foreground/60">Insight · Intelligence · Opportunity · Growth</div>
+        <div className="relative text-sm text-primary-foreground/80">Insight · Intelligence · Opportunity · Growth</div>
       </div>
 
       {/* Auth + role selection */}
       <div className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-md">
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <img src={logoAsset.url} alt="Vantage" className="h-10 w-10 rounded bg-primary p-1" />
-            <span className="font-display text-xl font-bold">VANTAGE</span>
+          <div className="mb-6 flex items-center gap-3 lg:hidden">
+            <img src={logoAsset.url} alt="Vantage" className="h-10 w-10 rounded-md border bg-white p-1" />
+            <div className="flex flex-col leading-tight">
+              <span className="font-display text-xl font-bold text-primary">VANTAGE</span>
+              <span className="text-[11px] text-primary/80">Insight · Intelligence · Opportunity · Growth</span>
+            </div>
           </div>
-          <h2 className="font-display text-2xl font-semibold tracking-tight">Sign in</h2>
+          <h2 className="font-display text-2xl font-semibold tracking-tight text-primary">Sign in</h2>
           <p className="mt-1 text-sm text-muted-foreground">Welcome back. Continue to your workspace.</p>
+          <p className="mt-1 hidden text-xs text-primary/70 lg:block">Insight · Intelligence · Opportunity · Growth</p>
+
 
           <form
             className="mt-6 space-y-4"

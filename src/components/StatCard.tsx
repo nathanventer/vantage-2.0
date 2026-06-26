@@ -17,7 +17,7 @@ export function StatCard({
     info: "bg-info/10 text-info",
   }[tone];
   return (
-    <div className="group rounded-2xl border bg-card p-5 shadow-xs transition hover:shadow-md">
+    <div className="group flex min-h-[124px] flex-col justify-between rounded-lg border bg-card p-5 shadow-xs transition hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
