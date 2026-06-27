@@ -46,7 +46,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
-          <img src={logoAsset.url} alt="Vantage" className="h-8 w-8 shrink-0 rounded bg-white object-contain p-0.5" />
+          <img src={logoAsset.url} alt="Vantage" className="mx-auto h-8 w-8 shrink-0 rounded bg-white object-contain p-0.5" />
           {!collapsed && (
             <div className="flex flex-col leading-tight">
               <span className="font-display text-base font-bold text-sidebar-foreground">VANTAGE</span>
