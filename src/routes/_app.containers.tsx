@@ -27,30 +27,32 @@ function ContainersPage() {
         <StatCard label="Damage reports" value={c.filter(x => x.damage).length} icon={AlertTriangle} tone="info" />
       </div>
       <div className="rounded-xl border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Container No.</TableHead>
-              <TableHead>Operation</TableHead>
-              <TableHead>Vessel</TableHead>
-              <TableHead>Dwell</TableHead>
-              <TableHead>Damage</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {c.map((x) => (
-              <TableRow key={x.id}>
-                <TableCell className="font-medium">{x.containerNo}</TableCell>
-                <TableCell>{x.type}</TableCell>
-                <TableCell className="text-muted-foreground">{x.vessel}</TableCell>
-                <TableCell>{x.dwellDays} d</TableCell>
-                <TableCell>{x.damage ? <StatusBadge status="Failed" /> : <StatusBadge status="Verified" />}</TableCell>
-                <TableCell><StatusBadge status={x.status} /></TableCell>
+        <div className="w-full overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Container No.</TableHead>
+                <TableHead>Operation</TableHead>
+                <TableHead>Vessel</TableHead>
+                <TableHead>Dwell</TableHead>
+                <TableHead className="w-px">Damage</TableHead>
+                <TableHead className="w-px">Status</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {c.map((x) => (
+                <TableRow key={x.id}>
+                  <TableCell className="font-medium">{x.containerNo}</TableCell>
+                  <TableCell>{x.type}</TableCell>
+                  <TableCell className="text-muted-foreground">{x.vessel}</TableCell>
+                  <TableCell>{x.dwellDays} d</TableCell>
+                  <TableCell>{x.damage ? <StatusBadge status="Failed" /> : <StatusBadge status="Verified" />}</TableCell>
+                  <TableCell><StatusBadge status={x.status} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

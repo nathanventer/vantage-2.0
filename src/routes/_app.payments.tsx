@@ -66,59 +66,63 @@ function PaymentsPage() {
         <TabsContent value="invoices" className="mt-4">
           <div className="rounded-xl border bg-card">
             {inv.isLoading ? <Skeleton className="h-72" /> : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice</TableHead>
-                    <TableHead>Transaction</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Due</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices.map((i) => (
-                    <TableRow key={i.id}>
-                      <TableCell className="font-medium">{i.number}</TableCell>
-                      <TableCell className="text-muted-foreground">{i.transactionRef}</TableCell>
-                      <TableCell>{i.client}</TableCell>
-                      <TableCell className="text-muted-foreground">{i.provider}</TableCell>
-                      <TableCell className="text-right">{fmt(i.amountZAR)}</TableCell>
-                      <TableCell className="text-muted-foreground">{new Date(i.dueAt).toLocaleDateString("en-ZA")}</TableCell>
-                      <TableCell><StatusBadge status={i.status} /></TableCell>
+              <div className="w-full overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice</TableHead>
+                      <TableHead>Transaction</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Provider</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Due</TableHead>
+                      <TableHead className="w-px">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices.map((i) => (
+                      <TableRow key={i.id}>
+                        <TableCell className="font-medium">{i.number}</TableCell>
+                        <TableCell className="text-muted-foreground">{i.transactionRef}</TableCell>
+                        <TableCell>{i.client}</TableCell>
+                        <TableCell className="text-muted-foreground">{i.provider}</TableCell>
+                        <TableCell className="text-right">{fmt(i.amountZAR)}</TableCell>
+                        <TableCell className="text-muted-foreground">{new Date(i.dueAt).toLocaleDateString("en-ZA")}</TableCell>
+                        <TableCell><StatusBadge status={i.status} /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
         </TabsContent>
         <TabsContent value="payments" className="mt-4">
           <div className="rounded-xl border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Gateway</TableHead>
-                  <TableHead>Settled</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.invoiceNumber}</TableCell>
-                    <TableCell className="text-right">{fmt(p.amountZAR)}</TableCell>
-                    <TableCell>{p.method}</TableCell>
-                    <TableCell><StatusBadge status={p.gatewayStatus} /></TableCell>
-                    <TableCell className="text-muted-foreground">{p.settledAt ? new Date(p.settledAt).toLocaleDateString("en-ZA") : "Pending"}</TableCell>
+            <div className="w-full overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Method</TableHead>
+                    <TableHead className="w-px">Gateway</TableHead>
+                    <TableHead>Settled</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-medium">{p.invoiceNumber}</TableCell>
+                      <TableCell className="text-right">{fmt(p.amountZAR)}</TableCell>
+                      <TableCell>{p.method}</TableCell>
+                      <TableCell><StatusBadge status={p.gatewayStatus} /></TableCell>
+                      <TableCell className="text-muted-foreground">{p.settledAt ? new Date(p.settledAt).toLocaleDateString("en-ZA") : "Pending"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </TabsContent>
       </Tabs>

@@ -41,36 +41,38 @@ function RegsPage() {
         {isLoading ? <Skeleton className="h-72" /> : (data ?? []).length === 0 ? (
           <EmptyState title="No registrations pending" description="New applicants will appear here for compliance review." icon={UserCheck} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Sub-type</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data ?? []).map((r) => (
-                <TableRow key={r.id} className="h-14 cursor-pointer hover:bg-muted/40" onClick={() => { setOpen(r); setReason(""); }}>
-                  <TableCell className="font-medium">{r.company}</TableCell>
-                  <TableCell>{r.category}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.subType}</TableCell>
-                  <TableCell className="text-muted-foreground">{r.contactName}</TableCell>
-                  <TableCell className="text-muted-foreground tabular-nums">{new Date(r.submittedAt).toLocaleDateString("en-ZA")}</TableCell>
-                  <TableCell><StatusBadge status={r.status} /></TableCell>
-                  <TableCell className="text-right">
-                    <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpen(r); setReason(""); }}>
-                      Review
-                    </Button>
-                  </TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Sub-type</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead className="w-px">Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {(data ?? []).map((r) => (
+                  <TableRow key={r.id} className="h-14 cursor-pointer hover:bg-muted/40" onClick={() => { setOpen(r); setReason(""); }}>
+                    <TableCell className="font-medium">{r.company}</TableCell>
+                    <TableCell>{r.category}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.subType}</TableCell>
+                    <TableCell className="text-muted-foreground">{r.contactName}</TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">{new Date(r.submittedAt).toLocaleDateString("en-ZA")}</TableCell>
+                    <TableCell><StatusBadge status={r.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpen(r); setReason(""); }}>
+                        Review
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 

@@ -58,34 +58,36 @@ function TxList() {
         ) : filtered.length === 0 ? (
           <div className="px-6 py-16 text-center text-sm text-muted-foreground">No transactions match your filters.</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Reference</TableHead>
-                <TableHead>Demand</TableHead>
-                <TableHead>Provider</TableHead>
-                <TableHead>Route</TableHead>
-                <TableHead>Stage</TableHead>
-                <TableHead className="text-right">Value</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((t) => (
-                <TableRow key={t.id} className="h-14 cursor-pointer hover:bg-muted/40">
-                  <TableCell className="font-medium">
-                    <Link to="/transactions/$id" params={{ id: t.id }} className="text-accent hover:underline">{t.reference}</Link>
-                  </TableCell>
-                  <TableCell>{t.demandCompany}</TableCell>
-                  <TableCell className="text-muted-foreground">{t.sourceProvider}</TableCell>
-                  <TableCell className="text-muted-foreground">{t.origin} → {t.destination}</TableCell>
-                  <TableCell><StatusBadge status={t.currentStage} /></TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(t.valueZAR)}</TableCell>
-                  <TableCell><StatusBadge status={t.status} /></TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Reference</TableHead>
+                  <TableHead>Demand</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Route</TableHead>
+                  <TableHead>Stage</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
+                  <TableHead className="w-px">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((t) => (
+                  <TableRow key={t.id} className="h-14 cursor-pointer hover:bg-muted/40">
+                    <TableCell className="font-medium">
+                      <Link to="/transactions/$id" params={{ id: t.id }} className="text-accent hover:underline">{t.reference}</Link>
+                    </TableCell>
+                    <TableCell>{t.demandCompany}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.sourceProvider}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.origin} → {t.destination}</TableCell>
+                    <TableCell><StatusBadge status={t.currentStage} /></TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(t.valueZAR)}</TableCell>
+                    <TableCell><StatusBadge status={t.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>
