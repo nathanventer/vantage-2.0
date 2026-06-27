@@ -85,7 +85,7 @@ function Dashboard() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border bg-card p-5 lg:col-span-2">
+        <div className="rounded-xl border bg-card p-5 overflow-visible lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-display font-semibold">Monthly spend & shipment volume</h3>
             <span className="text-xs text-muted-foreground">Last 12 months</span>
@@ -102,7 +102,7 @@ function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        <div className="rounded-xl border bg-card p-5">
+        <div className="rounded-xl border bg-card p-5 overflow-visible">
           <h3 className="mb-4 font-display font-semibold">Cost by route</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
@@ -146,7 +146,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4">
+        <div className="rounded-xl border bg-card p-4 overflow-visible">
           <h3 className="mb-4 font-display font-semibold">Lifecycle stage distribution</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={["Vessel","Port","Clearing","Transport","Warehouse","Delivery"].map((stage) => ({ stage, count: txs.filter(t => t.currentStage === stage).length }))}>
