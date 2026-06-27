@@ -1,78 +1,63 @@
-## Phase 1 Visual & Layout QA Pass
+## Layout & Visual QA Pass — Plan
 
-Pure styling/layout audit — no features, no logic, no data/auth changes. Brand colors will be added as new tokens so existing semantic tokens keep working; only visual rules below get adjusted.
+Scope: pure CSS/className fixes against the existing Phase 1 build. No logic, data, routing, or design-token changes.
 
-### 1. Brand color tokens (src/styles.css)
-Map the spec'd brand palette onto existing semantic tokens so every screen inherits the fix in one place:
-- `--primary` (sidebar/navy) → `#0F2147`
-- `--accent` (royal active/CTA) → `#1E5BB8`
-- `--background` → `#F5F7FA`
-- `--border` → `#AEB8C4` (silver)
-- success `#15803D`, warning `#B45309`, destructive `#B91C1C`, neutral silver
-- card radius → 8px (`--radius: 0.5rem`)
-- Add Inter via `<link>` in `src/routes/__root.tsx` head, set `--font-sans` and `--font-display` to Inter
-- Tighten dark-mode pairs to stay consistent (no logic change)
+### 1. AppShell + Sidebar (`src/components/AppShell.tsx`, `AppSidebar.tsx`)
+- Lock viewport scroll to the main column:
+  - Outer wrapper: add `h-dvh overflow-hidden`.
+  - Right column: add `min-h-0 overflow-hidden`.
+  - `<main>`: add `overflow-y-auto`.
+- Header: add left padding/margin to `SidebarTrigger` (`ml-1`) so it doesn't merge with sidebar edge. Verify nothing wraps 768–1280px (search is `hidden md:block`, kept).
+- Sidebar logo: add `mx-auto` to `<img>` so it centers in collapsed icon rail; keep `bg-white p-0.5 rounded` for navy contrast.
+- Verify shadcn sidebar overlay/z-index behavior is unchanged on mobile.
 
-### 2. Sidebar (`AppSidebar.tsx`)
-- Navy `#0F2147` bg, white text, royal `#1E5BB8` active item with subtle highlight (already wired via tokens after step 1; verify `--sidebar`, `--sidebar-primary`, `--sidebar-accent`)
-- Normalize nav item spacing: consistent icon size (16px), 12px gap, 8px vertical padding, label vertical-aligned with icon
-- Collapsed state: icon-only logo (hide wordmark + tagline); expanded: full wordmark + small tagline line
-- Fix logo tile: `bg-white p-1 rounded-md`, prevent stretch
+### 2. Logo
+- Confirm `h-8 w-8 object-contain` + white tile. No src or asset changes.
 
-### 3. Top bar (`AppShell.tsx`)
-- White bg (replace `.glass`), 1px bottom border `#AEB8C4`
-- Left: page title slot (use breadcrumbs/title), Right: search + role switcher + theme + bell + user — single row, `flex-nowrap`, no wrap
-- Search collapses to icon on `<md`
-- Sticky top, sidebar fixed left — verify no overlap at all viewport widths (use `var(--sidebar-width)` per Tailwind v4 fix)
+### 3. Data tables — wrap each in `<div className="overflow-x-auto w-full">` inside its card; add `whitespace-nowrap` to `TableHead` cells site-wide
+Files to touch:
+- `_app.transactions.index.tsx` (TxList)
+- `_app.requests.tsx` (Quotes table)
+- `_app.payments.tsx` (Invoices + Settlements)
+- `_app.documents.tsx` (All documents)
+- `_app.containers.tsx`
+- `_app.cargo.tsx`
+- `_app.transport.tsx`
+- `_app.admin.registrations.tsx`
+- `_app.admin.compliance.tsx`
+- `_app.admin.audit.tsx`
 
-### 4. Login / landing (`routes/index.tsx`)
-- Tagline: "Insight · Intelligence · Opportunity · Growth" → re-render in sentence case `Insight · Intelligence · Opportunity · Growth` (already correct casing) but recolor to navy `#0F2147` and reposition: under wordmark on right panel and on mobile header
-- Mobile header logo: white tile (not navy) so logo reads correctly
-- Confirm logo sizing 40–48px, no distortion
+Warehouse kanban (`_app.warehouse.tsx`): add `min-w-0` to card and `truncate` to client name div.
 
-### 5. Cards & page shell
-- All `Card` components: white bg, 8px radius, 1px silver border, 16–24px padding (update `components/ui/card.tsx` defaults: `rounded-lg` → `rounded-[8px]`, `shadow` → `shadow-xs`, ensure border)
-- StatCard: enforce uniform min-height (`min-h-[120px]`), aligned icon top-right, value 28px/600, label 11px uppercase — already close; tighten across all 3 dashboards
-- Page wrapper: 24px padding (already `px-4 py-6 sm:px-6`), bump to `p-6 lg:p-8` consistently
+Easiest reusable fix: also patch `src/components/ui/table.tsx` `Table` wrapper from `overflow-auto` → keep, but add `w-full` to ensure it doesn't collapse. (Already `relative w-full overflow-auto` — sufficient; per-page wrappers still added per spec.)
 
-### 6. Tables & lists (transactions, documents, users, registrations, audit, compliance)
-- Header cells aligned with body cells (use `<Table>` consistently; remove ad-hoc grids where they drift)
-- Long cells: add `truncate max-w-[Xch]` + `title=` tooltip
-- Toolbar row: search + status filter on same flex row (`flex flex-wrap md:flex-nowrap items-center gap-2`)
-- Empty state: centered inside the table container (`py-16 text-center`), not full-page
+### 4. StatCard (`src/components/StatCard.tsx`)
+- Add `line-clamp-1` to the `delta` div so long delta text can't push card height.
+- Icon container: add `shrink-0` so it never bleeds outside.
 
-### 7. Forms & modals (register wizard, new transaction, drawers, dialogs)
-- Labels above inputs, consistent `space-y-1.5`
-- Footer actions right-aligned: `flex justify-end gap-2` in card/modal footers (Cancel ghost left of primary)
-- Dialog: centered, semi-transparent overlay (shadcn default — verify), close `X` top-right (shadcn default — verify present, not hidden)
+### 5. Dashboard charts (`_app.dashboard.tsx`)
+- Add `overflow-visible` to chart cards so Recharts tooltips aren't clipped.
+- Verify PieChart legend `wrapperStyle` already set; no change.
+- Verify stacked single-column at 768–1024px doesn't overflow (no code change unless visible issue).
 
-### 8. StatusBadge (`components/StatusBadge.tsx`)
-- Re-map color tones to spec hexes via tokens (already done in step 1)
-- `rounded-full`, `px-2.5 py-0.5`, `text-xs`, `whitespace-nowrap`, `inline-flex` — already set; audit usage sites for cells that constrain width and add `truncate` on the badge container if needed
+### 6. PageHeader (`src/components/PageHeader.tsx`)
+- Already `flex-wrap gap-4 mb-6` — keep. Confirm `gap-3` is fine; leave as-is (existing `gap-4` satisfies spec).
 
-### 9. Typography & spacing
-- Body font Inter, headings 600, body 400 (set via tokens)
-- Sentence-case sweep on page titles, section headings, button labels, sidebar group labels (currently UPPERCASE "WORKSPACE" / "OPERATIONS" / "GOVERNANCE" → sentence case)
-- Card grid gap: `gap-4` (16px) standard; section gap `gap-6` (24px)
-- Add `truncate` to long inline text spots that visibly clip
+### 7. StatusBadge column sizing
+- In each table, set the Status `TableHead` to `className="w-px whitespace-nowrap"` so badge column shrink-wraps and badge isn't clipped. Apply across the table files listed in §3.
 
-### 10. Verification
-Run dev build, visit dashboard (each role), transactions list + detail, documents, register wizard, admin/registrations, admin/users, admin/audit, login. Take Playwright screenshots at 1280px and 390px; eyeball-check each rule above. Iterate on visible regressions only.
+### 8. Register wizard (`src/routes/register.tsx`)
+- Verify left rail `md:sticky md:top-6 self-start` doesn't exceed viewport; if needed add `md:max-h-[calc(100dvh-3rem)] md:overflow-y-auto`.
+- Confirm step indicator circles aren't clipped (add `pl-1` to step row if needed).
+- Mobile stacking: already grid → 1 col; verify no overlap.
 
-### Files touched (estimate)
-- `src/styles.css` — tokens, radius, font vars
-- `src/routes/__root.tsx` — Inter `<link>`
-- `src/components/AppShell.tsx` — top bar styling
-- `src/components/AppSidebar.tsx` — spacing, group label casing, logo
-- `src/routes/index.tsx` — tagline color/position, mobile logo tile
-- `src/components/ui/card.tsx` — radius/shadow defaults
-- `src/components/StatCard.tsx` — min-height alignment
-- `src/components/StatusBadge.tsx` — confirm tokens (no shape change)
-- Table/toolbar tweaks in: `_app.transactions.index.tsx`, `_app.documents.tsx`, `_app.admin.registrations.tsx`, `_app.admin.users.tsx`, `_app.admin.audit.tsx`, `_app.admin.compliance.tsx`
-- Sentence-case sweep across page headers & sidebar group labels
+### 9. Spacing
+- No token/spacing-value changes. Only confirm card header/body padding consistency in cards I'm already editing; do not introduce new padding rules.
 
-### Out of scope (will NOT change)
-- `mockApi.ts`, `data/mock.ts`, `types/index.ts`, routes, auth, RLS, business logic
-- New components/pages/features
-- Design system identity (only fixing incorrect applications)
-- Logo asset file
+### Out of scope
+- No changes to `mockApi.ts`, `data/mock.ts`, `types/`, routes, auth, business logic.
+- No changes to `styles.css` tokens, `routeTree.gen.ts`, shadcn `sidebar.tsx` internals.
+- No new files, components, or features.
+
+### Verification
+- After edits, run Playwright at 1280×1800 and 390×844 against `/dashboard`, `/transactions`, `/documents`, `/admin/registrations`, `/register`; screenshot and eyeball each rule.

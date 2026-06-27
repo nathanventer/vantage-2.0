@@ -110,41 +110,43 @@ function DocsPage() {
               {isLoading ? <Skeleton className="h-72" /> : filtered.length === 0 ? (
                 <EmptyState title="No documents match this filter" description="Try a different filter or upload a document." icon={FileText} />
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Transaction</TableHead>
-                      <TableHead>Uploaded by</TableHead>
-                      <TableHead className="text-right">Version</TableHead>
-                      <TableHead>Signed</TableHead>
-                      <TableHead>SARS</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((d) => (
-                      <TableRow key={d.id} className="h-14">
-                        <TableCell className="font-medium">{d.type}</TableCell>
-                        <TableCell className="text-muted-foreground">{d.transactionRef}</TableCell>
-                        <TableCell className="text-muted-foreground">{d.uploadedBy}</TableCell>
-                        <TableCell className="text-right tabular-nums">v{d.version}</TableCell>
-                        <TableCell><StatusBadge status={d.signed ? "Verified" : "Pending"} /></TableCell>
-                        <TableCell><StatusBadge status={d.sarsVerified ? "Verified" : "Pending"} /></TableCell>
-                        <TableCell><StatusBadge status={d.status} /></TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" aria-label="View document" onClick={() => setOpenDoc(d)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" aria-label="Version history" onClick={() => setOpenDoc(d)}>
-                            <History className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
+                <div className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Transaction</TableHead>
+                        <TableHead>Uploaded by</TableHead>
+                        <TableHead className="text-right">Version</TableHead>
+                        <TableHead className="w-px">Signed</TableHead>
+                        <TableHead className="w-px">SARS</TableHead>
+                        <TableHead className="w-px">Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((d) => (
+                        <TableRow key={d.id} className="h-14">
+                          <TableCell className="font-medium">{d.type}</TableCell>
+                          <TableCell className="text-muted-foreground">{d.transactionRef}</TableCell>
+                          <TableCell className="text-muted-foreground">{d.uploadedBy}</TableCell>
+                          <TableCell className="text-right tabular-nums">v{d.version}</TableCell>
+                          <TableCell><StatusBadge status={d.signed ? "Verified" : "Pending"} /></TableCell>
+                          <TableCell><StatusBadge status={d.sarsVerified ? "Verified" : "Pending"} /></TableCell>
+                          <TableCell><StatusBadge status={d.status} /></TableCell>
+                          <TableCell className="text-right">
+                            <Button size="icon" variant="ghost" aria-label="View document" onClick={() => setOpenDoc(d)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" aria-label="Version history" onClick={() => setOpenDoc(d)}>
+                              <History className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </div>
           </div>

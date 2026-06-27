@@ -83,7 +83,7 @@ function RegisterPage() {
       <div className="mx-auto max-w-6xl px-6 py-8">
         <div className="grid gap-8 lg:grid-cols-[260px_1fr_280px]">
           {/* Stepper */}
-          <aside className="space-y-1">
+          <aside className="space-y-1 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
             <h2 className="mb-3 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Onboarding</h2>
             {STEPS.map((label, i) => {
               const done = i < step, active = i === step;
