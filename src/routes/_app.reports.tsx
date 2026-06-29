@@ -68,7 +68,7 @@ function ReportsPage() {
                 <XAxis dataKey="month" fontSize={12} />
                 <YAxis fontSize={12} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
                 <Tooltip formatter={(v: number) => fmt(v)} />
-                <Line type="monotone" dataKey="spend" stroke="#0B2545" strokeWidth={2.5} />
+                <Line type="monotone" dataKey="spendZAR" stroke="#0B2545" strokeWidth={2.5} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -79,7 +79,7 @@ function ReportsPage() {
                 {(ser.data?.routeCosts ?? []).map((r, i) => (
                   <TableRow key={r.route}>
                     <TableCell>{r.route}</TableCell>
-                    <TableCell className="text-right">{fmt(r.cost)}</TableCell>
+                    <TableCell className="text-right">{fmt(r.costZAR)}</TableCell>
                     <TableCell className="text-right"><StatusBadge status={i % 3 === 0 ? "Pending" : "Verified"} /></TableCell>
                   </TableRow>
                 ))}

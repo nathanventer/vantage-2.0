@@ -96,7 +96,7 @@ function Dashboard() {
               <XAxis dataKey="month" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
               <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
-              <Line type="monotone" dataKey="spend" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="spendZAR" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="shipments" stroke="var(--color-accent)" strokeWidth={2} dot={{ r: 3 }} yAxisId={0} />
             </LineChart>
           </ResponsiveContainer>
@@ -106,7 +106,7 @@ function Dashboard() {
           <h3 className="mb-4 font-display font-semibold">Cost by route</h3>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={series?.routeCosts ?? []} dataKey="cost" nameKey="route" outerRadius={90}>
+              <Pie data={series?.routeCosts ?? []} dataKey="costZAR" nameKey="route" outerRadius={90}>
                 {(series?.routeCosts ?? []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />

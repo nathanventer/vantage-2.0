@@ -3,6 +3,9 @@ import * as M from "@/data/mock";
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
 export const mockApi = {
+  async listCompanies() { await delay(); return M.companies; },
+  async listProviders() { await delay(); return M.providers; },
+  async listUsers() { await delay(); return M.users; },
   async listTransactions() { await delay(); return M.transactions; },
   async getTransaction(id: string) {
     await delay();
