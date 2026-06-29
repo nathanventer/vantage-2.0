@@ -5,16 +5,15 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-display: "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-sans: "SF Pro Text", "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-display: "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
-
-
+  /* shadcn semantic tokens */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -59,10 +58,37 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --shadow-xs: 0 1px 2px rgba(15, 23, 38, 0.04);
-  --shadow-sm: 0 1px 2px rgba(15, 23, 38, 0.04), 0 1px 3px rgba(15, 23, 38, 0.05);
-  --shadow-md: 0 4px 12px rgba(15, 23, 38, 0.05), 0 2px 4px rgba(15, 23, 38, 0.04);
-  --shadow-lg: 0 8px 24px rgba(15, 23, 38, 0.06), 0 2px 6px rgba(15, 23, 38, 0.04);
+  /* Vantage design tokens (utilities: bg-surface, text-muted, border-strong, …) */
+  --color-app: var(--bg-app);
+  --color-surface: var(--bg-surface);
+  --color-surface-2: var(--bg-surface-2);
+  --color-surface-3: var(--bg-surface-3);
+  --color-inset: var(--bg-inset);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-border-strong: var(--border-strong);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-bd: var(--ok-bd);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-bd: var(--warn-bd);
+  --color-err: var(--err);
+  --color-err-bg: var(--err-bg);
+  --color-err-bd: var(--err-bd);
+  --color-info-bg: var(--info-bg);
+  --color-info-bd: var(--info-bd);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-bd: var(--neutral-bd);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 24px 60px -16px rgba(0, 0, 0, 0.65);
 
   --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
   --dur-fast: 150ms;
@@ -70,96 +96,96 @@
   --dur-slow: 320ms;
 }
 
-:root {
-  --radius: 0.5rem;
-
-  /* Brand: navy #0F2147, royal #1E5BB8, surface #F5F7FA, silver #AEB8C4 */
-  --background: #F5F7FA;
-  --foreground: #0F2147;
-  --card: #FFFFFF;
-  --card-foreground: #0F2147;
-  --popover: #FFFFFF;
-  --popover-foreground: #0F2147;
-
-  --primary: #0F2147;
-  --primary-foreground: #FFFFFF;
-
-  --secondary: #EEF2F7;
-  --secondary-foreground: #0F2147;
-
-  --muted: #EEF2F7;
-  --muted-foreground: #5A6878;
-
-  --accent: #1E5BB8;
-  --accent-foreground: #FFFFFF;
-
-  --destructive: #B91C1C;
-  --destructive-foreground: #FFFFFF;
-
-  --success: #15803D;
-  --success-foreground: #FFFFFF;
-  --warning: #B45309;
-  --warning-foreground: #FFFFFF;
-  --info: #1E5BB8;
-  --info-foreground: #FFFFFF;
-  --neutral: #AEB8C4;
-  --neutral-foreground: #0F2147;
-
-  --border: #AEB8C4;
-  --input: #AEB8C4;
-  --ring: #1E5BB8;
-
-  --chart-1: #0F2147;
-  --chart-2: #1E5BB8;
-  --chart-3: #15803D;
-  --chart-4: #B45309;
-  --chart-5: #5A6878;
-
-  --sidebar: #0F2147;
-  --sidebar-foreground: #FFFFFF;
-  --sidebar-primary: #1E5BB8;
-  --sidebar-primary-foreground: #FFFFFF;
-
-  --sidebar-accent: #1E5BB8;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: rgba(255,255,255,0.08);
-  --sidebar-ring: #1E5BB8;
-}
-
-
+/* ── Dark-only token values (single source of truth) ─────────────────────── */
+:root,
 .dark {
-  --background: oklch(0.16 0.03 256);
-  --foreground: oklch(0.97 0.01 240);
-  --card: oklch(0.21 0.04 258);
-  --card-foreground: oklch(0.97 0.01 240);
-  --popover: oklch(0.21 0.04 258);
-  --popover-foreground: oklch(0.97 0.01 240);
-  --primary: oklch(0.72 0.10 200);
-  --primary-foreground: oklch(0.16 0.03 256);
-  --secondary: oklch(0.26 0.04 258);
-  --secondary-foreground: oklch(0.97 0.01 240);
-  --muted: oklch(0.26 0.04 258);
-  --muted-foreground: oklch(0.74 0.02 245);
-  --accent: oklch(0.72 0.10 200);
-  --accent-foreground: oklch(0.16 0.03 256);
-  --destructive: oklch(0.68 0.18 28);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.70 0.14 150);
-  --success-foreground: oklch(0.16 0.03 256);
-  --warning: oklch(0.78 0.14 70);
-  --warning-foreground: oklch(0.16 0.03 256);
-  --info: oklch(0.72 0.14 258);
-  --info-foreground: oklch(0.16 0.03 256);
-  --neutral: oklch(0.72 0.02 250);
-  --neutral-foreground: oklch(0.16 0.03 256);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.72 0.10 200);
-  --sidebar: oklch(0.18 0.04 258);
-  --sidebar-foreground: oklch(0.97 0.01 240);
-  --sidebar-accent: oklch(0.26 0.05 258);
-  --sidebar-accent-foreground: oklch(0.97 0.01 240);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  color-scheme: dark;
+  --radius: 16px;
+
+  /* surfaces — navy-black elevation ladder (not pure black) */
+  --bg-app: #070b16;
+  --bg-surface: #0f1626;
+  --bg-surface-2: #161f33;
+  --bg-surface-3: #1e2942;
+  --bg-inset: #0a101e;
+
+  /* lines & focus */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --ring: #3b82f6;
+
+  /* text */
+  --text: #f3f6fb;
+  --text-muted: #a6b2c8;
+  --text-subtle: #6e7a90;
+
+  /* brand */
+  --brand: #2f6bff;
+  --brand-hover: #4a80ff;
+  --brand-press: #245bdd;
+  --brand-fg: #ffffff;
+  --brand-soft: rgba(47, 107, 255, 0.14);
+  --grad-from: #4a80ff;
+  --grad-to: #6e5bf2;
+
+  /* semantic */
+  --ok: #34d399;
+  --ok-bg: rgba(16, 185, 129, 0.13);
+  --ok-bd: rgba(16, 185, 129, 0.28);
+  --warn: #fbbf24;
+  --warn-bg: rgba(245, 158, 11, 0.13);
+  --warn-bd: rgba(245, 158, 11, 0.28);
+  --err: #fb7185;
+  --err-bg: rgba(244, 63, 94, 0.13);
+  --err-bd: rgba(244, 63, 94, 0.28);
+  --info: #60a5fa;
+  --info-bg: rgba(59, 130, 246, 0.13);
+  --info-bd: rgba(59, 130, 246, 0.28);
+  --neutral: #94a3b8;
+  --neutral-bg: rgba(148, 163, 184, 0.12);
+  --neutral-bd: rgba(148, 163, 184, 0.24);
+
+  --glass: rgba(10, 16, 28, 0.72);
+
+  /* shadcn semantic tokens remapped onto the ladder */
+  --background: var(--bg-app);
+  --foreground: var(--text);
+  --card: var(--bg-surface);
+  --card-foreground: var(--text);
+  --popover: var(--bg-surface-2);
+  --popover-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-fg);
+  --secondary: var(--bg-surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--bg-surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--brand);
+  --accent-foreground: var(--brand-fg);
+  --destructive: var(--err);
+  --destructive-foreground: #1a0509;
+  --success: var(--ok);
+  --success-foreground: #052016;
+  --warning: var(--warn);
+  --warning-foreground: #2a1d00;
+  --info-foreground: #04152b;
+  --neutral-foreground: #0b1220;
+  --input: var(--border-strong);
+
+  --chart-1: #2f6bff;
+  --chart-2: #6e5bf2;
+  --chart-3: #34d399;
+  --chart-4: #fbbf24;
+  --chart-5: #60a5fa;
+
+  --sidebar: #0b1220;
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-fg);
+  --sidebar-accent: var(--bg-surface-2);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -167,6 +193,7 @@
     border-color: var(--color-border);
   }
   html {
+    color-scheme: dark;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -193,13 +220,19 @@
   }
 }
 
+/* Frosted glass — top nav + side nav */
 @utility glass {
-  background-color: color-mix(in oklab, var(--color-card) 72%, transparent);
-  backdrop-filter: saturate(140%) blur(16px);
+  background-color: var(--glass);
+  backdrop-filter: saturate(140%) blur(20px);
 }
 
 @utility hairline {
   border-color: color-mix(in oklab, var(--color-border) 80%, transparent);
+}
+
+/* Glass sheen — 1px inner top highlight for elevated cards */
+@utility sheen {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 @media (prefers-reduced-motion: reduce) {
