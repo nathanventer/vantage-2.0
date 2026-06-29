@@ -1,5 +1,15 @@
 export type Role = "demand" | "source" | "admin";
 
+/** The authenticated user as the UI consumes it (derived from a profile row). */
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  companyId?: string;
+  companyName?: string;
+}
+
 export type Status = "success" | "pending" | "error" | "info" | "neutral";
 
 /**

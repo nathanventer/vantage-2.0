@@ -1,16 +1,11 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import type { Role } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
-type Ctx = { role: Role; setRole: (r: Role) => void };
-const RoleContext = createContext<Ctx | null>(null);
-
-export function RoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role>("demand");
-  return <RoleContext.Provider value={{ role, setRole }}>{children}</RoleContext.Provider>;
-}
-
+/**
+ * Backwards-compatible role hook. Role now derives from the authenticated user
+ * (see AuthContext); `setRole` is a demo-only override used by the role switcher
+ * under the mock backend.
+ */
 export function useRole() {
-  const ctx = useContext(RoleContext);
-  if (!ctx) throw new Error("useRole must be used inside RoleProvider");
-  return ctx;
+  const { role, setRole } = useAuth();
+  return { role, setRole };
 }

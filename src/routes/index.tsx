@@ -4,8 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Ship, ShieldCheck, Activity, Globe2, ArrowRight, Briefcase, Truck, ScanLine } from "lucide-react";
 import logoAsset from "@/assets/vantage-logo.png.asset.json";
-import { useState } from "react";
-import { useRole } from "@/contexts/RoleContext";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { DEMO_LOGINS } from "@/adapters/auth";
+import { toast } from "sonner";
 import type { Role } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -27,10 +29,30 @@ const ROLE_CARDS: { role: Role; icon: typeof Briefcase; title: string; desc: str
 
 function Landing() {
   const navigate = useNavigate();
-  const { setRole } = useRole();
+  const { signIn, user } = useAuth();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const enterAs = (r: Role) => { setRole(r); navigate({ to: "/dashboard" }); };
+  useEffect(() => { if (user) navigate({ to: "/dashboard" }); }, [user, navigate]);
+
+  const doSignIn = async (e: string, p: string) => {
+    setBusy(true);
+    try {
+      await signIn(e, p);
+      navigate({ to: "/dashboard" });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sign in failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const enterAs = (r: Role) => {
+    const creds = DEMO_LOGINS[r];
+    setEmail(creds.email);
+    void doSignIn(creds.email, creds.password);
+  };
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
@@ -84,7 +106,7 @@ function Landing() {
 
           <form
             className="mt-6 space-y-4"
-            onSubmit={(e) => { e.preventDefault(); navigate({ to: "/dashboard" }); }}
+            onSubmit={(e) => { e.preventDefault(); void doSignIn(email, password); }}
           >
             <div className="space-y-1.5">
               <Label htmlFor="email">Work email</Label>
@@ -92,9 +114,9 @@ function Landing() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" placeholder="••••••••" required />
+              <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full">Sign in to Vantage</Button>
+            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Signing in…" : "Sign in to Vantage"}</Button>
           </form>
 
           <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
