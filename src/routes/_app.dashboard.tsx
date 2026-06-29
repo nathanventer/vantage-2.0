@@ -7,12 +7,14 @@ import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { MonthlySpendChart } from "@/components/dashboard/MonthlySpendChart";
+import { RouteCostPanel } from "@/components/dashboard/RouteCostPanel";
 import {
   Ship, Clock, FileWarning, Wallet, Inbox, Truck, ShieldCheck,
   TrendingUp, Activity, Package,
 } from "lucide-react";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -20,7 +22,6 @@ export const Route = createFileRoute("/_app/dashboard")({
   component: Dashboard,
 });
 
-const COLORS = ["var(--color-chart-1)", "var(--color-chart-2)", "var(--color-chart-3)", "var(--color-chart-4)", "var(--color-chart-5)"];
 const GRID = "color-mix(in oklab, var(--color-border) 100%, transparent)";
 const AXIS = "var(--color-muted-foreground)";
 
@@ -75,7 +76,9 @@ function Dashboard() {
         description="Operational overview across the trade and logistics lifecycle."
         actions={
           role === "demand" ? (
-            <Button asChild className="bg-accent hover:bg-accent/90"><Link to="/transactions/new">New shipment</Link></Button>
+            <Button asChild>
+              <Link to="/transactions/new">New shipment</Link>
+            </Button>
           ) : undefined
         }
       />
@@ -84,35 +87,13 @@ function Dashboard() {
         {kpis.map((k) => <StatCard key={k.label} {...k} />)}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <div className="rounded-xl border bg-card p-5 lg:col-span-2">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-display font-semibold">Monthly spend & shipment volume</h3>
-            <span className="text-xs text-muted-foreground">Last 12 months</span>
-          </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={series?.monthlySpend ?? []}>
-              <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="month" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
-              <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R${(v/1_000_000).toFixed(1)}M`} />
-              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
-              <Line type="monotone" dataKey="spendZAR" stroke="var(--color-primary)" strokeWidth={2.5} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="shipments" stroke="var(--color-accent)" strokeWidth={2} dot={{ r: 3 }} yAxisId={0} />
-            </LineChart>
-          </ResponsiveContainer>
+      <div className="mt-6 grid gap-4 lg:grid-cols-5">
+        <div className="rounded-xl border bg-card p-5 lg:col-span-3">
+          <MonthlySpendChart data={series?.monthlySpend ?? []} />
         </div>
 
-        <div className="rounded-xl border bg-card p-5">
-          <h3 className="mb-4 font-display font-semibold">Cost by route</h3>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie data={series?.routeCosts ?? []} dataKey="costZAR" nameKey="route" outerRadius={90}>
-                {(series?.routeCosts ?? []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="rounded-xl border bg-card p-5 lg:col-span-2">
+          <RouteCostPanel routes={series?.routeCosts ?? []} />
         </div>
       </div>
 

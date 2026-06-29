@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSignOut } from "@/hooks/useSignOut";
+import { UserMenu } from "@/components/UserMenu";
 import { api } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,6 @@ const SUBTYPES: Record<"Demand" | "Source", string[]> = {
 function RegisterPage() {
   const navigate = useNavigate();
   const { user, refresh } = useAuth();
-  const signOut = useSignOut();
 
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState<"Demand" | "Source">("Demand");
@@ -214,14 +213,12 @@ function RegisterPage() {
   return (
     <div className="min-h-dvh bg-app">
       <header className="glass sticky top-0 z-30 border-b">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-2">
-            <img src={logoAsset.url} alt="" className="h-8 w-8 rounded bg-white/95 p-1" />
-            <span className="font-display text-lg font-bold">VANTAGE</span>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <img src={logoAsset.url} alt="" className="h-8 w-8 rounded-lg bg-white/95 p-1" />
+            <span className="font-display text-lg font-bold tracking-tight">VANTAGE</span>
           </div>
-          <Button variant="ghost" onClick={() => void signOut()}>
-            Sign out
-          </Button>
+          <UserMenu />
         </div>
       </header>
 
@@ -292,6 +289,7 @@ function RegisterPage() {
                   {(["Demand", "Source"] as const).map((c) => (
                     <button
                       key={c}
+                      type="button"
                       onClick={() => {
                         setCategory(c);
                         set("subType", SUBTYPES[c][0]);

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import { mockApi } from "./mockApi";
 import type { DataService } from "./DataService";
 import type {
@@ -133,6 +134,12 @@ interface QuoteRow {
   id: string;
   source_company_id: string;
   total: number | null;
+  freight_cost: number | null;
+  customs_cost: number | null;
+  warehouse_cost: number | null;
+  transport_cost: number | null;
+  other_cost: number | null;
+  vat_amount: number | null;
   estimated_transit_days: number | null;
   status: string;
   src: NamedRef | null;
@@ -157,12 +164,25 @@ interface ShipmentRow {
   quotes: QuoteRow[] | null;
 }
 
+function quoteTotal(q: QuoteRow): number {
+  const total = num(q.total);
+  if (total > 0) return total;
+  return (
+    num(q.freight_cost) +
+    num(q.customs_cost) +
+    num(q.warehouse_cost) +
+    num(q.transport_cost) +
+    num(q.other_cost) +
+    num(q.vat_amount)
+  );
+}
+
 function mapQuote(q: QuoteRow): Quote {
   return {
     id: q.id,
     providerId: q.source_company_id,
     providerName: q.src?.name ?? "",
-    priceZAR: num(q.total),
+    priceZAR: quoteTotal(q),
     etaDays: num(q.estimated_transit_days),
     status: quoteStatus(q.status),
   };
@@ -194,7 +214,7 @@ const SHIPMENT_SELECT =
   "status,current_step,created_at," +
   "demand:companies!shipments_demand_company_id_fkey(id,name)," +
   "source:companies!shipments_source_company_id_fkey(id,name)," +
-  "quotes(id,source_company_id,total,estimated_transit_days,status," +
+  "quotes(id,source_company_id,total,freight_cost,customs_cost,warehouse_cost,transport_cost,other_cost,vat_amount,estimated_transit_days,status," +
   "src:companies!quotes_source_company_id_fkey(id,name))";
 
 function fail(ctx: string, error: { message: string } | null) {
@@ -528,9 +548,10 @@ export const supabaseApi: DataService = {
     }));
   },
 
-  // ── Analytics + out-of-Phase-1: mock-backed until their phase ────────────
-  dashboardSeries(): Promise<DashboardSeries> {
-    return mockApi.dashboardSeries();
+  // ── Analytics: derived from live shipments + quotes (RLS-scoped) ─────────
+  async dashboardSeries(): Promise<DashboardSeries> {
+    const txs = await supabaseApi.listTransactions();
+    return buildDashboardSeriesFromTransactions(txs);
   },
   listWarehouseJobs() {
     return mockApi.listWarehouseJobs();

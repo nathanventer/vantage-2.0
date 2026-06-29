@@ -33,7 +33,7 @@ function TxList() {
         title="Transactions"
         description="Trade transactions across the Vessel → Delivery lifecycle."
         actions={
-          <Button asChild className="bg-accent hover:bg-accent/90">
+          <Button asChild>
             <Link to="/transactions/new"><Plus className="mr-1.5 h-4 w-4" /> New shipment request</Link>
           </Button>
         }

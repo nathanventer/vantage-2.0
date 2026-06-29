@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { FileText, ShieldCheck, PenLine, Archive, Eye, History, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { DocumentRecord } from "@/types";
 
 const DOC_TYPES = [
@@ -77,7 +78,9 @@ function DocsPage() {
                 <div key={t} className="rounded-xl border bg-card p-4 transition hover:shadow-sm">
                   <div className="flex items-start justify-between">
                     <FileText className="h-5 w-5 text-accent" />
-                    <Button size="sm" variant="ghost">Use</Button>
+                    <Button size="sm" variant="ghost" onClick={() => toast.info(`Template "${t}" ready to use`)}>
+                      Use
+                    </Button>
                   </div>
                   <div className="mt-2 text-sm font-medium">{t}</div>
                   <div className="text-xs text-muted-foreground">Template · v1.2</div>
@@ -93,12 +96,15 @@ function DocsPage() {
                 {FILTERS.map((f) => (
                   <button
                     key={f}
+                    type="button"
                     role="tab"
                     aria-selected={filter === f}
                     onClick={() => setFilter(f)}
                     className={cn(
                       "rounded-full px-3 py-1 text-xs font-medium transition",
-                      filter === f ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                      filter === f
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
                     )}
                   >
                     {f}

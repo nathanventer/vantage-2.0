@@ -1,4 +1,5 @@
 import * as M from "@/data/mock";
+import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import type { DataService } from "./DataService";
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -52,7 +53,7 @@ export const mockApi: DataService = {
   async updateOnboardingStep() { await delay(); },
   async dashboardSeries() {
     await delay();
-    return { monthlySpend: M.monthlySpend, routeCosts: M.routeCosts };
+    return buildDashboardSeriesFromTransactions(M.transactions);
   },
 };
 

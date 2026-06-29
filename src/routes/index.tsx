@@ -167,12 +167,13 @@ function Landing() {
             {(["signin", "signup"] as const).map((m) => (
               <button
                 key={m}
+                type="button"
                 onClick={() => setMode(m)}
                 className={cn(
                   "flex-1 rounded-full px-3 py-1.5 font-medium transition",
                   mode === m
                     ? "bg-surface-2 text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground",
+                    : "text-muted-foreground hover:bg-surface-2/60 hover:text-foreground",
                 )}
               >
                 {m === "signin" ? "Sign in" : "Create account"}
@@ -222,9 +223,10 @@ function Landing() {
                 {ROLE_CARDS.map(({ role, icon: I, title }) => (
                   <button
                     key={role}
+                    type="button"
                     onClick={() => enterAs(role)}
                     disabled={busy}
-                    className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2"
+                    className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <I className="h-4 w-4 text-brand" />
                     <span className="text-xs font-semibold">{title}</span>

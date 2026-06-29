@@ -163,7 +163,7 @@
   --accent: var(--brand);
   --accent-foreground: var(--brand-fg);
   --destructive: var(--err);
-  --destructive-foreground: #1a0509;
+  --destructive-foreground: #fff5f7;
   --success: var(--ok);
   --success-foreground: #052016;
   --warning: var(--warn);
@@ -210,6 +210,14 @@
     font-weight: 600;
   }
   h1 { letter-spacing: -0.03em; }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
   table, .tabular, [data-numeric] {
     font-variant-numeric: tabular-nums;
   }

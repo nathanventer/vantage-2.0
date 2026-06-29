@@ -62,7 +62,9 @@ function NewTx() {
             </Fld>
             <Fld label="Target ready date"><Input type="date" /></Fld>
             <div className="md:col-span-2 flex justify-end">
-              <Button onClick={() => setStep(2)} className="bg-primary hover:bg-primary/90">Match providers <ArrowRight className="ml-2 h-4 w-4" /></Button>
+              <Button onClick={() => setStep(2)}>
+                Match providers <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
@@ -89,7 +91,7 @@ function NewTx() {
             </div>
             <div className="mt-6 flex justify-between">
               <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
-              <Button disabled={!picked} onClick={() => setStep(3)} className="bg-primary hover:bg-primary/90">
+              <Button disabled={!picked} onClick={() => setStep(3)}>
                 Accept quote <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -104,8 +106,11 @@ function NewTx() {
             <h3 className="mt-3 font-display text-xl font-semibold">Transaction created</h3>
             <p className="mt-1 text-sm text-muted-foreground">Reference VTG-TXN-1025 has been created with {picked}.</p>
             <Button
-              className="mt-6 bg-accent hover:bg-accent/90"
-              onClick={() => { toast.success("Transaction VTG-TXN-1025 created"); navigate({ to: "/transactions" }); }}
+              className="mt-6"
+              onClick={() => {
+                toast.success("Transaction VTG-TXN-1025 created");
+                navigate({ to: "/transactions" });
+              }}
             >
               View transactions
             </Button>
