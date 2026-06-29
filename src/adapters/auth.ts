@@ -9,6 +9,7 @@ import type { AuthUser, Role } from "@/types";
 export interface AuthAdapter {
   getCurrentUser(): Promise<AuthUser | null>;
   signIn(email: string, password: string): Promise<AuthUser>;
+  signUp(email: string, password: string, fullName: string): Promise<AuthUser>;
   signOut(): Promise<void>;
   onChange(cb: () => void): () => void;
 }
@@ -22,7 +23,9 @@ function mapDbRole(r: string): Role {
 async function loadProfile(userId: string, fallbackEmail: string): Promise<AuthUser> {
   const { data } = await supabase
     .from("profiles")
-    .select("id,email,full_name,role,company_id,company:companies(name)")
+    .select(
+      "id,email,full_name,role,company_id,onboarding_step,company:companies(name,approval_status)",
+    )
     .eq("id", userId)
     .maybeSingle();
   const p = data as {
@@ -30,15 +33,20 @@ async function loadProfile(userId: string, fallbackEmail: string): Promise<AuthU
     full_name: string | null;
     role: string;
     company_id: string | null;
-    company: { name: string } | null;
+    onboarding_step: number | null;
+    company: { name: string; approval_status: string } | null;
   } | null;
+  const role = mapDbRole(p?.role ?? "demand_user");
   return {
     id: userId,
     email: p?.email ?? fallbackEmail,
     fullName: p?.full_name || p?.email || fallbackEmail,
-    role: mapDbRole(p?.role ?? "demand_user"),
+    role,
     companyId: p?.company_id ?? undefined,
     companyName: p?.company?.name ?? undefined,
+    // Admins have no trading company but are never gated; everyone else needs approval.
+    companyApproved: role === "admin" || p?.company?.approval_status === "approved",
+    onboardingStep: p?.onboarding_step ?? 1,
   };
 }
 
@@ -53,6 +61,16 @@ const supabaseAuth: AuthAdapter = {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(error.message);
     return loadProfile(data.user.id, data.user.email ?? email);
+  },
+  async signUp(email, password, fullName) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error("Sign up did not return a user");
+    return loadProfile(data.user.id, email);
   },
   async signOut() {
     await supabase.auth.signOut();
@@ -71,6 +89,8 @@ const DEMO_PROFILE: Record<Role, AuthUser> = {
     fullName: "Michael Dlamini",
     role: "demand",
     companyName: "Ubuntu Retail Imports (Pty) Ltd",
+    companyApproved: true,
+    onboardingStep: 8,
   },
   source: {
     id: "demo-source",
@@ -78,12 +98,16 @@ const DEMO_PROFILE: Record<Role, AuthUser> = {
     fullName: "Sarah Naidoo",
     role: "source",
     companyName: "Southern Cross Logistics Solutions",
+    companyApproved: true,
+    onboardingStep: 8,
   },
   admin: {
     id: "demo-admin",
     email: "admin@tradehub.com",
     fullName: "Platform Admin",
     role: "admin",
+    companyApproved: true,
+    onboardingStep: 8,
   },
 };
 function roleFromEmail(email: string): Role {
@@ -99,6 +123,19 @@ const mockAuth: AuthAdapter = {
   },
   async signIn(email) {
     mockUser = { ...DEMO_PROFILE[roleFromEmail(email)], email };
+    mockListeners.forEach((f) => f());
+    return mockUser;
+  },
+  async signUp(email, _password, fullName) {
+    // New mock signups land in the wizard (unapproved) to exercise onboarding.
+    mockUser = {
+      id: "demo-new",
+      email,
+      fullName,
+      role: "demand",
+      companyApproved: false,
+      onboardingStep: 1,
+    };
     mockListeners.forEach((f) => f());
     return mockUser;
   },

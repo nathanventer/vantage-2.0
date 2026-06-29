@@ -43,6 +43,13 @@ export const mockApi: DataService = {
     const r = M.registrations.find((x) => x.id === companyId || x.companyId === companyId);
     if (r) r.verificationChecklist = checklist;
   },
+  // Onboarding write-path — no-ops for the offline demo.
+  async setRoleIntent() { await delay(); },
+  async saveCompany() { await delay(); return "mock-company"; },
+  async recordComplianceDocument() { await delay(); },
+  async capturePopiaConsent() { await delay(); },
+  async submitCompanyForReview() { await delay(); },
+  async updateOnboardingStep() { await delay(); },
   async dashboardSeries() {
     await delay();
     return { monthlySpend: M.monthlySpend, routeCosts: M.routeCosts };

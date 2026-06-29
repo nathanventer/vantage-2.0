@@ -15,6 +15,7 @@ import type {
   AuditEvent,
   Registration,
   DashboardSeries,
+  CompanyInput,
 } from "@/types";
 
 /**
@@ -41,6 +42,14 @@ export interface DataService {
   rejectCompany(companyId: string, reason: string): Promise<void>;
   setCompanyPending(companyId: string, note?: string): Promise<void>;
   updateVerificationChecklist(companyId: string, checklist: Record<string, boolean>): Promise<void>;
+
+  // ── Onboarding write-path (applicant) ────────────────────────────────────
+  setRoleIntent(role: "demand" | "source"): Promise<void>;
+  saveCompany(input: CompanyInput): Promise<string>;
+  recordComplianceDocument(companyId: string, docType: string): Promise<void>;
+  capturePopiaConsent(policyVersion: string): Promise<void>;
+  submitCompanyForReview(companyId: string): Promise<void>;
+  updateOnboardingStep(step: number): Promise<void>;
 
   // ── Core trade lifecycle (Phase 1) ──────────────────────────────────────
   listTransactions(): Promise<Transaction[]>;

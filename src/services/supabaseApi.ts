@@ -201,6 +201,12 @@ function fail(ctx: string, error: { message: string } | null) {
   if (error) throw new Error(`[supabaseApi] ${ctx}: ${error.message}`);
 }
 
+async function currentUserId(): Promise<string> {
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error("[supabaseApi] not authenticated");
+  return data.user.id;
+}
+
 /**
  * Live Supabase implementation of the DataService port. Phase-1 entities read
  * from the canonical schema with field mapping to the UI shapes. Out-of-Phase-1
@@ -338,6 +344,77 @@ export const supabaseApi: DataService = {
       .update({ verification_checklist: checklist })
       .eq("id", companyId);
     fail("updateVerificationChecklist", error);
+  },
+
+  // ── Onboarding write-path ────────────────────────────────────────────────
+  async setRoleIntent(role): Promise<void> {
+    const id = await currentUserId();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: role === "source" ? "source_user" : "demand_user" })
+      .eq("id", id);
+    fail("setRoleIntent", error);
+  },
+
+  async saveCompany(input): Promise<string> {
+    const id = await currentUserId();
+    const fields = {
+      name: input.name,
+      type: input.type,
+      registration_number: input.registrationNumber ?? null,
+      vat_number: input.vatNumber ?? null,
+      contact_person: input.contactPerson ?? null,
+      contact_email: input.contactEmail ?? null,
+      contact_phone: input.contactPhone ?? null,
+      service_categories: input.subType ? [input.subType] : [],
+    };
+    const { data: prof } = await supabase.from("profiles").select("company_id").eq("id", id).maybeSingle();
+    const existing = (prof as { company_id: string | null } | null)?.company_id ?? null;
+    if (existing) {
+      const { error } = await supabase.from("companies").update(fields).eq("id", existing);
+      fail("saveCompany(update)", error);
+      return existing;
+    }
+    const { data, error } = await supabase
+      .from("companies")
+      .insert({ ...fields, approval_status: "pending" })
+      .select("id")
+      .single();
+    fail("saveCompany(insert)", error);
+    const companyId = (data as { id: string }).id;
+    const { error: linkErr } = await supabase.from("profiles").update({ company_id: companyId }).eq("id", id);
+    fail("saveCompany(link)", linkErr);
+    return companyId;
+  },
+
+  async recordComplianceDocument(companyId, docType): Promise<void> {
+    await supabase.from("compliance_documents").delete().eq("company_id", companyId).eq("doc_type", docType);
+    const { error } = await supabase
+      .from("compliance_documents")
+      .insert({ company_id: companyId, doc_type: docType, verification_status: "pending" });
+    fail("recordComplianceDocument", error);
+  },
+
+  async capturePopiaConsent(policyVersion): Promise<void> {
+    const id = await currentUserId();
+    const { error } = await supabase
+      .from("popia_consents")
+      .insert({ user_id: id, consent_type: "privacy_policy", granted: true, policy_version: policyVersion });
+    fail("capturePopiaConsent", error);
+  },
+
+  async submitCompanyForReview(companyId): Promise<void> {
+    const { error } = await supabase
+      .from("companies")
+      .update({ approval_status: "pending" })
+      .eq("id", companyId);
+    fail("submitCompanyForReview", error);
+  },
+
+  async updateOnboardingStep(step): Promise<void> {
+    const id = await currentUserId();
+    const { error } = await supabase.from("profiles").update({ onboarding_step: step }).eq("id", id);
+    fail("updateOnboardingStep", error);
   },
 
   async listTransactions(): Promise<Transaction[]> {

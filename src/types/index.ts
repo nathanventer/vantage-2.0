@@ -8,6 +8,22 @@ export interface AuthUser {
   role: Role;
   companyId?: string;
   companyName?: string;
+  /** Whether the user's company has been approved (drives the onboarding gate). */
+  companyApproved: boolean;
+  /** Persisted 8-step onboarding position so users resume where they left off. */
+  onboardingStep: number;
+}
+
+/** Company create/update payload captured during onboarding (Step 2). */
+export interface CompanyInput {
+  name: string;
+  type: "demand" | "source";
+  registrationNumber?: string;
+  vatNumber?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  subType?: string;
 }
 
 export type Status = "success" | "pending" | "error" | "info" | "neutral";

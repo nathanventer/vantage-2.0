@@ -12,7 +12,9 @@ function AppLayout() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isSupabase && !loading && !user) navigate({ to: "/" });
+    if (!isSupabase || loading) return;
+    if (!user) navigate({ to: "/" });
+    else if (!user.companyApproved) navigate({ to: "/register" }); // gate until approved
   }, [isSupabase, loading, user, navigate]);
 
   if (isSupabase && loading) {
@@ -22,7 +24,7 @@ function AppLayout() {
       </div>
     );
   }
-  if (isSupabase && !user) return null;
+  if (isSupabase && (!user || !user.companyApproved)) return null;
 
   return (
     <AppShell>

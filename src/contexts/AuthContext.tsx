@@ -8,7 +8,10 @@ type Ctx = {
   loading: boolean;
   isSupabase: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Re-pull the current user (e.g. after onboarding writes change approval). */
+  refresh: () => Promise<void>;
   /** Demo-only role override (no-op effect on data under supabase RLS). */
   setRole: (r: Role) => void;
 };
@@ -39,6 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   }, []);
 
+  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
+    const u = await authAdapter.signUp(email, password, fullName);
+    setOverride(null);
+    setUser(u);
+  }, []);
+
   const signOut = useCallback(async () => {
     await authAdapter.signOut();
     setUser(null);
@@ -55,7 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         isSupabase: IS_SUPABASE,
         signIn,
+        signUp,
         signOut,
+        refresh,
         setRole: setOverride,
       }}
     >
