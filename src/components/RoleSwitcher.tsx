@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useSignOut } from "@/hooks/useSignOut";
 import type { Role } from "@/types";
 import { cn } from "@/lib/utils";
 import {
@@ -24,7 +25,15 @@ const FULL: Record<Role, string> = {
 };
 
 export function RoleSwitcher() {
-  const { role, setRole, user, isSupabase, signOut } = useAuth();
+  const { role, setRole, user, isSupabase } = useAuth();
+  const signOut = useSignOut();
+
+  const signOutButton = user ? (
+    <Button variant="ghost" size="sm" onClick={() => void signOut()} aria-label="Sign out">
+      <LogOut className="h-4 w-4" />
+      <span className="ml-1.5 hidden sm:inline">Sign out</span>
+    </Button>
+  ) : null;
 
   // Authenticated mode: show the signed-in user + sign out (role is real).
   if (isSupabase) {
@@ -37,17 +46,14 @@ export function RoleSwitcher() {
             {user?.companyName ? ` · ${user.companyName}` : ""}
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => void signOut()} aria-label="Sign out">
-          <LogOut className="h-4 w-4" />
-          <span className="ml-1.5 hidden sm:inline">Sign out</span>
-        </Button>
+        {signOutButton}
       </div>
     );
   }
 
-  // Mock/demo mode: local role toggle.
+  // Mock/demo mode: local role toggle + sign out.
   return (
-    <>
+    <div className="flex items-center gap-2">
       <div className="hidden md:flex items-center gap-2">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Demo role
@@ -90,6 +96,7 @@ export function RoleSwitcher() {
           </SelectContent>
         </Select>
       </div>
-    </>
+      {signOutButton}
+    </div>
   );
 }

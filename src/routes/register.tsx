@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSignOut } from "@/hooks/useSignOut";
 import { api } from "@/services";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,7 @@ const SUBTYPES: Record<"Demand" | "Source", string[]> = {
 function RegisterPage() {
   const navigate = useNavigate();
   const { user, refresh } = useAuth();
+  const signOut = useSignOut();
 
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState<"Demand" | "Source">("Demand");
@@ -217,7 +219,7 @@ function RegisterPage() {
             <img src={logoAsset.url} alt="" className="h-8 w-8 rounded bg-white/95 p-1" />
             <span className="font-display text-lg font-bold">VANTAGE</span>
           </div>
-          <Button variant="ghost" onClick={() => navigate({ to: "/" })}>
+          <Button variant="ghost" onClick={() => void signOut()}>
             Sign out
           </Button>
         </div>
