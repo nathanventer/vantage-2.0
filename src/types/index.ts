@@ -99,6 +99,12 @@ export interface Registration {
   submittedAt: string;
   status: RegistrationStatus;
   governance: GovernanceCheck[];
+  /** Admin manual-verification checklist (item -> confirmed). */
+  verificationChecklist?: Record<string, boolean>;
+  rejectionReason?: string;
+  /** Uploaded compliance docs vs required count (for the completeness badge). */
+  docCount?: number;
+  docTotal?: number;
 }
 
 export interface GovernanceCheck {

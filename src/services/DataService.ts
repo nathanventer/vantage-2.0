@@ -36,6 +36,12 @@ export interface DataService {
   listUsers(): Promise<User[]>;
   listRegistrations(): Promise<Registration[]>;
 
+  // ── Manual registration verification (admin) ─────────────────────────────
+  approveCompany(companyId: string): Promise<void>;
+  rejectCompany(companyId: string, reason: string): Promise<void>;
+  setCompanyPending(companyId: string, note?: string): Promise<void>;
+  updateVerificationChecklist(companyId: string, checklist: Record<string, boolean>): Promise<void>;
+
   // ── Core trade lifecycle (Phase 1) ──────────────────────────────────────
   listTransactions(): Promise<Transaction[]>;
   getTransaction(id: string): Promise<Transaction | null>;

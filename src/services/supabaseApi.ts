@@ -265,7 +265,8 @@ export const supabaseApi: DataService = {
       .from("companies")
       .select(
         "id,name,type,service_categories,contact_person,contact_email,created_at," +
-          "approval_status,compliance_documents(doc_type,verification_status)",
+          "approval_status,verification_checklist,rejection_reason," +
+          "compliance_documents(doc_type,verification_status)",
       )
       .order("created_at", { ascending: false });
     fail("listRegistrations", error);
@@ -278,10 +279,13 @@ export const supabaseApi: DataService = {
       contact_email: string | null;
       created_at: string;
       approval_status: string;
+      verification_checklist: Record<string, boolean> | null;
+      rejection_reason: string | null;
       compliance_documents: { doc_type: string; verification_status: string }[] | null;
     };
     return ((data ?? []) as unknown as Row[]).map((c) => {
-      const governance: GovernanceCheck[] = (c.compliance_documents ?? []).map((d) => ({
+      const docs = c.compliance_documents ?? [];
+      const governance: GovernanceCheck[] = docs.map((d) => ({
         item: d.doc_type.replace(/_/g, " "),
         status: govStatus(d.verification_status),
       }));
@@ -296,8 +300,44 @@ export const supabaseApi: DataService = {
         submittedAt: c.created_at,
         status: regStatus(c.approval_status),
         governance,
+        verificationChecklist: c.verification_checklist ?? {},
+        rejectionReason: c.rejection_reason ?? undefined,
+        docCount: docs.length,
+        docTotal: 8,
       };
     });
+  },
+
+  async approveCompany(companyId: string): Promise<void> {
+    const { error } = await supabase
+      .from("companies")
+      .update({ approval_status: "approved", approved_at: new Date().toISOString(), rejection_reason: null })
+      .eq("id", companyId);
+    fail("approveCompany", error);
+  },
+
+  async rejectCompany(companyId: string, reason: string): Promise<void> {
+    const { error } = await supabase
+      .from("companies")
+      .update({ approval_status: "rejected", rejection_reason: reason })
+      .eq("id", companyId);
+    fail("rejectCompany", error);
+  },
+
+  async setCompanyPending(companyId: string): Promise<void> {
+    const { error } = await supabase
+      .from("companies")
+      .update({ approval_status: "pending" })
+      .eq("id", companyId);
+    fail("setCompanyPending", error);
+  },
+
+  async updateVerificationChecklist(companyId: string, checklist: Record<string, boolean>): Promise<void> {
+    const { error } = await supabase
+      .from("companies")
+      .update({ verification_checklist: checklist })
+      .eq("id", companyId);
+    fail("updateVerificationChecklist", error);
   },
 
   async listTransactions(): Promise<Transaction[]> {

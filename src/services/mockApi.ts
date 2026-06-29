@@ -23,6 +23,26 @@ export const mockApi: DataService = {
   async listComplianceFlags() { await delay(); return M.complianceFlags; },
   async listAuditEvents() { await delay(); return M.auditEvents; },
   async listRegistrations() { await delay(); return M.registrations; },
+  async approveCompany(companyId) {
+    await delay();
+    const r = M.registrations.find((x) => x.id === companyId || x.companyId === companyId);
+    if (r) { r.status = "Approved"; r.rejectionReason = undefined; }
+  },
+  async rejectCompany(companyId, reason) {
+    await delay();
+    const r = M.registrations.find((x) => x.id === companyId || x.companyId === companyId);
+    if (r) { r.status = "Rejected"; r.rejectionReason = reason; }
+  },
+  async setCompanyPending(companyId) {
+    await delay();
+    const r = M.registrations.find((x) => x.id === companyId || x.companyId === companyId);
+    if (r) r.status = "Pending";
+  },
+  async updateVerificationChecklist(companyId, checklist) {
+    await delay();
+    const r = M.registrations.find((x) => x.id === companyId || x.companyId === companyId);
+    if (r) r.verificationChecklist = checklist;
+  },
   async dashboardSeries() {
     await delay();
     return { monthlySpend: M.monthlySpend, routeCosts: M.routeCosts };
