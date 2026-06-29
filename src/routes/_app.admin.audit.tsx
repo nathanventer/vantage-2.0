@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/EmptyState";
@@ -23,7 +23,7 @@ const ICONS: Record<string, typeof ScrollText> = {
 };
 
 function AuditPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["ae"], queryFn: mockApi.listAuditEvents });
+  const { data, isLoading } = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof data>();

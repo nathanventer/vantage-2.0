@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_app/cargo")({
 });
 
 function CargoPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["cg"], queryFn: mockApi.listCargoHandling });
+  const { data, isLoading } = useQuery({ queryKey: ["cg"], queryFn: api.listCargoHandling });
   if (isLoading) return <Skeleton className="h-96" />;
   return (
     <div>

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_app/transport")({
 });
 
 function TransportPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["tp"], queryFn: mockApi.listTrips });
+  const { data, isLoading } = useQuery({ queryKey: ["tp"], queryFn: api.listTrips });
   if (isLoading) return <Skeleton className="h-96" />;
   return (
     <div>

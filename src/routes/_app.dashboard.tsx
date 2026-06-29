@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { useRole } from "@/contexts/RoleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -26,13 +26,13 @@ const AXIS = "var(--color-muted-foreground)";
 
 function Dashboard() {
   const { role } = useRole();
-  const txQ = useQuery({ queryKey: ["tx"], queryFn: mockApi.listTransactions });
-  const seriesQ = useQuery({ queryKey: ["series"], queryFn: mockApi.dashboardSeries });
-  const invQ = useQuery({ queryKey: ["inv"], queryFn: mockApi.listInvoices });
-  const reqQ = useQuery({ queryKey: ["req"], queryFn: mockApi.listShipmentRequests });
-  const regQ = useQuery({ queryKey: ["reg"], queryFn: mockApi.listRegistrations });
-  const cfQ = useQuery({ queryKey: ["cf"], queryFn: mockApi.listComplianceFlags });
-  const aeQ = useQuery({ queryKey: ["ae"], queryFn: mockApi.listAuditEvents });
+  const txQ = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
+  const seriesQ = useQuery({ queryKey: ["series"], queryFn: api.dashboardSeries });
+  const invQ = useQuery({ queryKey: ["inv"], queryFn: api.listInvoices });
+  const reqQ = useQuery({ queryKey: ["req"], queryFn: api.listShipmentRequests });
+  const regQ = useQuery({ queryKey: ["reg"], queryFn: api.listRegistrations });
+  const cfQ = useQuery({ queryKey: ["cf"], queryFn: api.listComplianceFlags });
+  const aeQ = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
 
   if (txQ.isLoading || seriesQ.isLoading) {
     return (

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { LifecycleStepper } from "@/components/LifecycleStepper";
@@ -24,9 +24,9 @@ export const Route = createFileRoute("/_app/transactions/$id")({
 function TxDetail() {
   const { id } = Route.useParams();
   const router = useRouter();
-  const { data, isLoading } = useQuery({ queryKey: ["tx", id], queryFn: () => mockApi.getTransaction(id) });
-  const docsQ = useQuery({ queryKey: ["doc"], queryFn: mockApi.listDocuments });
-  const auditQ = useQuery({ queryKey: ["ae"], queryFn: mockApi.listAuditEvents });
+  const { data, isLoading } = useQuery({ queryKey: ["tx", id], queryFn: () => api.getTransaction(id) });
+  const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments });
+  const auditQ = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
 
   const fmt = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n);

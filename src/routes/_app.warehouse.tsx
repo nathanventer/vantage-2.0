@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_app/warehouse")({
 const TYPES = ["Bonded", "General", "Clearing", "Cross-docking"] as const;
 
 function WarehousePage() {
-  const { data, isLoading } = useQuery({ queryKey: ["wh"], queryFn: mockApi.listWarehouseJobs });
+  const { data, isLoading } = useQuery({ queryKey: ["wh"], queryFn: api.listWarehouseJobs });
   if (isLoading) return <Skeleton className="h-96" />;
   const jobs = data ?? [];
 

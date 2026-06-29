@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_app/containers")({
 });
 
 function ContainersPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["cn"], queryFn: mockApi.listContainerJobs });
+  const { data, isLoading } = useQuery({ queryKey: ["cn"], queryFn: api.listContainerJobs });
   if (isLoading) return <Skeleton className="h-96" />;
   const c = data ?? [];
   const avgDwell = (c.reduce((s, x) => s + x.dwellDays, 0) / Math.max(1, c.length)).toFixed(1);

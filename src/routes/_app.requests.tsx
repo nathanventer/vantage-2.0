@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_app/requests")({
 });
 
 function RequestsPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["req"], queryFn: mockApi.listShipmentRequests });
+  const { data, isLoading } = useQuery({ queryKey: ["req"], queryFn: api.listShipmentRequests });
   return (
     <div>
       <PageHeader title="Incoming requests" description="New shipment requests routed to your operation. Accept or submit a quote." />

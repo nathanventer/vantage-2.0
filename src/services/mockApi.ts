@@ -1,8 +1,9 @@
 import * as M from "@/data/mock";
+import type { DataService } from "./DataService";
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
 
-export const mockApi = {
+export const mockApi: DataService = {
   async listCompanies() { await delay(); return M.companies; },
   async listProviders() { await delay(); return M.providers; },
   async listUsers() { await delay(); return M.users; },

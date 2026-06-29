@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
@@ -16,8 +16,8 @@ export const Route = createFileRoute("/_app/reports")({
 });
 
 function ReportsPage() {
-  const tx = useQuery({ queryKey: ["tx"], queryFn: mockApi.listTransactions });
-  const ser = useQuery({ queryKey: ["series"], queryFn: mockApi.dashboardSeries });
+  const tx = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
+  const ser = useQuery({ queryKey: ["series"], queryFn: api.dashboardSeries });
 
   const fmt = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n);
 

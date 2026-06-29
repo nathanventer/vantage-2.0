@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { StatCard } from "@/components/StatCard";
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_app/admin/compliance")({
 });
 
 function CompPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["cf"], queryFn: mockApi.listComplianceFlags });
+  const { data, isLoading } = useQuery({ queryKey: ["cf"], queryFn: api.listComplianceFlags });
   if (isLoading) return <Skeleton className="h-96" />;
   const flags = data ?? [];
 

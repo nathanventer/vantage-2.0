@@ -268,3 +268,20 @@ export interface AuditEvent {
   entity: string;
   timestamp: string;
 }
+
+/* ── Dashboard analytics series ─────────────────────────────────────────── */
+export interface MonthlySpendPoint {
+  month: string;
+  spendZAR: number;
+  shipments: number;
+}
+
+export interface RouteCostPoint {
+  route: string;
+  costZAR: number;
+}
+
+export interface DashboardSeries {
+  monthlySpend: MonthlySpendPoint[];
+  routeCosts: RouteCostPoint[];
+}

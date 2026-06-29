@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { mockApi } from "@/services/mockApi";
+import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
@@ -30,7 +30,7 @@ function toGovItems(r: Registration): GovernanceItem[] {
 }
 
 function RegsPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["reg"], queryFn: mockApi.listRegistrations });
+  const { data, isLoading } = useQuery({ queryKey: ["reg"], queryFn: api.listRegistrations });
   const [open, setOpen] = useState<Registration | null>(null);
   const [reason, setReason] = useState("");
 
