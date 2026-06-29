@@ -16,10 +16,16 @@ if ((!url || !anonKey) && import.meta.env.VITE_DATA_BACKEND === "supabase") {
   );
 }
 
-export const supabase = createClient(url ?? "", anonKey ?? "", {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+// Fallbacks keep createClient from throwing at import time when env is absent
+// (e.g. under the mock backend). Real values come from .env.local.
+export const supabase = createClient(
+  url || "http://localhost:54321",
+  anonKey || "anon-placeholder",
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   },
-});
+);

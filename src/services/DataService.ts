@@ -1,7 +1,20 @@
 import type {
-  Company, Provider, User, Transaction, ShipmentRequest, WarehouseJob,
-  ContainerJob, CargoHandling, Trip, DocumentRecord, Invoice, Payment,
-  ComplianceFlag, AuditEvent, Registration, DashboardSeries,
+  Company,
+  Provider,
+  User,
+  Transaction,
+  ShipmentRequest,
+  WarehouseJob,
+  ContainerJob,
+  CargoHandling,
+  Trip,
+  DocumentRecord,
+  Invoice,
+  Payment,
+  ComplianceFlag,
+  AuditEvent,
+  Registration,
+  DashboardSeries,
 } from "@/types";
 
 /**
