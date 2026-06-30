@@ -8,14 +8,21 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { MonthlySpendChart } from "@/components/dashboard/MonthlySpendChart";
-import { RouteCostPanel } from "@/components/dashboard/RouteCostPanel";
+import { CostByRoutePanel } from "@/components/dashboard/CostByRoutePanel";
+import { LifecycleProgress } from "@/components/dashboard/LifecycleProgress";
 import {
-  Ship, Clock, FileWarning, Wallet, Inbox, Truck, ShieldCheck,
-  TrendingUp, Activity, Package,
+  Ship,
+  Clock,
+  FileWarning,
+  Wallet,
+  Inbox,
+  Truck,
+  ShieldCheck,
+  TrendingUp,
+  Activity,
+  Package,
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_app/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Vantage" }] }),
@@ -38,7 +45,9 @@ function Dashboard() {
   if (txQ.isLoading || seriesQ.isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28" />
+        ))}
       </div>
     );
   }
@@ -46,25 +55,88 @@ function Dashboard() {
   const inv = invQ.data ?? [];
   const series = seriesQ.data;
 
-  const fmt = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(n);
+  const fmt = (n: number) =>
+    new Intl.NumberFormat("en-ZA", {
+      style: "currency",
+      currency: "ZAR",
+      maximumFractionDigits: 0,
+    }).format(n);
 
   const demandKpis = [
-    { label: "Active shipments", value: txs.filter(t => t.status !== "Closed").length, icon: Ship, tone: "default" as const },
-    { label: "In transit", value: txs.filter(t => t.currentStage === "Transport").length, icon: Truck, tone: "info" as const },
-    { label: "Pending approvals", value: inv.filter(i => i.status === "Unpaid").length, icon: Clock, tone: "warning" as const },
-    { label: "Spend this month", value: fmt(2_840_000), delta: "+12% vs last month", icon: Wallet, tone: "success" as const },
+    {
+      label: "Active shipments",
+      value: txs.filter((t) => t.status !== "Closed").length,
+      icon: Ship,
+      tone: "default" as const,
+    },
+    {
+      label: "In transit",
+      value: txs.filter((t) => t.currentStage === "Transport").length,
+      icon: Truck,
+      tone: "info" as const,
+    },
+    {
+      label: "Pending approvals",
+      value: inv.filter((i) => i.status === "Unpaid").length,
+      icon: Clock,
+      tone: "warning" as const,
+    },
+    {
+      label: "Spend this month",
+      value: fmt(2_840_000),
+      delta: "+12% vs last month",
+      icon: Wallet,
+      tone: "success" as const,
+    },
   ];
   const sourceKpis = [
-    { label: "Incoming requests", value: (reqQ.data ?? []).filter(r => r.status === "Open").length, icon: Inbox, tone: "info" as const },
-    { label: "Jobs in progress", value: txs.filter(t => t.status === "In Progress").length, icon: Activity, tone: "warning" as const },
-    { label: "Fleet utilisation", value: "78%", delta: "Target 75%", icon: Truck, tone: "success" as const },
+    {
+      label: "Incoming requests",
+      value: (reqQ.data ?? []).filter((r) => r.status === "Open").length,
+      icon: Inbox,
+      tone: "info" as const,
+    },
+    {
+      label: "Jobs in progress",
+      value: txs.filter((t) => t.status === "In Progress").length,
+      icon: Activity,
+      tone: "warning" as const,
+    },
+    {
+      label: "Fleet utilisation",
+      value: "78%",
+      delta: "Target 75%",
+      icon: Truck,
+      tone: "success" as const,
+    },
     { label: "Settlements due", value: fmt(1_245_000), icon: Wallet, tone: "default" as const },
   ];
   const adminKpis = [
-    { label: "Pending registrations", value: (regQ.data ?? []).filter(r => r.status === "Under Review").length, icon: Clock, tone: "warning" as const },
-    { label: "Compliance flags", value: (cfQ.data ?? []).filter(c => c.status !== "Closed").length, icon: FileWarning, tone: "info" as const },
-    { label: "Audit events (30d)", value: (aeQ.data ?? []).length, icon: ShieldCheck, tone: "default" as const },
-    { label: "Platform volume", value: fmt(48_300_000), delta: "Last 30 days", icon: TrendingUp, tone: "success" as const },
+    {
+      label: "Pending registrations",
+      value: (regQ.data ?? []).filter((r) => r.status === "Under Review").length,
+      icon: Clock,
+      tone: "warning" as const,
+    },
+    {
+      label: "Compliance flags",
+      value: (cfQ.data ?? []).filter((c) => c.status !== "Closed").length,
+      icon: FileWarning,
+      tone: "info" as const,
+    },
+    {
+      label: "Audit events (30d)",
+      value: (aeQ.data ?? []).length,
+      icon: ShieldCheck,
+      tone: "default" as const,
+    },
+    {
+      label: "Platform volume",
+      value: fmt(48_300_000),
+      delta: "Last 30 days",
+      icon: TrendingUp,
+      tone: "success" as const,
+    },
   ];
 
   const kpis = role === "demand" ? demandKpis : role === "source" ? sourceKpis : adminKpis;
@@ -72,7 +144,13 @@ function Dashboard() {
   return (
     <div>
       <PageHeader
-        title={role === "demand" ? "Demand workspace" : role === "source" ? "Source operations" : "Admin & compliance"}
+        title={
+          role === "demand"
+            ? "Demand workspace"
+            : role === "source"
+              ? "Source operations"
+              : "Admin & compliance"
+        }
         description="Operational overview across the trade and logistics lifecycle."
         actions={
           role === "demand" ? (
@@ -84,7 +162,13 @@ function Dashboard() {
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((k) => <StatCard key={k.label} {...k} />)}
+        {kpis.map((k) => (
+          <StatCard key={k.label} {...k} />
+        ))}
+      </div>
+
+      <div className="mt-6">
+        <LifecycleProgress transactions={txs} />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
@@ -92,8 +176,8 @@ function Dashboard() {
           <MonthlySpendChart data={series?.monthlySpend ?? []} />
         </div>
 
-        <div className="rounded-xl border bg-card p-5 lg:col-span-2">
-          <RouteCostPanel routes={series?.routeCosts ?? []} />
+        <div className="lg:col-span-2">
+          <CostByRoutePanel transactions={txs} loading={txQ.isLoading} />
         </div>
       </div>
 
@@ -101,7 +185,9 @@ function Dashboard() {
         <div className="rounded-xl border bg-card">
           <div className="flex items-center justify-between border-b p-4">
             <h3 className="font-display font-semibold">Recent transactions</h3>
-            <Button variant="ghost" size="sm" asChild><Link to="/transactions">View all</Link></Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/transactions">View all</Link>
+            </Button>
           </div>
           <div className="divide-y">
             {txs.slice(0, 6).map((t) => (
@@ -115,7 +201,9 @@ function Dashboard() {
                   <Package className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <div className="text-sm font-medium">{t.reference}</div>
-                    <div className="text-xs text-muted-foreground">{t.origin} → {t.destination}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {t.origin} → {t.destination}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -130,11 +218,27 @@ function Dashboard() {
         <div className="rounded-xl border bg-card p-4">
           <h3 className="mb-4 font-display font-semibold">Lifecycle stage distribution</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={["Vessel","Port","Clearing","Transport","Warehouse","Delivery"].map((stage) => ({ stage, count: txs.filter(t => t.currentStage === stage).length }))}>
+            <BarChart
+              data={["Vessel", "Port", "Clearing", "Transport", "Warehouse", "Delivery"].map(
+                (stage) => ({ stage, count: txs.filter((t) => t.currentStage === stage).length }),
+              )}
+            >
               <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="stage" stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
+              <XAxis
+                dataKey="stage"
+                stroke={AXIS}
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+              />
               <YAxis stroke={AXIS} fontSize={11} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid var(--color-border)", fontVariantNumeric: "tabular-nums" }} />
+              <Tooltip
+                contentStyle={{
+                  borderRadius: 10,
+                  border: "1px solid var(--color-border)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              />
               <Bar dataKey="count" fill="var(--color-accent)" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
