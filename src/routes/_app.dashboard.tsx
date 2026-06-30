@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
+import { subscribeTable } from "@/lib/realtime";
 import { useRole } from "@/contexts/RoleContext";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -34,6 +36,7 @@ const AXIS = "var(--color-muted-foreground)";
 
 function Dashboard() {
   const { role } = useRole();
+  const qc = useQueryClient();
   const txQ = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
   const seriesQ = useQuery({ queryKey: ["series"], queryFn: api.dashboardSeries });
   const invQ = useQuery({ queryKey: ["inv"], queryFn: api.listInvoices });
@@ -41,6 +44,21 @@ function Dashboard() {
   const regQ = useQuery({ queryKey: ["reg"], queryFn: api.listRegistrations });
   const cfQ = useQuery({ queryKey: ["cf"], queryFn: api.listComplianceFlags });
   const aeQ = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
+
+  // Live dashboard: refresh when ops events / shipments change (no-op under mock).
+  useEffect(() => {
+    const refresh = () => {
+      qc.invalidateQueries({ queryKey: ["tx"] });
+      qc.invalidateQueries({ queryKey: ["series"] });
+      qc.invalidateQueries({ queryKey: ["ae"] });
+    };
+    const unsubEvents = subscribeTable("shipment_events", refresh);
+    const unsubShipments = subscribeTable("shipments", refresh);
+    return () => {
+      unsubEvents();
+      unsubShipments();
+    };
+  }, [qc]);
 
   if (txQ.isLoading || seriesQ.isLoading) {
     return (
