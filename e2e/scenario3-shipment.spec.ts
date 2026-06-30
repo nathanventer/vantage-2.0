@@ -16,8 +16,10 @@ test.describe("Scenario 3 — shipment request → score → select provider", (
     await page.getByRole("button", { name: /match providers/i }).click();
     await expect(page.getByText(/matched providers/i)).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole("button", { name: /accept quote/i }).click();
-    await expect(page.getByText(/transaction created/i)).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: /confirm selection/i }).click();
+    await expect(page.getByRole("heading", { name: /shipment created/i })).toBeVisible({
+      timeout: 20_000,
+    });
 
     await page.getByRole("button", { name: /view transactions/i }).click();
     await expect(page).toHaveURL(/\/transactions/);
