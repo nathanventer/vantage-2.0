@@ -14,7 +14,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import logoAsset from "@/assets/vantage-logo.png.asset.json";
+import { VantageLogo } from "@/components/VantageLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { DEMO_LOGINS } from "@/adapters/auth";
 import { api } from "@/services";
@@ -115,14 +115,8 @@ function Landing() {
               "radial-gradient(circle at 80% 30%, rgba(255,255,255,.25), transparent 40%), radial-gradient(circle at 15% 85%, rgba(255,255,255,.15), transparent 45%)",
           }}
         />
-        <div className="relative flex items-center gap-3">
-          <img src={logoAsset.url} alt="Vantage" className="h-12 w-12 rounded-xl bg-white/95 p-1" />
-          <div>
-            <div className="font-display text-2xl font-bold tracking-tight">VANTAGE</div>
-            <div className="text-[10px] uppercase tracking-[0.22em] text-white/70">
-              Trade &amp; Logistics Platform
-            </div>
-          </div>
+        <div className="relative">
+          <VantageLogo size="lg" />
         </div>
         <div className="relative max-w-md">
           <h1 className="font-display text-[2.6rem] font-bold leading-[1.05] tracking-tight">
@@ -153,13 +147,8 @@ function Landing() {
       {/* Auth card */}
       <div className="flex items-center justify-center bg-app p-6 sm:p-10">
         <div className="glass w-full max-w-md rounded-2xl border p-6 shadow-lg sheen sm:p-8">
-          <div className="mb-6 flex items-center gap-3 lg:hidden">
-            <img
-              src={logoAsset.url}
-              alt="Vantage"
-              className="h-10 w-10 rounded-md border bg-white p-1"
-            />
-            <span className="font-display text-xl font-bold">VANTAGE</span>
+          <div className="mb-8 flex justify-center lg:hidden">
+            <VantageLogo size="md" onLight />
           </div>
 
           {/* Segmented control */}

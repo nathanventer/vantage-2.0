@@ -1,14 +1,35 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, FileBox, Inbox, Warehouse, Container, Boxes,
-  Truck, FileText, CreditCard, BarChart3, ShieldCheck, ScrollText, UserCheck, Users,
+  LayoutDashboard,
+  FileBox,
+  Inbox,
+  Warehouse,
+  Container,
+  Boxes,
+  Truck,
+  FileText,
+  CreditCard,
+  BarChart3,
+  ShieldCheck,
+  ScrollText,
+  UserCheck,
+  Users,
 } from "lucide-react";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useRole } from "@/contexts/RoleContext";
-import logoAsset from "@/assets/vantage-logo.png.asset.json";
+import { VantageLogo } from "@/components/VantageLogo";
+import { cn } from "@/lib/utils";
 
 type Item = { title: string; url: string; icon: typeof LayoutDashboard };
 
@@ -44,15 +65,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
-          <img src={logoAsset.url} alt="Vantage" className="h-8 w-8 shrink-0 rounded bg-white object-contain p-0.5" />
-          {!collapsed && (
-            <div className="flex flex-col leading-tight">
-              <span className="font-display text-base font-bold text-sidebar-foreground">VANTAGE</span>
-              <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60">Trade & Logistics</span>
-            </div>
-          )}
+      <SidebarHeader className="border-b border-sidebar-border px-2 py-4">
+        <Link
+          to="/dashboard"
+          className={cn("flex items-center", collapsed ? "justify-center" : "justify-start px-1")}
+        >
+          <VantageLogo size={collapsed ? "sm" : "md"} />
         </Link>
       </SidebarHeader>
 

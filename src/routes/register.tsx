@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import logoAsset from "@/assets/vantage-logo.png.asset.json";
+import { VantageLogo } from "@/components/VantageLogo";
 import type { CompanyInput } from "@/types";
 
 export const Route = createFileRoute("/register")({
@@ -213,11 +213,8 @@ function RegisterPage() {
   return (
     <div className="min-h-dvh bg-app">
       <header className="glass sticky top-0 z-30 border-b">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <img src={logoAsset.url} alt="" className="h-8 w-8 rounded-lg bg-white/95 p-1" />
-            <span className="font-display text-lg font-bold tracking-tight">VANTAGE</span>
-          </div>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
+          <VantageLogo size="md" onLight />
           <UserMenu />
         </div>
       </header>
