@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
+import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { mockApi } from "./mockApi";
 import type { DataService } from "./DataService";
 import type {
@@ -337,7 +338,11 @@ export const supabaseApi: DataService = {
   async approveCompany(companyId: string): Promise<void> {
     const { error } = await supabase
       .from("companies")
-      .update({ approval_status: "approved", approved_at: new Date().toISOString(), rejection_reason: null })
+      .update({
+        approval_status: "approved",
+        approved_at: new Date().toISOString(),
+        rejection_reason: null,
+      })
       .eq("id", companyId);
     fail("approveCompany", error);
   },
@@ -358,7 +363,10 @@ export const supabaseApi: DataService = {
     fail("setCompanyPending", error);
   },
 
-  async updateVerificationChecklist(companyId: string, checklist: Record<string, boolean>): Promise<void> {
+  async updateVerificationChecklist(
+    companyId: string,
+    checklist: Record<string, boolean>,
+  ): Promise<void> {
     const { error } = await supabase
       .from("companies")
       .update({ verification_checklist: checklist })
@@ -388,7 +396,11 @@ export const supabaseApi: DataService = {
       contact_phone: input.contactPhone ?? null,
       service_categories: input.subType ? [input.subType] : [],
     };
-    const { data: prof } = await supabase.from("profiles").select("company_id").eq("id", id).maybeSingle();
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", id)
+      .maybeSingle();
     const existing = (prof as { company_id: string | null } | null)?.company_id ?? null;
     if (existing) {
       const { error } = await supabase.from("companies").update(fields).eq("id", existing);
@@ -402,13 +414,20 @@ export const supabaseApi: DataService = {
       .single();
     fail("saveCompany(insert)", error);
     const companyId = (data as { id: string }).id;
-    const { error: linkErr } = await supabase.from("profiles").update({ company_id: companyId }).eq("id", id);
+    const { error: linkErr } = await supabase
+      .from("profiles")
+      .update({ company_id: companyId })
+      .eq("id", id);
     fail("saveCompany(link)", linkErr);
     return companyId;
   },
 
   async recordComplianceDocument(companyId, docType): Promise<void> {
-    await supabase.from("compliance_documents").delete().eq("company_id", companyId).eq("doc_type", docType);
+    await supabase
+      .from("compliance_documents")
+      .delete()
+      .eq("company_id", companyId)
+      .eq("doc_type", docType);
     const { error } = await supabase
       .from("compliance_documents")
       .insert({ company_id: companyId, doc_type: docType, verification_status: "pending" });
@@ -417,9 +436,12 @@ export const supabaseApi: DataService = {
 
   async capturePopiaConsent(policyVersion): Promise<void> {
     const id = await currentUserId();
-    const { error } = await supabase
-      .from("popia_consents")
-      .insert({ user_id: id, consent_type: "privacy_policy", granted: true, policy_version: policyVersion });
+    const { error } = await supabase.from("popia_consents").insert({
+      user_id: id,
+      consent_type: "privacy_policy",
+      granted: true,
+      policy_version: policyVersion,
+    });
     fail("capturePopiaConsent", error);
   },
 
@@ -433,7 +455,10 @@ export const supabaseApi: DataService = {
 
   async updateOnboardingStep(step): Promise<void> {
     const id = await currentUserId();
-    const { error } = await supabase.from("profiles").update({ onboarding_step: step }).eq("id", id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ onboarding_step: step })
+      .eq("id", id);
     fail("updateOnboardingStep", error);
   },
 
@@ -546,6 +571,110 @@ export const supabaseApi: DataService = {
       entity: e.entity_id ? `${e.entity}:${e.entity_id}` : e.entity,
       timestamp: e.created_at,
     }));
+  },
+
+  // ── Shipment & quote write-path (Section F) ──────────────────────────────
+  async createShipment(input): Promise<Transaction> {
+    const userId = await currentUserId();
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", userId)
+      .maybeSingle();
+    const companyId = (prof as { company_id: string | null } | null)?.company_id;
+    if (!companyId) throw new Error("[supabaseApi] no company linked to current user");
+
+    const { data: refData, error: refErr } = await supabase.rpc("next_ref", { p_prefix: "TXN" });
+    fail("createShipment(next_ref)", refErr);
+    const reference = (refData as string | null) ?? `VTG-TXN-${Date.now()}`;
+
+    const { data, error } = await supabase
+      .from("shipments")
+      .insert({
+        reference,
+        demand_company_id: companyId,
+        origin_port: input.origin,
+        destination_port: input.destination,
+        cargo_description: input.cargo,
+        weight_kg: Math.round(input.weightTons * 1000),
+        cargo_value: input.valueZAR ?? null,
+        container_type: input.containerType ?? null,
+        status: "submitted",
+        current_step: 1,
+      })
+      .select("id")
+      .single();
+    fail("createShipment(insert)", error);
+    const created = await supabaseApi.getTransaction((data as { id: string }).id);
+    if (!created) throw new Error("[supabaseApi] created shipment not found");
+    return created;
+  },
+
+  async scoreQuotes(shipmentId): Promise<ScoredQuote[]> {
+    const tx = await supabaseApi.getTransaction(shipmentId);
+    if (!tx) throw new Error(`[supabaseApi] shipment not found: ${shipmentId}`);
+    const result = optimizer.score(
+      tx.quotes.map((q) => ({
+        id: q.id,
+        providerId: q.providerId,
+        providerName: q.providerName,
+        priceZAR: q.priceZAR,
+        etaDays: q.etaDays,
+      })),
+    );
+    // Persist scores (best-effort; columns added by the next_ref/scoring migration).
+    await Promise.all(
+      result.ranked.map((s) =>
+        supabase
+          .from("quotes")
+          .update({
+            cost_score: s.costScore,
+            service_score: s.serviceScore,
+            compliance_score: s.complianceScoreWeighted,
+            capacity_score: s.capacityScoreWeighted,
+            risk_score: s.riskScoreWeighted,
+            total_score: s.totalScore,
+          })
+          .eq("id", s.id),
+      ),
+    );
+    return result.ranked;
+  },
+
+  async selectQuote(shipmentId, quoteId, reason): Promise<void> {
+    const tx = await supabaseApi.getTransaction(shipmentId);
+    if (!tx) throw new Error(`[supabaseApi] shipment not found: ${shipmentId}`);
+    const result = optimizer.score(
+      tx.quotes.map((q) => ({
+        id: q.id,
+        providerId: q.providerId,
+        providerName: q.providerName,
+        priceZAR: q.priceZAR,
+        etaDays: q.etaDays,
+      })),
+    );
+    if (result.recommendedQuoteId && quoteId !== result.recommendedQuoteId && !reason?.trim()) {
+      throw new Error("source_override_reason required when overriding the recommended quote");
+    }
+    const chosen = tx.quotes.find((q) => q.id === quoteId);
+    if (!chosen) throw new Error(`[supabaseApi] quote not found: ${quoteId}`);
+
+    const { error: qErr } = await supabase
+      .from("quotes")
+      .update({ status: "selected" })
+      .eq("id", quoteId);
+    fail("selectQuote(quote)", qErr);
+
+    const { error: sErr } = await supabase
+      .from("shipments")
+      .update({
+        source_company_id: chosen.providerId,
+        current_step: 4,
+        status: "in_progress",
+        source_override_reason: reason?.trim() || null,
+      })
+      .eq("id", tx.id);
+    fail("selectQuote(shipment)", sErr);
   },
 
   // ── Analytics: derived from live shipments + quotes (RLS-scoped) ─────────

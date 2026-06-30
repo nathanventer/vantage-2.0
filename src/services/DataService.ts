@@ -16,7 +16,9 @@ import type {
   Registration,
   DashboardSeries,
   CompanyInput,
+  NewShipmentInput,
 } from "@/types";
+import type { ScoredQuote } from "@/adapters/optimizer";
 
 /**
  * The single data-access port the UI depends on. Derived from the surface the
@@ -58,6 +60,17 @@ export interface DataService {
   listDocuments(): Promise<DocumentRecord[]>;
   listAuditEvents(): Promise<AuditEvent[]>;
   dashboardSeries(): Promise<DashboardSeries>;
+
+  // ── Shipment & quote write-path (Section F) ─────────────────────────────
+  /** Create a shipment/RFQ; reference generated via next_ref(). */
+  createShipment(input: NewShipmentInput): Promise<Transaction>;
+  /** Score a shipment's quotes through the Optimizer (25/25/20/15/15). */
+  scoreQuotes(shipmentId: string): Promise<ScoredQuote[]>;
+  /**
+   * Select a provider quote. A non-recommended pick requires a recorded
+   * source_override_reason (enforced here AND in the UI).
+   */
+  selectQuote(shipmentId: string, quoteId: string, reason?: string): Promise<void>;
 
   // ── Out-of-Phase-1 (mock-backed until their phase) ──────────────────────
   listWarehouseJobs(): Promise<WarehouseJob[]>;

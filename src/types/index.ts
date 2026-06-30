@@ -14,6 +14,16 @@ export interface AuthUser {
   onboardingStep: number;
 }
 
+/** New shipment / RFQ payload captured on the New Shipment page (Section F). */
+export interface NewShipmentInput {
+  origin: string;
+  destination: string;
+  cargo: string;
+  weightTons: number;
+  containerType?: string;
+  valueZAR?: number;
+}
+
 /** Company create/update payload captured during onboarding (Step 2). */
 export interface CompanyInput {
   name: string;

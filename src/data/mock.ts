@@ -76,7 +76,7 @@ const CARGOS = [
   "Steel coils",
 ];
 
-const STEP_LABELS = [
+export const STEP_LABELS = [
   "Shipment request created",
   "Providers matched",
   "Quotes / acceptance",
@@ -94,6 +94,16 @@ const STEP_LABELS = [
   "Payment processed",
   "Transaction closed",
 ];
+
+/** Build the canonical 16 lifecycle steps for a given 1-based current step. */
+export function makeLifecycleSteps(currentStep: number): LifecycleStep[] {
+  const done = currentStep - 1;
+  return STEP_LABELS.map((label, idx) => ({
+    index: idx + 1,
+    label,
+    status: idx < done ? "Completed" : idx === done ? "In Progress" : "Pending",
+  }));
+}
 
 const MACRO_STAGES: MacroStage[] = [
   "Vessel",
