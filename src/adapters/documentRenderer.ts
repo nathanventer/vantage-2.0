@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { EDGE_LIVE, invokeEdge } from "@/lib/edge";
 
 /**
  * DocumentRenderer seam — client-side PDF generation (jsPDF). Used by the
@@ -25,10 +26,16 @@ export interface RenderDoc {
 }
 
 export interface DocumentRenderer {
-  /** Build a PDF Blob for in-app preview / upload. */
+  /** Build a PDF Blob for in-app preview / upload (client-side, instant). */
   toBlob(doc: RenderDoc): Blob;
-  /** Build and trigger a browser download. */
+  /** Build and trigger a browser download (client-side, instant). */
   download(doc: RenderDoc, filename: string): void;
+  /**
+   * Produce the canonical, branded PDF server-side and store it in the private
+   * transaction-docs bucket (via the render-pdf edge function), returning a
+   * signed URL. Returns null when edge functions are not live (use download()).
+   */
+  archive(doc: RenderDoc, path: string): Promise<{ path: string; url: string | null } | null>;
 }
 
 const BRAND: [number, number, number] = [47, 107, 255];
@@ -113,5 +120,9 @@ export const documentRenderer: DocumentRenderer = {
   },
   download(doc, filename) {
     build(doc).save(filename.endsWith(".pdf") ? filename : `${filename}.pdf`);
+  },
+  async archive(doc, path) {
+    if (!EDGE_LIVE) return null;
+    return invokeEdge<{ path: string; url: string | null }>("render-pdf", { doc, path });
   },
 };

@@ -1,4 +1,4 @@
-import { IS_SUPABASE } from "./auth";
+import { EDGE_LIVE, invokeEdge } from "@/lib/edge";
 
 /**
  * PaymentGateway seam. Phase-1 is a mock that walks an invoice through the
@@ -60,7 +60,31 @@ const mockGateway: PaymentGateway = {
   },
 };
 
-// TODO Phase 3: real PSP/bank gateway implementation behind this same port.
-const realGateway: PaymentGateway = mockGateway;
+// Real gateway: initiate creates a Stripe PaymentIntent via the edge function
+// (secret key server-side). Settlement is NEVER marked from the client — the
+// stripe-webhook function flips invoices to paid after Stripe confirms. Here
+// `settle` simply records the client-side intent to await confirmation.
+const edgeGateway: PaymentGateway = {
+  async initiate(invoiceNumber, amountZAR, method) {
+    const r = await invokeEdge<{ clientSecret: string; reference: string }>(
+      "create-payment-intent",
+      { invoiceNumber, amountZAR, method },
+    );
+    return {
+      invoiceNumber,
+      amountZAR,
+      method,
+      reference: r.reference,
+      timeline: [
+        { state: "Invoiced", at: new Date().toISOString(), note: "Invoice issued" },
+        { state: "Payment Initiated", at: new Date().toISOString(), note: `${method} via Stripe` },
+      ],
+    };
+  },
+  // Settlement is webhook-driven; the client cannot self-settle.
+  async settle(intent) {
+    return intent;
+  },
+};
 
-export const paymentGateway: PaymentGateway = IS_SUPABASE ? realGateway : mockGateway;
+export const paymentGateway: PaymentGateway = EDGE_LIVE ? edgeGateway : mockGateway;

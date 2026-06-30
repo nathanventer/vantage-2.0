@@ -6,7 +6,9 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  // supabase/functions/* are Deno edge functions (npm:/jsr: specifiers, Deno
+  // globals) — linted/typechecked by the Supabase toolchain, not the client.
+  { ignores: ["dist", ".output", ".vinxi", "supabase/functions/**"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
