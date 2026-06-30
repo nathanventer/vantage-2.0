@@ -17,6 +17,8 @@ import type {
   DashboardSeries,
   CompanyInput,
   NewShipmentInput,
+  NewDocumentInput,
+  DocumentPayload,
 } from "@/types";
 import type { ScoredQuote } from "@/adapters/optimizer";
 
@@ -71,6 +73,15 @@ export interface DataService {
    * source_override_reason (enforced here AND in the UI).
    */
   selectQuote(shipmentId: string, quoteId: string, reason?: string): Promise<void>;
+
+  // ── Document write-path (Section C → shipment_documents) ────────────────
+  createDocument(input: NewDocumentInput): Promise<DocumentRecord>;
+  /** Save a new version of a document's structured payload (jsonb). */
+  versionDocument(docId: string, payload: DocumentPayload): Promise<DocumentRecord>;
+  /** Apply a typed-name e-signature (SignatureProvider). */
+  signDocument(docId: string, fullName: string): Promise<DocumentRecord>;
+  /** Admin approval / archive. */
+  approveDocument(docId: string): Promise<DocumentRecord>;
 
   // ── Out-of-Phase-1 (mock-backed until their phase) ──────────────────────
   listWarehouseJobs(): Promise<WarehouseJob[]>;

@@ -1,7 +1,8 @@
 import * as M from "@/data/mock";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
-import type { MacroStage, Quote, Transaction } from "@/types";
+import { signatureProvider } from "@/adapters/signatureProvider";
+import type { DocumentRecord, MacroStage, Quote, Transaction } from "@/types";
 import type { DataService } from "./DataService";
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -19,6 +20,13 @@ const stageForStep = (step: number): MacroStage =>
 
 /** In-memory reference counter, seeded past the 24 generated demo shipments. */
 let refCounter = 1000 + M.transactions.length;
+let docCounter = M.documents.length;
+
+function findDoc(docId: string) {
+  const doc = M.documents.find((d) => d.id === docId);
+  if (!doc) throw new Error(`[mockApi] document not found: ${docId}`);
+  return doc;
+}
 
 function scoreInputs(t: Transaction) {
   return t.quotes.map((q) => ({
@@ -220,6 +228,57 @@ export const mockApi: DataService = {
       entity: tx.reference,
       timestamp: new Date().toISOString(),
     });
+  },
+
+  // ── Document write-path (Section C) ──────────────────────────────────────
+  async createDocument(input) {
+    await delay();
+    docCounter += 1;
+    const doc: DocumentRecord = {
+      id: `doc-new-${docCounter}`,
+      type: input.type,
+      transactionRef: input.transactionRef,
+      shipmentId: input.shipmentId,
+      uploadedById: "you",
+      uploadedBy: "You",
+      uploadedAt: new Date().toISOString(),
+      status: "Draft",
+      signed: false,
+      sarsVerified: false,
+      version: 1,
+      payload: input.payload ?? {},
+    };
+    M.documents.unshift(doc);
+    return doc;
+  },
+
+  async versionDocument(docId, payload) {
+    await delay();
+    const doc = findDoc(docId);
+    doc.payload = payload;
+    doc.version += 1;
+    doc.status = "Submitted";
+    return doc;
+  },
+
+  async signDocument(docId, fullName) {
+    await delay();
+    const doc = findDoc(docId);
+    const sig = signatureProvider.sign(fullName);
+    doc.signed = true;
+    doc.signedBy = sig.signedBy;
+    doc.signedAt = sig.signedAt;
+    doc.signatureToken = sig.token;
+    doc.status = "Verified";
+    return doc;
+  },
+
+  async approveDocument(docId) {
+    await delay();
+    const doc = findDoc(docId);
+    doc.status = "Approved";
+    doc.sarsVerified = true;
+    return doc;
   },
 };
 

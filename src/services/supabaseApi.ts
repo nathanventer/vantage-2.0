@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabaseClient";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
+import { dbFromLabel, labelFromDb } from "@/lib/documents";
+import { signatureProvider } from "@/adapters/signatureProvider";
 import { mockApi } from "./mockApi";
 import type { DataService } from "./DataService";
 import type {
@@ -21,7 +23,7 @@ import type {
   RegistrationStatus,
   GovernanceStatus,
   UserStatus,
-  DocumentType,
+  DocumentStatus,
   MacroStage,
   GovernanceCheck,
 } from "@/types";
@@ -109,22 +111,53 @@ function buildSteps(currentStep: number): LifecycleStep[] {
   }));
 }
 
-/* DB doc_type (snake, 19) → UI DocumentType. Unmapped fall back; reconciled in
- * the documents module (STEP 7). shipment_documents is currently empty. */
-const DOC_TYPE_MAP: Record<string, DocumentType> = {
-  purchase_order: "Purchase Order",
-  commercial_invoice: "Commercial Invoice",
-  bill_of_lading: "Bill of Lading",
-  customs_declaration: "Customs Declaration",
-  delivery_note: "Delivery Note",
-  warehouse_receipt: "Warehouse Receipt",
-  transport_manifest: "Transport Manifest",
-  proof_of_service: "Proof of Service Completion",
-  proof_of_payment: "Proof of Payment",
-  transaction_summary: "Transaction Summary",
-  sars_clearing: "SARS Clearing Document",
-};
-const docType = (t: string): DocumentType => DOC_TYPE_MAP[t] ?? "Transaction Summary";
+/* DB doc_type (snake) ↔ UI DocumentType — lossless map lives in @/lib/documents. */
+const docType = labelFromDb;
+
+function docStatus(s: string): DocumentStatus {
+  if (s === "approved") return "Approved";
+  if (s === "verified") return "Verified";
+  if (s === "submitted") return "Submitted";
+  return "Draft";
+}
+
+const DOC_SELECT =
+  "id,shipment_id,doc_type,reference,status,version,created_at,payload," +
+  "signed_by,signed_at,shipment:shipments(reference),generated_by";
+
+interface DocRow {
+  id: string;
+  shipment_id: string | null;
+  doc_type: string;
+  reference: string | null;
+  status: string;
+  version: number;
+  created_at: string;
+  payload: Record<string, unknown> | null;
+  signed_by: string | null;
+  signed_at: string | null;
+  shipment: { reference: string } | null;
+  generated_by: string | null;
+}
+
+function mapDocument(d: DocRow): DocumentRecord {
+  return {
+    id: d.id,
+    type: docType(d.doc_type),
+    transactionRef: d.shipment?.reference ?? d.reference ?? "—",
+    shipmentId: d.shipment_id ?? undefined,
+    uploadedById: d.generated_by ?? "",
+    uploadedBy: d.signed_by ?? d.generated_by ?? "—",
+    uploadedAt: d.created_at,
+    status: docStatus(d.status),
+    signed: !!d.signed_by,
+    sarsVerified: d.status === "approved",
+    version: d.version,
+    payload: (d.payload as DocumentRecord["payload"]) ?? undefined,
+    signedBy: d.signed_by ?? undefined,
+    signedAt: d.signed_at ?? undefined,
+  };
+}
 
 /* ── Row shapes for the columns we read (no generated DB types) ──────────── */
 interface NamedRef {
@@ -519,33 +552,80 @@ export const supabaseApi: DataService = {
     const { data, error } = await supabase
       .from("shipment_documents")
       .select(
-        "id,doc_type,reference,status,version,created_at," +
-          "shipment:shipments(reference),generated_by",
+        "id,shipment_id,doc_type,reference,status,version,created_at,payload," +
+          "signed_by,signed_at,shipment:shipments(reference),generated_by",
       )
       .order("created_at", { ascending: false });
     fail("listDocuments", error);
-    type Row = {
-      id: string;
-      doc_type: string;
-      reference: string | null;
-      status: string;
-      version: number;
-      created_at: string;
-      shipment: { reference: string } | null;
-      generated_by: string | null;
-    };
-    return ((data ?? []) as unknown as Row[]).map((d) => ({
-      id: d.id,
-      type: docType(d.doc_type),
-      transactionRef: d.shipment?.reference ?? d.reference ?? "—",
-      uploadedById: d.generated_by ?? "",
-      uploadedBy: d.generated_by ?? "—",
-      uploadedAt: d.created_at,
-      status: "Draft",
-      signed: d.status === "approved",
-      sarsVerified: false,
-      version: d.version,
-    }));
+    return ((data ?? []) as unknown as DocRow[]).map(mapDocument);
+  },
+
+  async createDocument(input): Promise<DocumentRecord> {
+    const userId = await currentUserId();
+    let shipmentId = input.shipmentId ?? null;
+    if (!shipmentId && input.transactionRef) {
+      const { data: s } = await supabase
+        .from("shipments")
+        .select("id")
+        .eq("reference", input.transactionRef)
+        .maybeSingle();
+      shipmentId = (s as { id: string } | null)?.id ?? null;
+    }
+    const { data, error } = await supabase
+      .from("shipment_documents")
+      .insert({
+        shipment_id: shipmentId,
+        doc_type: dbFromLabel(input.type),
+        reference: input.transactionRef,
+        status: "draft",
+        version: 1,
+        payload: input.payload ?? {},
+        generated_by: userId,
+      })
+      .select(DOC_SELECT)
+      .single();
+    fail("createDocument", error);
+    return mapDocument(data as unknown as DocRow);
+  },
+
+  async versionDocument(docId, payload): Promise<DocumentRecord> {
+    const { data: cur } = await supabase
+      .from("shipment_documents")
+      .select("version")
+      .eq("id", docId)
+      .maybeSingle();
+    const nextVersion = ((cur as { version: number } | null)?.version ?? 1) + 1;
+    const { data, error } = await supabase
+      .from("shipment_documents")
+      .update({ payload, version: nextVersion, status: "submitted" })
+      .eq("id", docId)
+      .select(DOC_SELECT)
+      .single();
+    fail("versionDocument", error);
+    return mapDocument(data as unknown as DocRow);
+  },
+
+  async signDocument(docId, fullName): Promise<DocumentRecord> {
+    const sig = signatureProvider.sign(fullName);
+    const { data, error } = await supabase
+      .from("shipment_documents")
+      .update({ signed_by: sig.signedBy, signed_at: sig.signedAt, status: "verified" })
+      .eq("id", docId)
+      .select(DOC_SELECT)
+      .single();
+    fail("signDocument", error);
+    return mapDocument(data as unknown as DocRow);
+  },
+
+  async approveDocument(docId): Promise<DocumentRecord> {
+    const { data, error } = await supabase
+      .from("shipment_documents")
+      .update({ status: "approved" })
+      .eq("id", docId)
+      .select(DOC_SELECT)
+      .single();
+    fail("approveDocument", error);
+    return mapDocument(data as unknown as DocRow);
   },
 
   async listAuditEvents(): Promise<AuditEvent[]> {

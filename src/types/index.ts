@@ -238,8 +238,16 @@ export interface Trip {
 }
 
 export type DocumentType =
+  | "RFQ"
+  | "Source Selection"
+  | "Formal Quote"
   | "Purchase Order"
+  | "Pro-forma Invoice"
   | "Commercial Invoice"
+  | "Tax Invoice"
+  | "Packing List"
+  | "Import Permit"
+  | "Insurance Certificate"
   | "Bill of Lading"
   | "Customs Declaration"
   | "Delivery Note"
@@ -251,10 +259,21 @@ export type DocumentType =
   | "Proof of Payment"
   | "Transaction Summary";
 
+/** Structured document body persisted to shipment_documents.payload (jsonb). */
+export interface DocumentPayload {
+  counterparty?: string;
+  amountZAR?: number;
+  issuedDate?: string;
+  notes?: string;
+  [key: string]: unknown;
+}
+
 export interface DocumentRecord {
   id: string;
   type: DocumentType;
   transactionRef: string;
+  /** FK into shipments (when known) for grouping + write-paths. */
+  shipmentId?: string;
   /** FK into companies/providers; `uploadedBy` is the denormalized display name. */
   uploadedById: string;
   uploadedBy: string;
@@ -263,6 +282,20 @@ export interface DocumentRecord {
   signed: boolean;
   sarsVerified: boolean;
   version: number;
+  /** Structured form body (versioned). */
+  payload?: DocumentPayload;
+  /** E-signature stamp (SignatureProvider). */
+  signedBy?: string;
+  signedAt?: string;
+  signatureToken?: string;
+}
+
+/** Create payload for a new document from a template (Section C). */
+export interface NewDocumentInput {
+  type: DocumentType;
+  transactionRef: string;
+  shipmentId?: string;
+  payload?: DocumentPayload;
 }
 
 export interface Invoice {
