@@ -7,7 +7,7 @@ bun install
 supabase db push                              # apply all migrations (incl. phase_c_hardening)
 supabase db execute --file supabase/seed.sql  # idempotent demo data
 bash scripts/verify-phase-c.sh               # tsc + lint + test + build + bundle grep
-VITE_DATA_BACKEND=mock bun run test:e2e e2e/mock-smoke.spec.ts   # CI smoke
+VITE_DATA_BACKEND=mock bun run test:e2e mock-smoke   # CI smoke (dev server on :8080)
 VITE_DATA_BACKEND=supabase bun run test:e2e:supabase           # scenarios 1–3 (needs .env.local)
 bun run types:gen                             # refresh src/types/supabase.ts (requires supabase CLI login)
 ```

@@ -31,10 +31,12 @@ jobs:
         run: bunx playwright install chromium --with-deps
 
       - name: E2E tests (mock backend)
-        run: bun run test:e2e e2e/mock-smoke.spec.ts
+        run: bun run test:e2e mock-smoke
         env:
           VITE_DATA_BACKEND: mock
           CI: true
+          PLAYWRIGHT_DEV_HOST: 127.0.0.1
+          PLAYWRIGHT_DEV_PORT: "8080"
 
       - name: Build
         run: bun run build

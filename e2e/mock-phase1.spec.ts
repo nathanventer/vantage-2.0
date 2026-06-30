@@ -16,7 +16,10 @@ test.describe("Mock backend — Phase 1", () => {
   test("Scenario 3 — shipment request → score → select", async ({ page }) => {
     await asMockRole(page, "demand");
     await page.goto("/transactions/new");
+    await expect(page.getByRole("heading", { name: /new shipment request/i })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: /match providers/i }).click();
+    await expect(page.getByText(/Vantage scored/i)).toBeVisible({ timeout: 20_000 });
     await expect(page.getByRole("button", { name: /confirm selection/i })).toBeVisible({
       timeout: 20_000,
     });
