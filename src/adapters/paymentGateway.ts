@@ -26,6 +26,8 @@ export interface PaymentIntent {
 export interface PaymentGateway {
   /** Begin a (mock) settlement for an invoice using the chosen method. */
   initiate(invoiceNumber: string, amountZAR: number, method: PaymentMethod): Promise<PaymentIntent>;
+  /** Confirm final settlement, appending the Settled event to the timeline. */
+  settle(intent: PaymentIntent): Promise<PaymentIntent>;
 }
 
 function isoMinutesAgo(min: number): string {
@@ -41,8 +43,18 @@ const mockGateway: PaymentGateway = {
       reference: `PAY-${invoiceNumber.replace(/\D/g, "").slice(-6) || "000000"}`,
       timeline: [
         { state: "Invoiced", at: isoMinutesAgo(90), note: "Invoice issued" },
-        { state: "Payment Initiated", at: isoMinutesAgo(60), note: `${method} initiated` },
-        { state: "Verified", at: isoMinutesAgo(30), note: "Bank gateway verified (mock)" },
+        { state: "Payment Initiated", at: isoMinutesAgo(2), note: `${method} initiated` },
+        { state: "Verified", at: isoMinutesAgo(1), note: "Bank gateway verified (mock)" },
+      ],
+    };
+  },
+  async settle(intent) {
+    if (intent.timeline.some((e) => e.state === "Settled")) return intent;
+    return {
+      ...intent,
+      timeline: [
+        ...intent.timeline,
+        { state: "Settled", at: new Date().toISOString(), note: "Funds settled (mock)" },
       ],
     };
   },
