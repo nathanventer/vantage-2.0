@@ -67,12 +67,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border px-2 py-4">
+      <SidebarHeader className="border-b border-sidebar-border px-2 py-3">
         <Link
           to="/dashboard"
-          className={cn("flex items-center", collapsed ? "justify-center" : "justify-start px-1")}
+          className={cn(
+            "flex items-center overflow-hidden",
+            collapsed ? "justify-center" : "justify-start px-1",
+          )}
         >
-          <VantageLogo size={collapsed ? "sm" : "md"} />
+          <VantageLogo size={collapsed ? "sm" : "md"} tone="sidebar" compact={collapsed} />
         </Link>
       </SidebarHeader>
 

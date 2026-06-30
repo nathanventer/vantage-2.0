@@ -116,7 +116,7 @@ function Landing() {
           }}
         />
         <div className="relative">
-          <VantageLogo size="lg" />
+          <VantageLogo size="lg" tone="light" />
         </div>
         <div className="relative max-w-md">
           <h1 className="font-display text-[2.6rem] font-bold leading-[1.05] tracking-tight">
@@ -148,7 +148,7 @@ function Landing() {
       <div className="flex items-center justify-center bg-app p-6 sm:p-10">
         <div className="glass w-full max-w-md rounded-2xl border p-6 shadow-lg sheen sm:p-8">
           <div className="mb-8 flex justify-center lg:hidden">
-            <VantageLogo size="md" onLight />
+            <VantageLogo size="md" />
           </div>
 
           {/* Segmented control */}

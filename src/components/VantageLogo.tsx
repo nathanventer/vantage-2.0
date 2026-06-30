@@ -1,30 +1,41 @@
-import logoUrl from "@/assets/vantage-logo.png";
 import { cn } from "@/lib/utils";
 
 const sizes = {
-  sm: "h-8",
-  md: "h-11",
-  lg: "h-14",
+  sm: "text-xs tracking-[0.14em]",
+  md: "text-xl tracking-[0.16em] sm:text-2xl sm:tracking-[0.18em]",
+  lg: "text-3xl tracking-[0.18em]",
+} as const;
+
+const tones = {
+  default: "text-foreground",
+  light: "text-white",
+  sidebar: "text-sidebar-foreground",
 } as const;
 
 type VantageLogoProps = {
   size?: keyof typeof sizes;
-  /** Invert for readability on light backgrounds */
-  onLight?: boolean;
+  tone?: keyof typeof tones;
+  /** Sidebar icon mode — single-letter mark */
+  compact?: boolean;
   className?: string;
 };
 
-export function VantageLogo({ size = "md", onLight = false, className }: VantageLogoProps) {
+export function VantageLogo({
+  size = "md",
+  tone = "default",
+  compact = false,
+  className,
+}: VantageLogoProps) {
   return (
-    <img
-      src={logoUrl}
-      alt="Vantage"
+    <span
       className={cn(
+        "font-display shrink-0 font-bold uppercase leading-none",
         sizes[size],
-        "w-auto shrink-0 object-contain",
-        onLight && "brightness-0 invert",
+        tones[tone],
         className,
       )}
-    />
+    >
+      {compact ? "V" : "VANTAGE"}
+    </span>
   );
 }
