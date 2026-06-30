@@ -10,7 +10,6 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       {...props}
     />
   ),
-
 );
 Card.displayName = "Card";
 

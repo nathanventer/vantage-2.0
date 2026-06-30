@@ -21,16 +21,16 @@ Both migrations are already applied to the live project (see `list_migrations`).
 
 All demo accounts use password **`Demo@123`** (created by `seed.sql`):
 
-| Email | Role | Company |
-| --- | --- | --- |
-| admin@tradehub.com | super_admin | — (platform) |
-| auditor@pulse.com | compliance_admin | — (Pulse) |
-| buyer@ubuntuimports.com | demand_user | Ubuntu Retail Imports |
-| finance@ubuntuimports.com | demand_user | Ubuntu Retail Imports |
-| provider@sclogistics.com | source_user | Southern Cross Logistics |
-| warehouse@sclogistics.com | source_user | Southern Cross Logistics |
-| transport@sclogistics.com | source_user | Southern Cross Logistics |
-| customs@sclogistics.com | source_user | Southern Cross Logistics |
+| Email                     | Role             | Company                  |
+| ------------------------- | ---------------- | ------------------------ |
+| admin@tradehub.com        | super_admin      | — (platform)             |
+| auditor@pulse.com         | compliance_admin | — (Pulse)                |
+| buyer@ubuntuimports.com   | demand_user      | Ubuntu Retail Imports    |
+| finance@ubuntuimports.com | demand_user      | Ubuntu Retail Imports    |
+| provider@sclogistics.com  | source_user      | Southern Cross Logistics |
+| warehouse@sclogistics.com | source_user      | Southern Cross Logistics |
+| transport@sclogistics.com | source_user      | Southern Cross Logistics |
+| customs@sclogistics.com   | source_user      | Southern Cross Logistics |
 
 Seeded data: 2 companies, 8 users, 5 shipments (TXN-1001..1005), 5 quotes, and
 verified compliance documents. Source: `TradeHub_Pulse_Demo_Workbook.xlsx` +

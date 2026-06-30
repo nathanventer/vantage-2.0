@@ -23,17 +23,17 @@ supabase link --project-ref qzckmlhaoehsngxjlgfk
 
 ## Functions
 
-| Function                  | Purpose                                              | Secrets |
-|---------------------------|------------------------------------------------------|---------|
-| `create-payment-intent`   | Stripe PaymentIntent for an invoice                  | `STRIPE_SECRET_KEY` |
-| `stripe-webhook`          | Confirms settlement / activates subscription (trusted) | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` |
-| `create-checkout-session` | Pulse subscription checkout                          | `STRIPE_SECRET_KEY`, `PULSE_PRICE_STANDARD`, `PULSE_PRICE_PRO`, `APP_URL` |
-| `send-email`              | Templated transactional email                        | `RESEND_API_KEY`, `EMAIL_FROM` |
-| `verify-compliance`       | CIPC/SARS/bank/VAT/B-BBEE verification (sandbox fallback) | `COMPLIANCE_API_BASE`, `COMPLIANCE_API_KEY` |
-| `sign-doc`                | Finalise e-signature + audit                         | `SIGNATURE_WEBHOOK_SECRET` (optional) |
-| `render-pdf`              | Branded PDF → transaction-docs bucket                | platform `SUPABASE_*` only |
-| `fleet-position`          | Latest GPS/ETA for a trip                            | `MAPS_API_KEY` |
-| `scheduled-reports`       | Cron Pulse report email + snapshot                   | `RESEND_API_KEY`, `EMAIL_FROM` |
+| Function                  | Purpose                                                   | Secrets                                                                   |
+| ------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `create-payment-intent`   | Stripe PaymentIntent for an invoice                       | `STRIPE_SECRET_KEY`                                                       |
+| `stripe-webhook`          | Confirms settlement / activates subscription (trusted)    | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`                              |
+| `create-checkout-session` | Pulse subscription checkout                               | `STRIPE_SECRET_KEY`, `PULSE_PRICE_STANDARD`, `PULSE_PRICE_PRO`, `APP_URL` |
+| `send-email`              | Templated transactional email                             | `RESEND_API_KEY`, `EMAIL_FROM`                                            |
+| `verify-compliance`       | CIPC/SARS/bank/VAT/B-BBEE verification (sandbox fallback) | `COMPLIANCE_API_BASE`, `COMPLIANCE_API_KEY`                               |
+| `sign-doc`                | Finalise e-signature + audit                              | `SIGNATURE_WEBHOOK_SECRET` (optional)                                     |
+| `render-pdf`              | Branded PDF → transaction-docs bucket                     | platform `SUPABASE_*` only                                                |
+| `fleet-position`          | Latest GPS/ETA for a trip                                 | `MAPS_API_KEY`                                                            |
+| `scheduled-reports`       | Cron Pulse report email + snapshot                        | `RESEND_API_KEY`, `EMAIL_FROM`                                            |
 
 ## Set secrets
 

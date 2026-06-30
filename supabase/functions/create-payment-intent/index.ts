@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
     if (!userId) return json({ error: "unauthorized" }, 401);
 
     const { invoiceNumber, amountZAR, method } = await req.json();
-    if (!invoiceNumber || !amountZAR) return json({ error: "invoiceNumber and amountZAR required" }, 400);
+    if (!invoiceNumber || !amountZAR)
+      return json({ error: "invoiceNumber and amountZAR required" }, 400);
 
     const db = adminClient();
     // Resolve the invoice via service role (re-validate the amount server-side).
@@ -36,7 +37,12 @@ Deno.serve(async (req) => {
     const intent = await stripe.paymentIntents.create({
       amount: Math.round(Number(invoice.amount) * 100),
       currency: (invoice.currency ?? "zar").toLowerCase(),
-      metadata: { invoice_id: invoice.id, invoice_number: invoice.number, method: method ?? "Card", user_id: userId },
+      metadata: {
+        invoice_id: invoice.id,
+        invoice_number: invoice.number,
+        method: method ?? "Card",
+        user_id: userId,
+      },
       automatic_payment_methods: { enabled: true },
     });
 

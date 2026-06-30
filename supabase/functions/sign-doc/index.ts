@@ -29,7 +29,12 @@ Deno.serve(async (req) => {
     const db = adminClient();
     const { data, error } = await db
       .from("shipment_documents")
-      .update({ signed_by: fullName, signed_at: signedAt, signature_token: sigToken, status: "verified" })
+      .update({
+        signed_by: fullName,
+        signed_at: signedAt,
+        signature_token: sigToken,
+        status: "verified",
+      })
       .eq("id", documentId)
       .select("id, shipment_id")
       .single();

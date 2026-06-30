@@ -1,8 +1,19 @@
 import type { ReactNode } from "react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export function DetailDrawer({
-  open, onOpenChange, title, description, children, footer,
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  footer,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;

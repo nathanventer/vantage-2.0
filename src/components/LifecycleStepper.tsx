@@ -27,16 +27,32 @@ export function LifecycleStepper({ steps }: { steps: LifecycleStep[] }) {
                 !done && !active && "bg-muted text-muted-foreground",
               )}
             >
-              {done ? <Check className="h-4 w-4" /> : active ? <Clock className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              {done ? (
+                <Check className="h-4 w-4" />
+              ) : active ? (
+                <Clock className="h-4 w-4" />
+              ) : (
+                <Circle className="h-3 w-3" />
+              )}
             </div>
             <div className="flex-1 pt-1">
               <div className="flex items-center justify-between gap-3">
-                <p className={cn("font-medium", done && "text-foreground", active && "text-foreground", !done && !active && "text-muted-foreground")}>
+                <p
+                  className={cn(
+                    "font-medium",
+                    done && "text-foreground",
+                    active && "text-foreground",
+                    !done && !active && "text-muted-foreground",
+                  )}
+                >
                   {s.index}. {s.label}
                 </p>
                 {s.timestamp && (
                   <span className="text-xs text-muted-foreground">
-                    {new Date(s.timestamp).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
+                    {new Date(s.timestamp).toLocaleDateString("en-ZA", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
                   </span>
                 )}
               </div>

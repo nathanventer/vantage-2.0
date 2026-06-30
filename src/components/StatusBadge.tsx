@@ -4,12 +4,28 @@ import type { StatusLabel } from "@/types";
 type Tone = "success" | "warning" | "info" | "destructive" | "neutral";
 
 const TONE: Record<string, Tone> = {
-  Verified: "success", Approved: "success", Completed: "success", Paid: "success",
-  Delivered: "success", Confirmed: "success", Accepted: "success", Active: "success",
-  Pending: "warning", "Under Review": "warning", "In Progress": "warning",
-  "In Transit": "warning", Submitted: "warning", Scheduled: "warning",
-  Failed: "destructive", Rejected: "destructive", Overdue: "destructive", Cancelled: "destructive",
-  Open: "info", Quoted: "info", Draft: "info", Unpaid: "info",
+  Verified: "success",
+  Approved: "success",
+  Completed: "success",
+  Paid: "success",
+  Delivered: "success",
+  Confirmed: "success",
+  Accepted: "success",
+  Active: "success",
+  Pending: "warning",
+  "Under Review": "warning",
+  "In Progress": "warning",
+  "In Transit": "warning",
+  Submitted: "warning",
+  Scheduled: "warning",
+  Failed: "destructive",
+  Rejected: "destructive",
+  Overdue: "destructive",
+  Cancelled: "destructive",
+  Open: "info",
+  Quoted: "info",
+  Draft: "info",
+  Unpaid: "info",
   Closed: "neutral",
 };
 
@@ -30,8 +46,14 @@ const DOT: Record<Tone, string> = {
 };
 
 export function StatusBadge({
-  status, className, dot = true,
-}: { status: StatusLabel | string; className?: string; dot?: boolean }) {
+  status,
+  className,
+  dot = true,
+}: {
+  status: StatusLabel | string;
+  className?: string;
+  dot?: boolean;
+}) {
   const tone = TONE[status] ?? "neutral";
   return (
     <span

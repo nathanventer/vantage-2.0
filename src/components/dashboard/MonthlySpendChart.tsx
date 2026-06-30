@@ -29,7 +29,9 @@ function SpendTooltip({
 
   return (
     <div className="rounded-xl border border-border bg-popover/95 px-3 py-2.5 shadow-lg backdrop-blur-sm">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+        {label}
+      </p>
       <div className="space-y-1.5">
         {spend != null && (
           <div className="flex items-center justify-between gap-6">
@@ -81,16 +83,28 @@ export function MonthlySpendChart({ data }: { data: MonthlySpendPoint[] }) {
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="rounded-lg border bg-inset/50 px-3 py-2.5">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Latest</div>
-          <div className="mt-0.5 font-display text-base font-semibold tabular-nums">{formatZAR(latest?.spendZAR ?? 0)}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Latest
+          </div>
+          <div className="mt-0.5 font-display text-base font-semibold tabular-nums">
+            {formatZAR(latest?.spendZAR ?? 0)}
+          </div>
         </div>
         <div className="rounded-lg border bg-inset/50 px-3 py-2.5">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Peak month</div>
-          <div className="mt-0.5 font-display text-base font-semibold tabular-nums">{peak.month}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Peak month
+          </div>
+          <div className="mt-0.5 font-display text-base font-semibold tabular-nums">
+            {peak.month}
+          </div>
         </div>
         <div className="col-span-2 rounded-lg border bg-inset/50 px-3 py-2.5 sm:col-span-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Shipments</div>
-          <div className="mt-0.5 font-display text-base font-semibold tabular-nums">{latest?.shipments ?? 0}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Shipments
+          </div>
+          <div className="mt-0.5 font-display text-base font-semibold tabular-nums">
+            {latest?.shipments ?? 0}
+          </div>
         </div>
       </div>
 
@@ -130,7 +144,10 @@ export function MonthlySpendChart({ data }: { data: MonthlySpendPoint[] }) {
               axisLine={false}
               width={32}
             />
-            <Tooltip content={<SpendTooltip />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
+            <Tooltip
+              content={<SpendTooltip />}
+              cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
+            />
             <Area
               yAxisId="spend"
               type="monotone"

@@ -29,7 +29,13 @@ async function buildPdf(doc: RenderDoc): Promise<Uint8Array> {
 
   page.drawRectangle({ x: 0, y: 772, width: 595, height: 70, color: rgb(0.06, 0.09, 0.15) });
   page.drawText("VANTAGE", { x: 40, y: 800, size: 20, font: bold, color: rgb(1, 1, 1) });
-  page.drawText("Integrated Trade & Logistics Platform", { x: 40, y: 784, size: 9, font, color: rgb(0.7, 0.78, 1) });
+  page.drawText("Integrated Trade & Logistics Platform", {
+    x: 40,
+    y: 784,
+    size: 9,
+    font,
+    color: rgb(0.7, 0.78, 1),
+  });
 
   let y = 740;
   page.drawText(doc.title, { x: 40, y, size: 16, font: bold, color: rgb(0.06, 0.09, 0.15) });
@@ -44,7 +50,13 @@ async function buildPdf(doc: RenderDoc): Promise<Uint8Array> {
   }
   for (const f of doc.fields ?? []) {
     page.drawText(`${f.label}:`, { x: 40, y, size: 10, font: bold, color: rgb(0.35, 0.39, 0.47) });
-    page.drawText(String(f.value ?? "—"), { x: 200, y, size: 10, font, color: rgb(0.06, 0.09, 0.15) });
+    page.drawText(String(f.value ?? "—"), {
+      x: 200,
+      y,
+      size: 10,
+      font,
+      color: rgb(0.06, 0.09, 0.15),
+    });
     y -= 18;
   }
   page.drawText(doc.footer ?? `Generated ${new Date().toISOString()}`, {

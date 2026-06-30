@@ -5,11 +5,16 @@ export type Crumb = { label: string; to?: string };
 
 export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
-    <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-1 text-xs text-muted-foreground">
+    <nav
+      aria-label="Breadcrumb"
+      className="mb-3 flex items-center gap-1 text-xs text-muted-foreground"
+    >
       {items.map((c, i) => (
         <span key={i} className="flex items-center gap-1">
           {c.to ? (
-            <Link to={c.to} className="hover:text-foreground transition-colors">{c.label}</Link>
+            <Link to={c.to} className="hover:text-foreground transition-colors">
+              {c.label}
+            </Link>
           ) : (
             <span className="text-foreground font-medium">{c.label}</span>
           )}

@@ -18,7 +18,9 @@ function RouteTooltip({
   return (
     <div className="rounded-xl border border-border bg-popover/95 px-3 py-2 shadow-lg backdrop-blur-sm">
       <p className="max-w-[200px] text-xs font-medium leading-snug">{row.route}</p>
-      <p className="mt-1 font-display text-sm font-semibold tabular-nums">{formatZAR(row.costZAR)}</p>
+      <p className="mt-1 font-display text-sm font-semibold tabular-nums">
+        {formatZAR(row.costZAR)}
+      </p>
       <p className="text-[11px] text-muted-foreground">{row.share.toFixed(1)}% of total</p>
     </div>
   );
@@ -55,8 +57,12 @@ export function RouteCostPanel({ routes }: { routes: RouteCostPoint[] }) {
           <p className="mt-0.5 text-xs text-muted-foreground">Logistics spend by corridor</p>
         </div>
         <div className="rounded-lg bg-brand-soft px-3 py-2 text-right">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Total</div>
-          <div className="font-display text-lg font-semibold tabular-nums leading-tight">{formatZAR(total)}</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Total
+          </div>
+          <div className="font-display text-lg font-semibold tabular-nums leading-tight">
+            {formatZAR(total)}
+          </div>
         </div>
       </div>
 
@@ -83,7 +89,9 @@ export function RouteCostPanel({ routes }: { routes: RouteCostPoint[] }) {
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Routes</span>
+            <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Routes
+            </span>
             <span className="font-display text-2xl font-bold tabular-nums">{routes.length}</span>
           </div>
         </div>
@@ -100,8 +108,12 @@ export function RouteCostPanel({ routes }: { routes: RouteCostPoint[] }) {
                   <span className="truncate text-sm font-medium leading-snug">{route.route}</span>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-sm font-semibold tabular-nums">{formatZAR(route.costZAR)}</div>
-                  <div className="text-[11px] tabular-nums text-muted-foreground">{route.share.toFixed(0)}%</div>
+                  <div className="text-sm font-semibold tabular-nums">
+                    {formatZAR(route.costZAR)}
+                  </div>
+                  <div className="text-[11px] tabular-nums text-muted-foreground">
+                    {route.share.toFixed(0)}%
+                  </div>
                 </div>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-inset">

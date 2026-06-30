@@ -28,7 +28,11 @@ function AuditPage() {
   const grouped = useMemo(() => {
     const map = new Map<string, typeof data>();
     (data ?? []).forEach((e) => {
-      const key = new Date(e.timestamp).toLocaleDateString("en-ZA", { day: "2-digit", month: "long", year: "numeric" });
+      const key = new Date(e.timestamp).toLocaleDateString("en-ZA", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
       const arr = map.get(key) ?? [];
       arr.push(e);
       map.set(key, arr as never);
@@ -40,15 +44,24 @@ function AuditPage() {
 
   return (
     <div>
-      <PageHeader title="Audit log" description="Immutable record of governance, RBAC, and document events." />
+      <PageHeader
+        title="Audit log"
+        description="Immutable record of governance, RBAC, and document events."
+      />
 
       {grouped.length === 0 ? (
-        <EmptyState title="No events yet" description="Audit events will appear here as activity happens." icon={ScrollText} />
+        <EmptyState
+          title="No events yet"
+          description="Audit events will appear here as activity happens."
+          icon={ScrollText}
+        />
       ) : (
         <div className="space-y-6">
           {grouped.map(([day, events]) => (
             <section key={day}>
-              <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{day}</h3>
+              <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                {day}
+              </h3>
               <ol className="relative space-y-3 border-l pl-6">
                 {(events ?? []).map((e) => {
                   const I = ICONS[e.action] ?? ScrollText;
@@ -63,7 +76,9 @@ function AuditPage() {
                           <span className="text-muted-foreground">on</span>{" "}
                           <span className="font-medium tabular-nums">{e.entity}</span>
                         </div>
-                        <div className="text-xs text-muted-foreground tabular-nums">{new Date(e.timestamp).toLocaleTimeString("en-ZA")}</div>
+                        <div className="text-xs text-muted-foreground tabular-nums">
+                          {new Date(e.timestamp).toLocaleTimeString("en-ZA")}
+                        </div>
                       </div>
                     </li>
                   );

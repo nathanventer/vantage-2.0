@@ -4,7 +4,14 @@ import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_app/cargo")({
   head: () => ({ meta: [{ title: "Cargo Handling — Vantage" }] }),
@@ -16,7 +23,10 @@ function CargoPage() {
   if (isLoading) return <Skeleton className="h-96" />;
   return (
     <div>
-      <PageHeader title="Cargo handling" description="Bulk handling, palletising, weighbridge, loading/offloading and condition reports." />
+      <PageHeader
+        title="Cargo handling"
+        description="Bulk handling, palletising, weighbridge, loading/offloading and condition reports."
+      />
       <div className="rounded-xl border bg-card">
         <Table>
           <TableHeader>
@@ -35,9 +45,19 @@ function CargoPage() {
                 <TableCell>{c.operation}</TableCell>
                 <TableCell>{c.weightKg.toLocaleString("en-ZA")} kg</TableCell>
                 <TableCell>
-                  <StatusBadge status={c.condition === "Good" ? "Verified" : c.condition === "Damaged" ? "Failed" : "Pending"} />
+                  <StatusBadge
+                    status={
+                      c.condition === "Good"
+                        ? "Verified"
+                        : c.condition === "Damaged"
+                          ? "Failed"
+                          : "Pending"
+                    }
+                  />
                 </TableCell>
-                <TableCell className="text-muted-foreground">{new Date(c.timestamp).toLocaleString("en-ZA")}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {new Date(c.timestamp).toLocaleString("en-ZA")}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

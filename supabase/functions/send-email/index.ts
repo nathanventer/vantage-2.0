@@ -19,7 +19,10 @@ interface EmailRequest {
   data?: Record<string, string>;
 }
 
-function render(template: TemplateId, d: Record<string, string> = {}): { subject: string; html: string } {
+function render(
+  template: TemplateId,
+  d: Record<string, string> = {},
+): { subject: string; html: string } {
   const shell = (title: string, body: string) =>
     `<div style="font-family:system-ui,sans-serif;background:#070b16;color:#f3f6fb;padding:32px">
        <h1 style="color:#4a80ff;margin:0 0 8px">VANTAGE</h1>
@@ -28,17 +31,44 @@ function render(template: TemplateId, d: Record<string, string> = {}): { subject
      </div>`;
   switch (template) {
     case "registration_submitted":
-      return { subject: "We received your registration", html: shell("Registration received", `Hi ${d.name ?? "there"}, your company registration is under review.`) };
+      return {
+        subject: "We received your registration",
+        html: shell(
+          "Registration received",
+          `Hi ${d.name ?? "there"}, your company registration is under review.`,
+        ),
+      };
     case "registration_approved":
-      return { subject: "Your Vantage account is approved", html: shell("Approved", `Welcome aboard, ${d.name ?? ""}. Your workspace is now unlocked.`) };
+      return {
+        subject: "Your Vantage account is approved",
+        html: shell("Approved", `Welcome aboard, ${d.name ?? ""}. Your workspace is now unlocked.`),
+      };
     case "registration_rejected":
-      return { subject: "Registration update", html: shell("Registration not approved", `Reason: ${d.reason ?? "Please contact support."}`) };
+      return {
+        subject: "Registration update",
+        html: shell(
+          "Registration not approved",
+          `Reason: ${d.reason ?? "Please contact support."}`,
+        ),
+      };
     case "quote_received":
-      return { subject: `New quote on ${d.reference ?? "your shipment"}`, html: shell("New quote", `${d.provider ?? "A provider"} quoted ${d.amount ?? ""}.`) };
+      return {
+        subject: `New quote on ${d.reference ?? "your shipment"}`,
+        html: shell("New quote", `${d.provider ?? "A provider"} quoted ${d.amount ?? ""}.`),
+      };
     case "payment_settled":
-      return { subject: `Payment settled — ${d.invoice ?? ""}`, html: shell("Payment settled", `Invoice ${d.invoice ?? ""} for ${d.amount ?? ""} has settled.`) };
+      return {
+        subject: `Payment settled — ${d.invoice ?? ""}`,
+        html: shell(
+          "Payment settled",
+          `Invoice ${d.invoice ?? ""} for ${d.amount ?? ""} has settled.`,
+        ),
+      };
     case "shipment_exception":
-      return { subject: `Exception on ${d.reference ?? "shipment"}`, html: shell("Shipment exception", `${d.detail ?? "An exception was raised."}`) };
+      return {
+        subject: `Exception on ${d.reference ?? "shipment"}`,
+        html: shell("Shipment exception", `${d.detail ?? "An exception was raised."}`),
+      };
   }
 }
 

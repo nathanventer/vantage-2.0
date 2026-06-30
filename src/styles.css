@@ -10,7 +10,8 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: "SF Pro Text", "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-sans:
+    "SF Pro Text", "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-display: "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
   /* shadcn semantic tokens */
@@ -204,12 +205,19 @@
     font-family: var(--font-sans);
     font-feature-settings: "cv11", "ss01";
   }
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
     font-weight: 600;
   }
-  h1 { letter-spacing: -0.03em; }
+  h1 {
+    letter-spacing: -0.03em;
+  }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
@@ -218,7 +226,9 @@
   [role="button"][aria-disabled="true"] {
     cursor: not-allowed;
   }
-  table, .tabular, [data-numeric] {
+  table,
+  .tabular,
+  [data-numeric] {
     font-variant-numeric: tabular-nums;
   }
   :focus-visible {
@@ -244,7 +254,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
