@@ -45,7 +45,6 @@ function TxList() {
           <Input placeholder="Search reference or company…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
         </div>
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="h-10 rounded-md border border-input bg-inset px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-
           <option value="all">All statuses</option>
           <option value="Open">Open</option>
           <option value="In Progress">In Progress</option>
