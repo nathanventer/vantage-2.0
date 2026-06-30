@@ -10,6 +10,7 @@ import {
   FileText,
   CreditCard,
   BarChart3,
+  TrendingUp,
   ShieldCheck,
   ScrollText,
   UserCheck,
@@ -39,6 +40,7 @@ const COMMON: Item[] = [
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Payments", url: "/payments", icon: CreditCard },
   { title: "Reports", url: "/reports", icon: BarChart3 },
+  { title: "Pulse", url: "/pulse", icon: TrendingUp },
 ];
 
 const SOURCE: Item[] = [

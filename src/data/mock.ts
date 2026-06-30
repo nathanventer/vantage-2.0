@@ -14,6 +14,8 @@ import type {
   LifecycleStep,
   MacroStage,
   ShipmentEvent,
+  LaneRate,
+  TransportMode,
   DocumentType,
   Company,
   Provider,
@@ -307,6 +309,51 @@ export const shipmentEvents: ShipmentEvent[] = transactions.flatMap((t) =>
       createdAt: s.timestamp ?? t.createdAt,
     })),
 );
+
+/* ── Pulse / Rate Intelligence: observed lane rates (Phase 2 §5) ─────────── */
+function lastPeriods(n: number): string[] {
+  const out: string[] = [];
+  const d = new Date();
+  d.setDate(1);
+  for (let i = n - 1; i >= 0; i--) {
+    const x = new Date(d.getFullYear(), d.getMonth() - i, 1);
+    out.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+const RATE_MODES: TransportMode[] = ["Sea", "Road"];
+const RATE_PROVIDERS = PROVIDERS.slice(0, 3);
+
+export const laneRates: LaneRate[] = (() => {
+  const periods = lastPeriods(12);
+  const rows: LaneRate[] = [];
+  let n = 0;
+  ROUTES.slice(0, 6).forEach(([origin, destination], li) => {
+    RATE_MODES.forEach((mode, mi) => {
+      const base = (mode === "Sea" ? 180000 : 95000) + li * 12000;
+      periods.forEach((period, pi) => {
+        // Gentle upward trend + seasonal wobble, deterministic.
+        const trend = 1 + pi * 0.012 + Math.sin((pi + li) / 2) * 0.03;
+        RATE_PROVIDERS.forEach((providerName, qi) => {
+          n += 1;
+          const spread = 1 + (qi - 1) * 0.06;
+          rows.push({
+            id: `lr-${n}`,
+            origin,
+            destination,
+            mode,
+            period,
+            providerName,
+            priceZAR: Math.round(base * trend * spread),
+            transitDays: (mode === "Sea" ? 18 : 4) + qi + (mi % 2),
+          });
+        });
+      });
+    });
+  });
+  return rows;
+})();
 
 export const shipmentRequests: ShipmentRequest[] = Array.from({ length: 18 }, (_, i) => {
   const demandCompany = rand(COMPANIES_DEMAND, i);

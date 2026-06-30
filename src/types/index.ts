@@ -339,6 +339,59 @@ export interface ScheduleTransportInput {
   eta?: string;
 }
 
+/** ── Pulse / Rate & Price Intelligence (Phase 2 §5) ─────────────────────── */
+export type TransportMode = "Sea" | "Air" | "Road" | "Rail";
+
+export interface LaneRate {
+  id: string;
+  origin: string;
+  destination: string;
+  mode: TransportMode;
+  /** YYYY-MM */
+  period: string;
+  providerName: string;
+  priceZAR: number;
+  transitDays: number;
+}
+
+export interface RateBenchmark {
+  lane: string;
+  origin: string;
+  destination: string;
+  mode: TransportMode;
+  medianZAR: number;
+  lowZAR: number;
+  highZAR: number;
+  samples: number;
+  /** Month-over-month median change, %. */
+  momChangePct: number;
+}
+
+export type SubscriptionStatus = "none" | "active" | "canceled";
+export type PulsePlan = "standard" | "pro";
+
+export interface RateSubscription {
+  status: SubscriptionStatus;
+  plan?: PulsePlan;
+  currentPeriodEnd?: string;
+}
+
+export interface PriceAlert {
+  id: string;
+  lane: string;
+  mode: TransportMode;
+  thresholdZAR: number;
+  direction: "above" | "below";
+  createdAt: string;
+}
+
+export interface NewPriceAlertInput {
+  lane: string;
+  mode: TransportMode;
+  thresholdZAR: number;
+  direction: "above" | "below";
+}
+
 /** POPIA data-subject access export (Section I). */
 export interface DataSubjectExport {
   generatedAt: string;

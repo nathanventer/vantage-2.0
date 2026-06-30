@@ -23,6 +23,12 @@ import type {
   ShipmentEvent,
   NewOpEventInput,
   ScheduleTransportInput,
+  LaneRate,
+  RateBenchmark,
+  RateSubscription,
+  PulsePlan,
+  PriceAlert,
+  NewPriceAlertInput,
 } from "@/types";
 import type { ScoredQuote } from "@/adapters/optimizer";
 
@@ -98,6 +104,19 @@ export interface DataService {
   scheduleTransport(input: ScheduleTransportInput): Promise<ShipmentEvent>;
   /** Capture POD: upload file to transaction-docs, create a POD doc, advance. */
   recordPOD(shipmentId: string, file: File): Promise<DocumentRecord>;
+
+  // ── Pulse / Rate & Price Intelligence (Phase 2 §5) ──────────────────────
+  /** Observed lane rates (origin/destination/mode/period/price). */
+  listLaneRates(): Promise<LaneRate[]>;
+  /** Market benchmarks aggregated from lane rates (median/range/MoM). */
+  listRateBenchmarks(): Promise<RateBenchmark[]>;
+  /** The current user's Pulse subscription entitlement. */
+  getRateSubscription(): Promise<RateSubscription>;
+  /** Begin Pulse checkout. Returns a Stripe URL (edge) or null (mock activates). */
+  startPulseCheckout(plan: PulsePlan): Promise<{ url: string | null }>;
+  /** The current user's price alerts. */
+  listPriceAlerts(): Promise<PriceAlert[]>;
+  createPriceAlert(input: NewPriceAlertInput): Promise<PriceAlert>;
 
   // ── POPIA data-subject rights (Section I → Methodology §4.12.2) ──────────
   /** Access: compile the data subject's accessible records for download. */

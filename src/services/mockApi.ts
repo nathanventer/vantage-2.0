@@ -1,9 +1,17 @@
 import * as M from "@/data/mock";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
+import { buildRateBenchmarks } from "@/lib/pulse";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { signatureProvider } from "@/adapters/signatureProvider";
 import { notifier } from "@/adapters/notifier";
-import type { DocumentRecord, MacroStage, Quote, Transaction } from "@/types";
+import type {
+  DocumentRecord,
+  MacroStage,
+  PriceAlert,
+  Quote,
+  RateSubscription,
+  Transaction,
+} from "@/types";
 import type { DataService } from "./DataService";
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -22,6 +30,10 @@ const stageForStep = (step: number): MacroStage =>
 /** In-memory reference counter, seeded past the 24 generated demo shipments. */
 let refCounter = 1000 + M.transactions.length;
 let docCounter = M.documents.length;
+
+/** Pulse subscription + alerts (mutable demo state). */
+let pulseSub: RateSubscription = { status: "none" };
+const priceAlerts: PriceAlert[] = [];
 
 function findDoc(docId: string) {
   const doc = M.documents.find((d) => d.id === docId);
@@ -399,6 +411,47 @@ export const mockApi: DataService = {
       payload: { fileName: file.name },
     });
     return doc;
+  },
+
+  // ── Pulse / Rate & Price Intelligence (Phase 2 §5) ──────────────────────
+  async listLaneRates() {
+    await delay();
+    return M.laneRates;
+  },
+  async listRateBenchmarks() {
+    await delay();
+    return buildRateBenchmarks(M.laneRates);
+  },
+  async getRateSubscription() {
+    await delay();
+    return pulseSub;
+  },
+  async startPulseCheckout(plan) {
+    await delay();
+    // Mock: no Stripe — grant entitlement locally so the demo unlocks Pulse.
+    pulseSub = {
+      status: "active",
+      plan,
+      currentPeriodEnd: new Date(Date.now() + 30 * 864e5).toISOString(),
+    };
+    return { url: null };
+  },
+  async listPriceAlerts() {
+    await delay();
+    return priceAlerts;
+  },
+  async createPriceAlert(input) {
+    await delay();
+    const alert = {
+      id: `alert-${Date.now()}`,
+      lane: input.lane,
+      mode: input.mode,
+      thresholdZAR: input.thresholdZAR,
+      direction: input.direction,
+      createdAt: new Date().toISOString(),
+    };
+    priceAlerts.unshift(alert);
+    return alert;
   },
 
   // ── POPIA data-subject rights (Section I) ────────────────────────────────

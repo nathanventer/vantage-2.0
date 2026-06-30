@@ -1,5 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
+import { buildRateBenchmarks } from "@/lib/pulse";
+import { EDGE_LIVE, invokeEdge } from "@/lib/edge";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { dbFromLabel, labelFromDb } from "@/lib/documents";
 import { signatureProvider } from "@/adapters/signatureProvider";
@@ -29,6 +31,10 @@ import type {
   GovernanceCheck,
   DataSubjectExport,
   ShipmentEvent,
+  LaneRate,
+  RateBenchmark,
+  RateSubscription,
+  PriceAlert,
 } from "@/types";
 
 /* ── Canonical lifecycle (blueprint §4.5.2, mirrors shipments.current_step) ── */
@@ -935,6 +941,131 @@ export const supabaseApi: DataService = {
       payload: { fileName: file.name, path },
     });
     return mapDocument(data as unknown as DocRow);
+  },
+
+  // ── Pulse / Rate & Price Intelligence (Phase 2 §5) ──────────────────────
+  async listLaneRates(): Promise<LaneRate[]> {
+    const { data, error } = await supabase
+      .from("lane_rates")
+      .select("id,origin,destination,mode,period,provider_name,price,transit_days")
+      .order("period", { ascending: true });
+    fail("listLaneRates", error);
+    type Row = {
+      id: string;
+      origin: string;
+      destination: string;
+      mode: string;
+      period: string;
+      provider_name: string;
+      price: number;
+      transit_days: number;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      origin: r.origin,
+      destination: r.destination,
+      mode: r.mode as LaneRate["mode"],
+      period: r.period,
+      providerName: r.provider_name,
+      priceZAR: Number(r.price),
+      transitDays: r.transit_days,
+    }));
+  },
+
+  async listRateBenchmarks(): Promise<RateBenchmark[]> {
+    return buildRateBenchmarks(await supabaseApi.listLaneRates());
+  },
+
+  async getRateSubscription(): Promise<RateSubscription> {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("rate_subscriptions")
+      .select("plan,status,current_period_end")
+      .eq("user_id", userId)
+      .maybeSingle();
+    fail("getRateSubscription", error);
+    const row = data as {
+      plan: string | null;
+      status: string;
+      current_period_end: string | null;
+    } | null;
+    if (!row) return { status: "none" };
+    return {
+      status: (row.status as RateSubscription["status"]) ?? "none",
+      plan: (row.plan as RateSubscription["plan"]) ?? undefined,
+      currentPeriodEnd: row.current_period_end ?? undefined,
+    };
+  },
+
+  async startPulseCheckout(plan): Promise<{ url: string | null }> {
+    if (!EDGE_LIVE) {
+      throw new Error(
+        "Pulse checkout requires the create-checkout-session edge function (set VITE_EDGE_LIVE=on + deploy + Stripe secrets).",
+      );
+    }
+    const { data: auth } = await supabase.auth.getUser();
+    return invokeEdge<{ url: string | null }>("create-checkout-session", {
+      plan,
+      email: auth.user?.email,
+    });
+  },
+
+  async listPriceAlerts(): Promise<PriceAlert[]> {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("price_alerts")
+      .select("id,lane,mode,threshold,direction,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    fail("listPriceAlerts", error);
+    type Row = {
+      id: string;
+      lane: string;
+      mode: string;
+      threshold: number;
+      direction: string;
+      created_at: string;
+    };
+    return ((data ?? []) as unknown as Row[]).map((a) => ({
+      id: a.id,
+      lane: a.lane,
+      mode: a.mode as PriceAlert["mode"],
+      thresholdZAR: Number(a.threshold),
+      direction: a.direction as PriceAlert["direction"],
+      createdAt: a.created_at,
+    }));
+  },
+
+  async createPriceAlert(input): Promise<PriceAlert> {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("price_alerts")
+      .insert({
+        user_id: userId,
+        lane: input.lane,
+        mode: input.mode,
+        threshold: input.thresholdZAR,
+        direction: input.direction,
+      })
+      .select("id,lane,mode,threshold,direction,created_at")
+      .single();
+    fail("createPriceAlert", error);
+    const a = data as unknown as {
+      id: string;
+      lane: string;
+      mode: string;
+      threshold: number;
+      direction: string;
+      created_at: string;
+    };
+    return {
+      id: a.id,
+      lane: a.lane,
+      mode: a.mode as PriceAlert["mode"],
+      thresholdZAR: Number(a.threshold),
+      direction: a.direction as PriceAlert["direction"],
+      createdAt: a.created_at,
+    };
   },
 
   // ── Analytics: derived from live shipments + quotes (RLS-scoped) ─────────
