@@ -83,7 +83,20 @@ export type PaymentStatus = "Verified" | "Pending";
 export type ComplianceStatus = "Open" | "Under Review" | "Closed";
 export type RegistrationStatus = "Under Review" | "Approved" | "Pending" | "Rejected";
 export type GovernanceStatus = "Verified" | "Pending" | "Failed";
-export type UserStatus = "Active" | "Pending" | "Rejected";
+export type UserStatus = "Active" | "Pending" | "Rejected" | "Suspended";
+
+/**
+ * Granular platform roles (Phase 2 §7). The app gates capabilities by the broad
+ * User.role (Demand/Source/Admin); these map onto it for display + DB RLS.
+ */
+export type PlatformRole =
+  | "super_admin"
+  | "operations_admin"
+  | "finance_admin"
+  | "compliance_admin"
+  | "demand_user"
+  | "source_user"
+  | "subscriber";
 
 /* ── Organisation entities (master lists) ──────────────────────────────── */
 export type OrgCategory = "Demand" | "Source";

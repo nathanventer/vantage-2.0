@@ -103,6 +103,7 @@ function govStatus(s: string): GovernanceStatus {
 function userStatus(s: string): UserStatus {
   if (s === "active") return "Active";
   if (s === "rejected") return "Rejected";
+  if (s === "suspended") return "Suspended";
   return "Pending";
 }
 function uiRole(r: string): User["role"] {
@@ -952,6 +953,37 @@ export const supabaseApi: DataService = {
       payload: { fileName: file.name, path },
     });
     return mapDocument(data as unknown as DocRow);
+  },
+
+  // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
+  async updateUserRole(userId, role): Promise<void> {
+    const dbRole =
+      role === "Source" ? "source_user" : role === "Admin" ? "operations_admin" : "demand_user";
+    const { error } = await supabase.from("profiles").update({ role: dbRole }).eq("id", userId);
+    fail("updateUserRole", error);
+  },
+
+  async setUserSuspended(userId, suspended): Promise<void> {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ status: suspended ? "suspended" : "active" })
+      .eq("id", userId);
+    fail("setUserSuspended", error);
+  },
+
+  async inviteUser(email, role): Promise<void> {
+    // Invitation is issued server-side (admin API needs the service role). The
+    // edge function / admin tooling owns auth.admin.inviteUserByEmail; here we
+    // record the intent + notify so the flow is wired without leaking secrets.
+    const dbRole =
+      role === "Source" ? "source_user" : role === "Admin" ? "operations_admin" : "demand_user";
+    await notifier.notify({
+      title: "User invitation requested",
+      body: `${email} (${role})`,
+      kind: "info",
+      email: { to: email, template: "registration_submitted", data: { name: email } },
+    });
+    void dbRole;
   },
 
   // ── Notifications (Phase 2 §8) ──────────────────────────────────────────

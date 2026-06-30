@@ -107,6 +107,11 @@ export interface DataService {
   /** Capture POD: upload file to transaction-docs, create a POD doc, advance. */
   recordPOD(shipmentId: string, file: File): Promise<DocumentRecord>;
 
+  // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
+  updateUserRole(userId: string, role: User["role"]): Promise<void>;
+  setUserSuspended(userId: string, suspended: boolean): Promise<void>;
+  inviteUser(email: string, role: User["role"]): Promise<void>;
+
   // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
   listNotifications(): Promise<NotificationItem[]>;
   markNotificationRead(id: string): Promise<void>;

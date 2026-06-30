@@ -454,6 +454,50 @@ export const mockApi: DataService = {
     return doc;
   },
 
+  // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
+  async updateUserRole(userId, role) {
+    await delay();
+    const u = M.users.find((x) => x.id === userId || x.email === userId);
+    if (u) u.role = role;
+    M.auditEvents.unshift({
+      id: `ae-role-${Date.now()}`,
+      actor: "you@demo",
+      action: "user.role_changed",
+      entity: userId,
+      timestamp: new Date().toISOString(),
+    });
+  },
+  async setUserSuspended(userId, suspended) {
+    await delay();
+    const u = M.users.find((x) => x.id === userId || x.email === userId);
+    if (u) u.status = suspended ? "Suspended" : "Active";
+    M.auditEvents.unshift({
+      id: `ae-susp-${Date.now()}`,
+      actor: "you@demo",
+      action: suspended ? "user.suspended" : "user.reinstated",
+      entity: userId,
+      timestamp: new Date().toISOString(),
+    });
+  },
+  async inviteUser(email, role) {
+    await delay();
+    M.users.unshift({
+      id: `user-${Date.now()}`,
+      name: email.split("@")[0],
+      email,
+      role,
+      company: "—",
+      status: "Pending",
+      lastLogin: "—",
+    });
+    await notifier.notify({
+      title: "User invited",
+      body: `${email} invited as ${role}`,
+      kind: "success",
+      email: { to: email, template: "registration_submitted", data: { name: email } },
+    });
+  },
+
   // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
   async listNotifications() {
     await delay();
