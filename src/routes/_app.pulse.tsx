@@ -282,12 +282,12 @@ function PulseDashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={256}>
               <LineChart data={trend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
-                <XAxis
-                  dataKey="period"
-                  tick={{ fontSize: 11 }}
-                  stroke="var(--color-text-subtle)"
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--color-border)"
+                  vertical={false}
                 />
+                <XAxis dataKey="period" tick={{ fontSize: 11 }} stroke="var(--color-text-subtle)" />
                 <YAxis
                   tick={{ fontSize: 11 }}
                   stroke="var(--color-text-subtle)"
@@ -316,7 +316,11 @@ function PulseDashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={224}>
               <BarChart data={suppliers} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="var(--color-border)"
+                  vertical={false}
+                />
                 <XAxis
                   dataKey="provider"
                   tick={{ fontSize: 11 }}

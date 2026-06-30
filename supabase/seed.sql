@@ -177,3 +177,103 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ============================================================================
+-- Phase 2 demo data — Pulse rate intelligence + an active subscriber + ops
+-- events. Guarded so every block is safe to re-run. Skipped automatically if a
+-- Phase-2 table is absent (i.e. migrations not yet applied).
+-- ============================================================================
+do $$
+declare
+  v_sc uuid;
+  v_buyer uuid;
+  v_card uuid;
+  v_txn uuid;
+  v_sys uuid;
+  r record;
+  p text;
+  base numeric;
+begin
+  if to_regclass('public.lane_rates') is null then
+    raise notice 'Phase-2 tables not present; skipping Phase-2 seed.';
+    return;
+  end if;
+
+  select id into v_sc from public.companies where name = 'Southern Cross Logistics Solutions';
+  select id into v_buyer from auth.users where email = 'buyer@ubuntuimports.com';
+  select id into v_sys from auth.users where email = 'admin@tradehub.com';
+
+  --------------------------------------------------------------------------
+  -- Rate card + lane rates: 4 lanes × 2 modes × last 12 months, with a gentle
+  -- upward trend + deterministic wobble so benchmarks/trends look real.
+  --------------------------------------------------------------------------
+  select id into v_card from public.rate_cards
+    where provider_company_id = v_sc and name = 'Southern Cross 2026 Lane Card';
+  if v_card is null then
+    insert into public.rate_cards (provider_company_id, name, currency, valid_from, valid_to)
+    values (v_sc, 'Southern Cross 2026 Lane Card', 'ZAR', date '2025-07-01', date '2026-12-31')
+    returning id into v_card;
+  end if;
+
+  for r in
+    select * from (values
+      ('Durban Port','Johannesburg','Sea', 95000),
+      ('Durban Port','Johannesburg','Road', 78000),
+      ('Cape Town Port','Johannesburg','Sea', 188000),
+      ('Cape Town Port','Stellenbosch','Road', 86000),
+      ('Durban Port','Bloemfontein','Sea', 176000),
+      ('Port Elizabeth','Pretoria','Sea', 165000)
+    ) as t(origin, destination, mode, base)
+  loop
+    for i in 0..11 loop
+      p := to_char((date_trunc('month', now()) - (i || ' months')::interval), 'YYYY-MM');
+      -- trend: older months cheaper; wobble: deterministic per month index
+      base := r.base * (1 + (11 - i) * 0.008) * (1 + ((i % 3) - 1) * 0.01);
+      if not exists (
+        select 1 from public.lane_rates
+        where rate_card_id = v_card and origin = r.origin and destination = r.destination
+          and mode = r.mode and period = p
+      ) then
+        insert into public.lane_rates (rate_card_id, provider_company_id, provider_name,
+          origin, destination, mode, period, price, currency, transit_days)
+        values (v_card, v_sc, 'Southern Cross Logistics Solutions',
+          r.origin, r.destination, r.mode, p, round(base, 2), 'ZAR',
+          case r.mode when 'Sea' then 18 when 'Rail' then 9 else 4 end);
+      end if;
+    end loop;
+  end loop;
+
+  --------------------------------------------------------------------------
+  -- An active Pulse subscriber (the demand buyer) for entitlement demos.
+  --------------------------------------------------------------------------
+  if v_buyer is not null and not exists (
+    select 1 from public.rate_subscriptions where user_id = v_buyer
+  ) then
+    insert into public.rate_subscriptions (user_id, plan, status, current_period_end)
+    values (v_buyer, 'standard', 'active', now() + interval '30 days');
+  end if;
+
+  --------------------------------------------------------------------------
+  -- Sample ops events on TXN-1003 (idempotent by step).
+  --------------------------------------------------------------------------
+  if to_regclass('public.shipment_events') is not null then
+    select id into v_txn from public.shipments where reference = 'TXN-1003';
+    if v_txn is not null then
+      for r in
+        select * from (values
+          (1, 'milestone', 'Shipment request created'),
+          (2, 'milestone', 'Providers matched'),
+          (3, 'milestone', 'Quotes received and accepted'),
+          (4, 'milestone', 'Provider confirmed')
+        ) as t(step, etype, note)
+      loop
+        if not exists (
+          select 1 from public.shipment_events where shipment_id = v_txn and step = r.step
+        ) then
+          insert into public.shipment_events (shipment_id, event_type, step, note, created_by)
+          values (v_txn, r.etype, r.step, r.note, v_sys);
+        end if;
+      end loop;
+    end if;
+  end if;
+end $$;
