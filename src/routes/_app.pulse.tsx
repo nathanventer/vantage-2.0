@@ -282,22 +282,22 @@ function PulseDashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={256}>
               <LineChart data={trend} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis
                   dataKey="period"
                   tick={{ fontSize: 11 }}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-text-subtle)"
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-text-subtle)"
                   tickFormatter={(v) => `${Math.round(v / 1000)}k`}
                 />
                 <Tooltip content={<ChartTip />} />
                 <Line
                   type="monotone"
                   dataKey="median"
-                  stroke="hsl(var(--brand))"
+                  stroke="var(--color-brand)"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -316,19 +316,19 @@ function PulseDashboard() {
           ) : (
             <ResponsiveContainer width="100%" height={224}>
               <BarChart data={suppliers} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis
                   dataKey="provider"
                   tick={{ fontSize: 11 }}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-text-subtle)"
                 />
                 <YAxis
                   tick={{ fontSize: 11 }}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-text-subtle)"
                   tickFormatter={(v) => `${Math.round(v / 1000)}k`}
                 />
                 <Tooltip content={<ChartTip />} />
-                <Bar dataKey="avg" fill="hsl(var(--brand))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="avg" fill="var(--color-brand)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
