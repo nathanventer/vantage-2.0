@@ -52,13 +52,22 @@ const MAP: Record<string, { tone: Tone; dot?: string; className?: string }> = {
   confirmed: { tone: "ok" },
 };
 
-export function StatusChip({ status, className }: { status: string; className?: string }) {
+export function StatusChip({
+  status,
+  label,
+  className,
+}: {
+  status: string;
+  /** Override the displayed text while keeping the tone derived from `status`. */
+  label?: string;
+  className?: string;
+}) {
   const key = status.trim().toLowerCase().replace(/[_-]+/g, " ");
   const m = MAP[key] ?? { tone: "neutral" as Tone };
   return (
     <span
       role="status"
-      aria-label={status}
+      aria-label={label ?? status}
       className={cn(
         "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium uppercase tracking-wide",
         TONE[m.tone],
@@ -67,7 +76,7 @@ export function StatusChip({ status, className }: { status: string; className?: 
       )}
     >
       <span aria-hidden className={cn("h-1.5 w-1.5 shrink-0 rounded-full", m.dot ?? DOT[m.tone])} />
-      {status.replace(/_/g, " ")}
+      {label ?? status.replace(/_/g, " ")}
     </span>
   );
 }
