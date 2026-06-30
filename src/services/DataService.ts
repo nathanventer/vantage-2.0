@@ -20,6 +20,9 @@ import type {
   NewDocumentInput,
   DocumentPayload,
   DataSubjectExport,
+  ShipmentEvent,
+  NewOpEventInput,
+  ScheduleTransportInput,
 } from "@/types";
 import type { ScoredQuote } from "@/adapters/optimizer";
 
@@ -83,6 +86,18 @@ export interface DataService {
   signDocument(docId: string, fullName: string): Promise<DocumentRecord>;
   /** Admin approval / archive. */
   approveDocument(docId: string): Promise<DocumentRecord>;
+
+  // ── Logistics operations execution (Phase 2 §1) ─────────────────────────
+  /** Ops event stream for a shipment (timeline), newest first. */
+  listShipmentEvents(shipmentId: string): Promise<ShipmentEvent[]>;
+  /** Log an operational event; optionally advance the lifecycle step. */
+  createOpEvent(input: NewOpEventInput): Promise<ShipmentEvent>;
+  /** Advance a shipment to a 1–16 step (writes event + audit, updates stage). */
+  advanceShipmentStep(shipmentId: string, toStep: number): Promise<Transaction>;
+  /** Schedule transport (vehicle/driver/ETD/ETA) and advance to step 11. */
+  scheduleTransport(input: ScheduleTransportInput): Promise<ShipmentEvent>;
+  /** Capture POD: upload file to transaction-docs, create a POD doc, advance. */
+  recordPOD(shipmentId: string, file: File): Promise<DocumentRecord>;
 
   // ── POPIA data-subject rights (Section I → Methodology §4.12.2) ──────────
   /** Access: compile the data subject's accessible records for download. */

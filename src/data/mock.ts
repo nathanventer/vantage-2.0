@@ -13,6 +13,7 @@ import type {
   Registration,
   LifecycleStep,
   MacroStage,
+  ShipmentEvent,
   DocumentType,
   Company,
   Provider,
@@ -113,6 +114,20 @@ const MACRO_STAGES: MacroStage[] = [
   "Warehouse",
   "Delivery",
 ];
+
+/** Map a 1–16 lifecycle step onto its macro stage (even 6-way split). */
+export function macroForStep(step: number): MacroStage {
+  const idx = Math.min(5, Math.max(0, Math.floor(((step - 1) / 16) * 6)));
+  return MACRO_STAGES[idx];
+}
+
+/** Current 1-based step for a shipment: the In-Progress step, else completed+1. */
+export function currentStepOf(steps: LifecycleStep[]): number {
+  const inProgress = steps.find((s) => s.status === "In Progress");
+  if (inProgress) return inProgress.index;
+  const completed = steps.filter((s) => s.status === "Completed").length;
+  return Math.min(STEP_LABELS.length, completed + 1);
+}
 
 function rand<T>(arr: T[], i: number): T {
   return arr[i % arr.length];
@@ -276,6 +291,22 @@ export const transactions: Transaction[] = Array.from({ length: 24 }, (_, i) => 
     })),
   };
 });
+
+/** Ops event stream (mutable). Seeded with the completed milestones per shipment. */
+export const shipmentEvents: ShipmentEvent[] = transactions.flatMap((t) =>
+  t.steps
+    .filter((s) => s.status === "Completed")
+    .map((s) => ({
+      id: `evt-${t.id}-${s.index}`,
+      shipmentId: t.id,
+      reference: t.reference,
+      eventType: "step_advanced" as const,
+      step: s.index,
+      note: s.label,
+      actor: "system@vantage",
+      createdAt: s.timestamp ?? t.createdAt,
+    })),
+);
 
 export const shipmentRequests: ShipmentRequest[] = Array.from({ length: 18 }, (_, i) => {
   const demandCompany = rand(COMPANIES_DEMAND, i);

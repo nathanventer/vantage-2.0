@@ -298,6 +298,47 @@ export interface NewDocumentInput {
   payload?: DocumentPayload;
 }
 
+/** ── Logistics operations execution (Phase 2 §1) ───────────────────────── */
+export type ShipmentEventType =
+  | "milestone"
+  | "step_advanced"
+  | "transport_scheduled"
+  | "pod_recorded"
+  | "warehouse_receipt"
+  | "container_update"
+  | "gps_ping"
+  | "exception";
+
+export interface ShipmentEvent {
+  id: string;
+  shipmentId: string;
+  reference: string;
+  eventType: ShipmentEventType;
+  /** 1–16 lifecycle step this event relates to (when applicable). */
+  step?: number;
+  note?: string;
+  payload?: Record<string, unknown>;
+  actor: string;
+  createdAt: string;
+}
+
+export interface NewOpEventInput {
+  shipmentId: string;
+  eventType: ShipmentEventType;
+  note?: string;
+  /** When set, also advance the shipment to this step. */
+  step?: number;
+  payload?: Record<string, unknown>;
+}
+
+export interface ScheduleTransportInput {
+  shipmentId: string;
+  vehicle: string;
+  driver: string;
+  etd?: string;
+  eta?: string;
+}
+
 /** POPIA data-subject access export (Section I). */
 export interface DataSubjectExport {
   generatedAt: string;

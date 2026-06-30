@@ -28,6 +28,7 @@ import type {
   MacroStage,
   GovernanceCheck,
   DataSubjectExport,
+  ShipmentEvent,
 } from "@/types";
 
 /* ── Canonical lifecycle (blueprint §4.5.2, mirrors shipments.current_step) ── */
@@ -794,6 +795,146 @@ export const supabaseApi: DataService = {
       })
       .eq("id", tx.id);
     fail("selectQuote(shipment)", sErr);
+  },
+
+  // ── Logistics operations execution (Phase 2 §1) ─────────────────────────
+  async listShipmentEvents(shipmentId): Promise<ShipmentEvent[]> {
+    const { data, error } = await supabase
+      .from("shipment_events")
+      .select(
+        "id,shipment_id,event_type,step,note,payload,created_by,created_at,shipment:shipments(reference)",
+      )
+      .eq("shipment_id", shipmentId)
+      .order("created_at", { ascending: false });
+    fail("listShipmentEvents", error);
+    type Row = {
+      id: string;
+      shipment_id: string;
+      event_type: string;
+      step: number | null;
+      note: string | null;
+      payload: Record<string, unknown> | null;
+      created_by: string | null;
+      created_at: string;
+      shipment: { reference: string } | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((e) => ({
+      id: e.id,
+      shipmentId: e.shipment_id,
+      reference: e.shipment?.reference ?? "",
+      eventType: e.event_type as ShipmentEvent["eventType"],
+      step: e.step ?? undefined,
+      note: e.note ?? undefined,
+      payload: e.payload ?? undefined,
+      actor: e.created_by ?? "system",
+      createdAt: e.created_at,
+    }));
+  },
+
+  async createOpEvent(input): Promise<ShipmentEvent> {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("shipment_events")
+      .insert({
+        shipment_id: input.shipmentId,
+        event_type: input.eventType,
+        step: input.step ?? null,
+        note: input.note ?? null,
+        payload: input.payload ?? null,
+        created_by: userId,
+      })
+      .select(
+        "id,shipment_id,event_type,step,note,payload,created_by,created_at,shipment:shipments(reference)",
+      )
+      .single();
+    fail("createOpEvent", error);
+    if (typeof input.step === "number") {
+      await supabase
+        .from("shipments")
+        .update({ current_step: input.step, status: input.step >= 16 ? "closed" : "in_progress" })
+        .eq("id", input.shipmentId);
+    }
+    const e = data as unknown as {
+      id: string;
+      shipment_id: string;
+      event_type: string;
+      step: number | null;
+      note: string | null;
+      payload: Record<string, unknown> | null;
+      created_by: string | null;
+      created_at: string;
+      shipment: { reference: string } | null;
+    };
+    return {
+      id: e.id,
+      shipmentId: e.shipment_id,
+      reference: e.shipment?.reference ?? "",
+      eventType: e.event_type as ShipmentEvent["eventType"],
+      step: e.step ?? undefined,
+      note: e.note ?? undefined,
+      payload: e.payload ?? undefined,
+      actor: e.created_by ?? "system",
+      createdAt: e.created_at,
+    };
+  },
+
+  async advanceShipmentStep(shipmentId, toStep): Promise<Transaction> {
+    await supabaseApi.createOpEvent({
+      shipmentId,
+      eventType: "step_advanced",
+      step: toStep,
+      note: `Advanced to step ${toStep}`,
+    });
+    const tx = await supabaseApi.getTransaction(shipmentId);
+    if (!tx) throw new Error(`[supabaseApi] shipment not found: ${shipmentId}`);
+    return tx;
+  },
+
+  async scheduleTransport(input): Promise<ShipmentEvent> {
+    return supabaseApi.createOpEvent({
+      shipmentId: input.shipmentId,
+      eventType: "transport_scheduled",
+      step: 11,
+      note: `Transport scheduled · ${input.vehicle} · ${input.driver}`,
+      payload: { vehicle: input.vehicle, driver: input.driver, etd: input.etd, eta: input.eta },
+    });
+  },
+
+  async recordPOD(shipmentId, file): Promise<DocumentRecord> {
+    const userId = await currentUserId();
+    const tx = await supabaseApi.getTransaction(shipmentId);
+    if (!tx) throw new Error(`[supabaseApi] shipment not found: ${shipmentId}`);
+    const ext = file.name.split(".").pop() || "pdf";
+    const path = `${tx.demandCompanyId}/pod/${tx.reference}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("transaction-docs")
+      .upload(path, file, { upsert: true });
+    fail("recordPOD(upload)", upErr);
+
+    const { data, error } = await supabase
+      .from("shipment_documents")
+      .insert({
+        shipment_id: shipmentId,
+        doc_type: "proof_of_delivery",
+        reference: tx.reference,
+        status: "submitted",
+        version: 1,
+        file_path: path,
+        generated_by: userId,
+        payload: { fileName: file.name },
+      })
+      .select(DOC_SELECT)
+      .single();
+    fail("recordPOD(insert)", error);
+
+    await supabaseApi.createOpEvent({
+      shipmentId,
+      eventType: "pod_recorded",
+      step: 13,
+      note: `POD uploaded · ${file.name}`,
+      payload: { fileName: file.name, path },
+    });
+    return mapDocument(data as unknown as DocRow);
   },
 
   // ── Analytics: derived from live shipments + quotes (RLS-scoped) ─────────

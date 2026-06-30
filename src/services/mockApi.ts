@@ -29,6 +29,24 @@ function findDoc(docId: string) {
   return doc;
 }
 
+/** Mutate a shipment's lifecycle to a 1–16 step (steps, stage, status). */
+function applyStep(tx: Transaction, toStep: number) {
+  const step = Math.min(Math.max(1, toStep), M.STEP_LABELS.length);
+  const now = new Date().toISOString();
+  tx.steps = M.STEP_LABELS.map((label, idx) => {
+    const index = idx + 1;
+    const prior = tx.steps.find((s) => s.index === index);
+    return {
+      index,
+      label,
+      status: index < step ? "Completed" : index === step ? "In Progress" : "Pending",
+      timestamp: index < step ? (prior?.timestamp ?? now) : index === step ? now : undefined,
+    };
+  });
+  tx.currentStage = M.macroForStep(step);
+  tx.status = step >= 16 ? "Closed" : step < 4 ? "Open" : "In Progress";
+}
+
 function scoreInputs(t: Transaction) {
   return t.quotes.map((q) => ({
     id: q.id,
@@ -279,6 +297,107 @@ export const mockApi: DataService = {
     const doc = findDoc(docId);
     doc.status = "Approved";
     doc.sarsVerified = true;
+    return doc;
+  },
+
+  // ── Logistics operations execution (Phase 2 §1) ─────────────────────────
+  async listShipmentEvents(shipmentId) {
+    await delay();
+    return M.shipmentEvents
+      .filter((e) => e.shipmentId === shipmentId)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  },
+
+  async createOpEvent(input) {
+    await delay();
+    const tx = M.transactions.find((t) => t.id === input.shipmentId);
+    if (!tx) throw new Error(`[mockApi] shipment not found: ${input.shipmentId}`);
+    const evt = {
+      id: `evt-${tx.id}-${Date.now()}`,
+      shipmentId: tx.id,
+      reference: tx.reference,
+      eventType: input.eventType,
+      step: input.step,
+      note: input.note,
+      payload: input.payload,
+      actor: "you@demo",
+      createdAt: new Date().toISOString(),
+    };
+    M.shipmentEvents.unshift(evt);
+    M.auditEvents.unshift({
+      id: `ae-op-${evt.id}`,
+      actor: "you@demo",
+      action: `ops.${input.eventType}`,
+      entity: tx.reference,
+      timestamp: evt.createdAt,
+    });
+    if (typeof input.step === "number") applyStep(tx, input.step);
+    return evt;
+  },
+
+  async advanceShipmentStep(shipmentId, toStep) {
+    await delay();
+    const tx = M.transactions.find((t) => t.id === shipmentId);
+    if (!tx) throw new Error(`[mockApi] shipment not found: ${shipmentId}`);
+    applyStep(tx, toStep);
+    const label = M.STEP_LABELS[toStep - 1] ?? `Step ${toStep}`;
+    M.shipmentEvents.unshift({
+      id: `evt-${tx.id}-${Date.now()}`,
+      shipmentId: tx.id,
+      reference: tx.reference,
+      eventType: "step_advanced",
+      step: toStep,
+      note: label,
+      actor: "you@demo",
+      createdAt: new Date().toISOString(),
+    });
+    M.auditEvents.unshift({
+      id: `ae-step-${tx.id}-${toStep}-${Date.now()}`,
+      actor: "you@demo",
+      action: "ops.step_advanced",
+      entity: tx.reference,
+      timestamp: new Date().toISOString(),
+    });
+    return tx;
+  },
+
+  async scheduleTransport(input) {
+    return this.createOpEvent({
+      shipmentId: input.shipmentId,
+      eventType: "transport_scheduled",
+      step: 11,
+      note: `Transport scheduled · ${input.vehicle} · ${input.driver}`,
+      payload: { vehicle: input.vehicle, driver: input.driver, etd: input.etd, eta: input.eta },
+    });
+  },
+
+  async recordPOD(shipmentId, file) {
+    await delay();
+    const tx = M.transactions.find((t) => t.id === shipmentId);
+    if (!tx) throw new Error(`[mockApi] shipment not found: ${shipmentId}`);
+    docCounter += 1;
+    const doc: DocumentRecord = {
+      id: `doc-pod-${docCounter}`,
+      type: "Proof of Delivery",
+      transactionRef: tx.reference,
+      shipmentId: tx.id,
+      uploadedById: "you",
+      uploadedBy: "You",
+      uploadedAt: new Date().toISOString(),
+      status: "Submitted",
+      signed: false,
+      sarsVerified: false,
+      version: 1,
+      payload: { fileName: file.name, notes: `POD captured (${Math.round(file.size / 1024)} KB)` },
+    };
+    M.documents.unshift(doc);
+    await this.createOpEvent({
+      shipmentId: tx.id,
+      eventType: "pod_recorded",
+      step: 13,
+      note: `POD uploaded · ${file.name}`,
+      payload: { fileName: file.name },
+    });
     return doc;
   },
 
