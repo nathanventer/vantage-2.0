@@ -29,6 +29,8 @@ import type {
   PulsePlan,
   PriceAlert,
   NewPriceAlertInput,
+  NotificationItem,
+  NotificationPreferences,
 } from "@/types";
 import type { ScoredQuote } from "@/adapters/optimizer";
 
@@ -104,6 +106,13 @@ export interface DataService {
   scheduleTransport(input: ScheduleTransportInput): Promise<ShipmentEvent>;
   /** Capture POD: upload file to transaction-docs, create a POD doc, advance. */
   recordPOD(shipmentId: string, file: File): Promise<DocumentRecord>;
+
+  // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
+  listNotifications(): Promise<NotificationItem[]>;
+  markNotificationRead(id: string): Promise<void>;
+  markAllNotificationsRead(): Promise<void>;
+  getNotificationPreferences(): Promise<NotificationPreferences>;
+  updateNotificationPreferences(prefs: NotificationPreferences): Promise<void>;
 
   // ── Pulse / Rate & Price Intelligence (Phase 2 §5) ──────────────────────
   /** Observed lane rates (origin/destination/mode/period/price). */

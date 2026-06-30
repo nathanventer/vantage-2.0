@@ -35,6 +35,8 @@ import type {
   RateBenchmark,
   RateSubscription,
   PriceAlert,
+  NotificationItem,
+  NotificationPreferences,
 } from "@/types";
 
 /* ── Canonical lifecycle (blueprint §4.5.2, mirrors shipments.current_step) ── */
@@ -263,6 +265,15 @@ const SHIPMENT_SELECT =
 function fail(ctx: string, error: { message: string } | null) {
   if (error) throw new Error(`[supabaseApi] ${ctx}: ${error.message}`);
 }
+
+const DEFAULT_NOTIF_PREFS: NotificationPreferences = {
+  registration: { inApp: true, email: true },
+  quote: { inApp: true, email: true },
+  payment: { inApp: true, email: true },
+  shipment: { inApp: true, email: false },
+  document: { inApp: true, email: false },
+  exception: { inApp: true, email: true },
+};
 
 async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser();
@@ -941,6 +952,74 @@ export const supabaseApi: DataService = {
       payload: { fileName: file.name, path },
     });
     return mapDocument(data as unknown as DocRow);
+  },
+
+  // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
+  async listNotifications(): Promise<NotificationItem[]> {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("id,title,body,kind,link,read_at,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    fail("listNotifications", error);
+    type Row = {
+      id: string;
+      title: string;
+      body: string | null;
+      kind: string;
+      link: string | null;
+      read_at: string | null;
+      created_at: string;
+    };
+    return ((data ?? []) as unknown as Row[]).map((n) => ({
+      id: n.id,
+      title: n.title,
+      body: n.body ?? undefined,
+      kind: (n.kind as NotificationItem["kind"]) ?? "info",
+      link: n.link ?? undefined,
+      readAt: n.read_at ?? undefined,
+      createdAt: n.created_at,
+    }));
+  },
+
+  async markNotificationRead(id): Promise<void> {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("id", id);
+    fail("markNotificationRead", error);
+  },
+
+  async markAllNotificationsRead(): Promise<void> {
+    const userId = await currentUserId();
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("read_at", null);
+    fail("markAllNotificationsRead", error);
+  },
+
+  async getNotificationPreferences(): Promise<NotificationPreferences> {
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("notification_preferences")
+      .select("prefs")
+      .eq("user_id", userId)
+      .maybeSingle();
+    fail("getNotificationPreferences", error);
+    const row = data as { prefs: NotificationPreferences } | null;
+    return row?.prefs ?? DEFAULT_NOTIF_PREFS;
+  },
+
+  async updateNotificationPreferences(prefs): Promise<void> {
+    const userId = await currentUserId();
+    const { error } = await supabase
+      .from("notification_preferences")
+      .upsert({ user_id: userId, prefs }, { onConflict: "user_id" });
+    fail("updateNotificationPreferences", error);
   },
 
   // ── Pulse / Rate & Price Intelligence (Phase 2 §5) ──────────────────────

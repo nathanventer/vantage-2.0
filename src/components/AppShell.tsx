@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { UserMenu } from "@/components/UserMenu";
-import { Bell, Search } from "lucide-react";
+import { NotificationBell } from "@/components/NotificationBell";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -26,15 +26,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               />
             </div>
             <div className="ml-auto flex shrink-0 items-center justify-end gap-0.5">
+              <NotificationBell />
               <UserMenu />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 rounded-xl"
-                aria-label="Notifications"
-              >
-                <Bell className="h-4 w-4" />
-              </Button>
             </div>
           </header>
           <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">

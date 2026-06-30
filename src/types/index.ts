@@ -339,6 +339,29 @@ export interface ScheduleTransportInput {
   eta?: string;
 }
 
+/** ── Notifications (Phase 2 §8) ─────────────────────────────────────────── */
+export type NotificationKind = "info" | "success" | "warning" | "error";
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body?: string;
+  kind: NotificationKind;
+  link?: string;
+  readAt?: string;
+  createdAt: string;
+}
+
+export type NotificationEvent =
+  | "registration"
+  | "quote"
+  | "payment"
+  | "shipment"
+  | "document"
+  | "exception";
+
+export type NotificationPreferences = Record<NotificationEvent, { inApp: boolean; email: boolean }>;
+
 /** ── Pulse / Rate & Price Intelligence (Phase 2 §5) ─────────────────────── */
 export type TransportMode = "Sea" | "Air" | "Road" | "Rail";
 

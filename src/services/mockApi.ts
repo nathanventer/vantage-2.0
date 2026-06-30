@@ -7,6 +7,8 @@ import { notifier } from "@/adapters/notifier";
 import type {
   DocumentRecord,
   MacroStage,
+  NotificationItem,
+  NotificationPreferences,
   PriceAlert,
   Quote,
   RateSubscription,
@@ -34,6 +36,45 @@ let docCounter = M.documents.length;
 /** Pulse subscription + alerts (mutable demo state). */
 let pulseSub: RateSubscription = { status: "none" };
 const priceAlerts: PriceAlert[] = [];
+
+/** Notifications (mutable demo state). */
+const notifications: NotificationItem[] = [
+  {
+    id: "ntf-1",
+    title: "Quote received",
+    body: "Maersk SA Forwarding quoted VTG-TXN-1003.",
+    kind: "info",
+    link: "/transactions",
+    createdAt: new Date(Date.now() - 36e5).toISOString(),
+  },
+  {
+    id: "ntf-2",
+    title: "Registration approved",
+    body: "Cape Imports (Pty) Ltd is now active.",
+    kind: "success",
+    link: "/admin/registrations",
+    createdAt: new Date(Date.now() - 9e6).toISOString(),
+  },
+  {
+    id: "ntf-3",
+    title: "Shipment exception",
+    body: "Customs hold on VTG-TXN-1007.",
+    kind: "warning",
+    link: "/transactions",
+    readAt: new Date(Date.now() - 8e6).toISOString(),
+    createdAt: new Date(Date.now() - 9e6).toISOString(),
+  },
+];
+
+const DEFAULT_PREFS: NotificationPreferences = {
+  registration: { inApp: true, email: true },
+  quote: { inApp: true, email: true },
+  payment: { inApp: true, email: true },
+  shipment: { inApp: true, email: false },
+  document: { inApp: true, email: false },
+  exception: { inApp: true, email: true },
+};
+let notifPrefs: NotificationPreferences = { ...DEFAULT_PREFS };
 
 function findDoc(docId: string) {
   const doc = M.documents.find((d) => d.id === docId);
@@ -411,6 +452,32 @@ export const mockApi: DataService = {
       payload: { fileName: file.name },
     });
     return doc;
+  },
+
+  // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
+  async listNotifications() {
+    await delay();
+    return notifications;
+  },
+  async markNotificationRead(id) {
+    await delay();
+    const n = notifications.find((x) => x.id === id);
+    if (n) n.readAt = new Date().toISOString();
+  },
+  async markAllNotificationsRead() {
+    await delay();
+    const now = new Date().toISOString();
+    notifications.forEach((n) => {
+      if (!n.readAt) n.readAt = now;
+    });
+  },
+  async getNotificationPreferences() {
+    await delay();
+    return notifPrefs;
+  },
+  async updateNotificationPreferences(prefs) {
+    await delay();
+    notifPrefs = prefs;
   },
 
   // ── Pulse / Rate & Price Intelligence (Phase 2 §5) ──────────────────────
