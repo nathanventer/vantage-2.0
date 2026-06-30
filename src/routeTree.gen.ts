@@ -17,6 +17,7 @@ import { Route as AppTransportRouteImport } from './routes/_app.transport'
 import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
 import { Route as AppRequestsRouteImport } from './routes/_app.requests'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppPrivacyRouteImport } from './routes/_app.privacy'
 import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
@@ -68,6 +69,11 @@ const AppRequestsRoute = AppRequestsRouteImport.update({
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPrivacyRoute = AppPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPaymentsRoute = AppPaymentsRouteImport.update({
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/payments': typeof AppPaymentsRoute
+  '/privacy': typeof AppPrivacyRoute
   '/reports': typeof AppReportsRoute
   '/requests': typeof AppRequestsRoute
   '/transactions': typeof AppTransactionsRouteWithChildren
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
   '/payments': typeof AppPaymentsRoute
+  '/privacy': typeof AppPrivacyRoute
   '/reports': typeof AppReportsRoute
   '/requests': typeof AppRequestsRoute
   '/transport': typeof AppTransportRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
   '/_app/payments': typeof AppPaymentsRoute
+  '/_app/privacy': typeof AppPrivacyRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/transactions': typeof AppTransactionsRouteWithChildren
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/payments'
+    | '/privacy'
     | '/reports'
     | '/requests'
     | '/transactions'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/documents'
     | '/payments'
+    | '/privacy'
     | '/reports'
     | '/requests'
     | '/transport'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/documents'
     | '/_app/payments'
+    | '/_app/privacy'
     | '/_app/reports'
     | '/_app/requests'
     | '/_app/transactions'
@@ -334,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/privacy': {
+      id: '/_app/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof AppPrivacyRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/payments': {
@@ -471,6 +490,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
+  AppPrivacyRoute: typeof AppPrivacyRoute
   AppReportsRoute: typeof AppReportsRoute
   AppRequestsRoute: typeof AppRequestsRoute
   AppTransactionsRoute: typeof AppTransactionsRouteWithChildren
@@ -485,6 +505,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
   AppPaymentsRoute: AppPaymentsRoute,
+  AppPrivacyRoute: AppPrivacyRoute,
   AppReportsRoute: AppReportsRoute,
   AppRequestsRoute: AppRequestsRoute,
   AppTransactionsRoute: AppTransactionsRouteWithChildren,

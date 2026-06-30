@@ -2,6 +2,7 @@ import * as M from "@/data/mock";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { signatureProvider } from "@/adapters/signatureProvider";
+import { notifier } from "@/adapters/notifier";
 import type { DocumentRecord, MacroStage, Quote, Transaction } from "@/types";
 import type { DataService } from "./DataService";
 
@@ -279,6 +280,34 @@ export const mockApi: DataService = {
     doc.status = "Approved";
     doc.sarsVerified = true;
     return doc;
+  },
+
+  // ── POPIA data-subject rights (Section I) ────────────────────────────────
+  async exportMyData() {
+    await delay();
+    return {
+      generatedAt: new Date().toISOString(),
+      subject: { id: "demo-user", email: "you@demo", fullName: "You", role: "demand" },
+      transactions: M.transactions,
+      documents: M.documents,
+      invoices: M.invoices,
+    };
+  },
+
+  async requestErasure(reason) {
+    await delay();
+    await notifier.notify({
+      title: "POPIA erasure request",
+      body: reason,
+      kind: "warning",
+    });
+    M.auditEvents.unshift({
+      id: `ae-erasure-${Date.now()}`,
+      actor: "you@demo",
+      action: "popia.erasure_request",
+      entity: "self",
+      timestamp: new Date().toISOString(),
+    });
   },
 };
 

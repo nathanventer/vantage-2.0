@@ -19,6 +19,7 @@ import type {
   NewShipmentInput,
   NewDocumentInput,
   DocumentPayload,
+  DataSubjectExport,
 } from "@/types";
 import type { ScoredQuote } from "@/adapters/optimizer";
 
@@ -82,6 +83,12 @@ export interface DataService {
   signDocument(docId: string, fullName: string): Promise<DocumentRecord>;
   /** Admin approval / archive. */
   approveDocument(docId: string): Promise<DocumentRecord>;
+
+  // ── POPIA data-subject rights (Section I → Methodology §4.12.2) ──────────
+  /** Access: compile the data subject's accessible records for download. */
+  exportMyData(): Promise<DataSubjectExport>;
+  /** Erasure: record an erasure request (actual cascade is reviewed by an admin). */
+  requestErasure(reason: string): Promise<void>;
 
   // ── Out-of-Phase-1 (mock-backed until their phase) ──────────────────────
   listWarehouseJobs(): Promise<WarehouseJob[]>;

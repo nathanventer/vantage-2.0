@@ -3,6 +3,7 @@ import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { dbFromLabel, labelFromDb } from "@/lib/documents";
 import { signatureProvider } from "@/adapters/signatureProvider";
+import { notifier } from "@/adapters/notifier";
 import { mockApi } from "./mockApi";
 import type { DataService } from "./DataService";
 import type {
@@ -26,6 +27,7 @@ import type {
   DocumentStatus,
   MacroStage,
   GovernanceCheck,
+  DataSubjectExport,
 } from "@/types";
 
 /* ── Canonical lifecycle (blueprint §4.5.2, mirrors shipments.current_step) ── */
@@ -626,6 +628,43 @@ export const supabaseApi: DataService = {
       .single();
     fail("approveDocument", error);
     return mapDocument(data as unknown as DocRow);
+  },
+
+  // ── POPIA data-subject rights (Section I) ────────────────────────────────
+  async exportMyData(): Promise<DataSubjectExport> {
+    const { data: auth } = await supabase.auth.getUser();
+    const u = auth.user;
+    const [transactions, documents, invoices] = await Promise.all([
+      supabaseApi.listTransactions(),
+      supabaseApi.listDocuments(),
+      supabaseApi.listInvoices(),
+    ]);
+    return {
+      generatedAt: new Date().toISOString(),
+      subject: u
+        ? {
+            id: u.id,
+            email: u.email ?? "",
+            fullName: (u.user_metadata?.full_name as string) ?? "",
+            role: (u.user_metadata?.role as string) ?? "",
+          }
+        : null,
+      transactions,
+      documents,
+      invoices,
+    };
+  },
+
+  async requestErasure(reason): Promise<void> {
+    const userId = await currentUserId();
+    await notifier.notify({
+      userId: userId ?? undefined,
+      title: "POPIA erasure request",
+      body: reason,
+      kind: "warning",
+    });
+    // TODO Phase 2: persist to a data_subject_requests table for admin review +
+    // execute the RLS-safe cascade erasure once the retention policy is defined.
   },
 
   async listAuditEvents(): Promise<AuditEvent[]> {

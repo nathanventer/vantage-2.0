@@ -298,6 +298,15 @@ export interface NewDocumentInput {
   payload?: DocumentPayload;
 }
 
+/** POPIA data-subject access export (Section I). */
+export interface DataSubjectExport {
+  generatedAt: string;
+  subject: { id: string; email: string; fullName: string; role: string } | null;
+  transactions: Transaction[];
+  documents: DocumentRecord[];
+  invoices: Invoice[];
+}
+
 export interface Invoice {
   id: string;
   number: string;
