@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
 
 /**
  * Browser Supabase client. Only the public URL + anon/publishable key are used
@@ -18,7 +19,7 @@ if ((!url || !anonKey) && import.meta.env.VITE_DATA_BACKEND === "supabase") {
 
 // Fallbacks keep createClient from throwing at import time when env is absent
 // (e.g. under the mock backend). Real values come from .env.local.
-export const supabase = createClient(
+export const supabase = createClient<Database>(
   url || "http://localhost:54321",
   anonKey || "anon-placeholder",
   {

@@ -12,8 +12,13 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run src/services/rls.integration.test.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:supabase": "VITE_DATA_BACKEND=supabase playwright test e2e/scenario*.spec.ts",
     "typecheck": "tsc --noEmit",
-    "types:gen": "supabase gen types typescript --project-id qzckmlhaoehsngxjlgfk --schema public > src/types/supabase.ts"
+    "types:gen": "supabase gen types typescript --project-id qzckmlhaoehsngxjlgfk --schema public > src/types/supabase.ts",
+    "verify:phase-c": "bash scripts/verify-phase-c.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -76,6 +81,7 @@
   "devDependencies": {
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "^2.6.2",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

@@ -1,6 +1,24 @@
 import { supabase } from "@/lib/supabaseClient";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
 import { buildRateBenchmarks } from "@/lib/pulse";
+import { formatReference } from "@/lib/references";
+import {
+  COMPLIANCE_BUCKET,
+  complianceDocPath,
+  podDocPath,
+  TRANSACTION_BUCKET,
+} from "@/lib/storagePaths";
+import {
+  dbRole,
+  docStatus,
+  govStatus,
+  quoteStatus,
+  regStatus,
+  reqStatus,
+  txStatus,
+  uiRole,
+  userStatus,
+} from "@/lib/statusMappers";
 import { EDGE_LIVE, invokeEdge } from "@/lib/edge";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { dbFromLabel, labelFromDb } from "@/lib/documents";
@@ -8,6 +26,7 @@ import { signatureProvider } from "@/adapters/signatureProvider";
 import { notifier } from "@/adapters/notifier";
 import { mockApi } from "./mockApi";
 import type { DataService } from "./DataService";
+import type { Json } from "@/types/supabase";
 import type {
   Company,
   Provider,
@@ -20,13 +39,6 @@ import type {
   Quote,
   LifecycleStep,
   DashboardSeries,
-  TransactionStatus,
-  RequestStatus,
-  QuoteStatus,
-  RegistrationStatus,
-  GovernanceStatus,
-  UserStatus,
-  DocumentStatus,
   MacroStage,
   GovernanceCheck,
   DataSubjectExport,
@@ -71,46 +83,10 @@ const num = (v: unknown): number => (v == null ? 0 : Number(v));
 const isUuid = (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
-/* ── Status mappers: canonical enums → the UI's coarse display unions ─────── */
-function txStatus(s: string): TransactionStatus {
-  if (["completed", "paid", "archived", "cancelled"].includes(s)) return "Closed";
-  if (["in_progress", "invoiced", "disputed"].includes(s)) return "In Progress";
-  return "Open"; // draft, submitted, quoted, approved
-}
-function reqStatus(s: string): RequestStatus {
-  if (s === "quoted") return "Quoted";
-  if (s === "approved") return "Accepted";
-  if (["draft", "submitted"].includes(s)) return "Open";
-  return "Confirmed";
-}
-function quoteStatus(s: string): QuoteStatus {
-  return s === "selected" ? "Accepted" : "Quoted";
-}
-function regStatus(s: string): RegistrationStatus {
-  const map: Record<string, RegistrationStatus> = {
-    pending: "Pending",
-    under_review: "Under Review",
-    approved: "Approved",
-    rejected: "Rejected",
-  };
-  return map[s] ?? "Pending";
-}
-function govStatus(s: string): GovernanceStatus {
-  if (s === "verified" || s === "not_required") return "Verified";
-  if (s === "failed") return "Failed";
-  return "Pending";
-}
-function userStatus(s: string): UserStatus {
-  if (s === "active") return "Active";
-  if (s === "rejected") return "Rejected";
-  if (s === "suspended") return "Suspended";
-  return "Pending";
-}
-function uiRole(r: string): User["role"] {
-  if (r === "source_user") return "Source";
-  if (r === "demand_user" || r === "subscriber") return "Demand";
-  return "Admin";
-}
+const asJson = (v: unknown): Json => v as Json;
+const LIST_LIMIT = 200;
+
+/* ── Status mappers live in @/lib/statusMappers (unit-tested) ─────────────── */
 function stageFor(step: number): MacroStage {
   return MACRO_STAGES[Math.min(Math.floor((step - 1) / 3), MACRO_STAGES.length - 1)];
 }
@@ -125,13 +101,6 @@ function buildSteps(currentStep: number): LifecycleStep[] {
 
 /* DB doc_type (snake) ↔ UI DocumentType — lossless map lives in @/lib/documents. */
 const docType = labelFromDb;
-
-function docStatus(s: string): DocumentStatus {
-  if (s === "approved") return "Approved";
-  if (s === "verified") return "Verified";
-  if (s === "submitted") return "Submitted";
-  return "Draft";
-}
 
 const DOC_SELECT =
   "id,shipment_id,doc_type,reference,status,version,created_at,payload," +
@@ -349,7 +318,8 @@ export const supabaseApi: DataService = {
           "approval_status,verification_checklist,rejection_reason," +
           "compliance_documents(doc_type,verification_status)",
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
     fail("listRegistrations", error);
     type Row = {
       id: string;
@@ -476,16 +446,32 @@ export const supabaseApi: DataService = {
     return companyId;
   },
 
-  async recordComplianceDocument(companyId, docType): Promise<void> {
+  async recordComplianceDocument(companyId, docType, file): Promise<void> {
+    const path = complianceDocPath(companyId, docType, file.name);
+    const { error: upErr } = await supabase.storage
+      .from(COMPLIANCE_BUCKET)
+      .upload(path, file, { upsert: true });
+    fail("recordComplianceDocument(upload)", upErr);
+
     await supabase
       .from("compliance_documents")
       .delete()
       .eq("company_id", companyId)
       .eq("doc_type", docType);
-    const { error } = await supabase
-      .from("compliance_documents")
-      .insert({ company_id: companyId, doc_type: docType, verification_status: "pending" });
+    const { error } = await supabase.from("compliance_documents").insert({
+      company_id: companyId,
+      doc_type: docType,
+      verification_status: "pending",
+      file_path: path,
+    });
     fail("recordComplianceDocument", error);
+  },
+
+  async getSignedStorageUrl(bucket, path): Promise<string> {
+    const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+    fail("getSignedStorageUrl", error);
+    if (!data?.signedUrl) throw new Error("[supabaseApi] signed URL unavailable");
+    return data.signedUrl;
   },
 
   async capturePopiaConsent(policyVersion): Promise<void> {
@@ -520,7 +506,8 @@ export const supabaseApi: DataService = {
     const { data, error } = await supabase
       .from("shipments")
       .select(SHIPMENT_SELECT)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
     fail("listTransactions", error);
     return ((data ?? []) as unknown as ShipmentRow[]).map(mapTransaction);
   },
@@ -543,7 +530,8 @@ export const supabaseApi: DataService = {
         "id,demand_company_id,origin_port,destination_port,cargo_description," +
           "weight_kg,created_at,status,demand:companies!shipments_demand_company_id_fkey(name)",
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
     fail("listShipmentRequests", error);
     type Row = {
       id: string;
@@ -576,7 +564,8 @@ export const supabaseApi: DataService = {
         "id,shipment_id,doc_type,reference,status,version,created_at,payload," +
           "signed_by,signed_at,shipment:shipments(reference),generated_by",
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
     fail("listDocuments", error);
     return ((data ?? []) as unknown as DocRow[]).map(mapDocument);
   },
@@ -600,7 +589,7 @@ export const supabaseApi: DataService = {
         reference: input.transactionRef,
         status: "draft",
         version: 1,
-        payload: input.payload ?? {},
+        payload: asJson(input.payload ?? {}),
         generated_by: userId,
       })
       .select(DOC_SELECT)
@@ -618,7 +607,7 @@ export const supabaseApi: DataService = {
     const nextVersion = ((cur as { version: number } | null)?.version ?? 1) + 1;
     const { data, error } = await supabase
       .from("shipment_documents")
-      .update({ payload, version: nextVersion, status: "submitted" })
+      .update({ payload: asJson(payload), version: nextVersion, status: "submitted" })
       .eq("id", docId)
       .select(DOC_SELECT)
       .single();
@@ -676,14 +665,19 @@ export const supabaseApi: DataService = {
 
   async requestErasure(reason): Promise<void> {
     const userId = await currentUserId();
+    const { error } = await supabase.from("data_subject_requests").insert({
+      user_id: userId,
+      request_type: "erasure",
+      reason,
+      status: "pending",
+    });
+    fail("requestErasure", error);
     await notifier.notify({
-      userId: userId ?? undefined,
+      userId,
       title: "POPIA erasure request",
       body: reason,
       kind: "warning",
     });
-    // TODO Phase 2: persist to a data_subject_requests table for admin review +
-    // execute the RLS-safe cascade erasure once the retention policy is defined.
   },
 
   async listAuditEvents(): Promise<AuditEvent[]> {
@@ -823,7 +817,8 @@ export const supabaseApi: DataService = {
         "id,shipment_id,event_type,step,note,payload,created_by,created_at,shipment:shipments(reference)",
       )
       .eq("shipment_id", shipmentId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
     fail("listShipmentEvents", error);
     type Row = {
       id: string;
@@ -858,7 +853,7 @@ export const supabaseApi: DataService = {
         event_type: input.eventType,
         step: input.step ?? null,
         note: input.note ?? null,
-        payload: input.payload ?? null,
+        payload: asJson(input.payload ?? null),
         created_by: userId,
       })
       .select(
@@ -922,10 +917,9 @@ export const supabaseApi: DataService = {
     const userId = await currentUserId();
     const tx = await supabaseApi.getTransaction(shipmentId);
     if (!tx) throw new Error(`[supabaseApi] shipment not found: ${shipmentId}`);
-    const ext = file.name.split(".").pop() || "pdf";
-    const path = `${tx.demandCompanyId}/pod/${tx.reference}-${Date.now()}.${ext}`;
+    const path = podDocPath(tx.demandCompanyId, tx.reference, file.name);
     const { error: upErr } = await supabase.storage
-      .from("transaction-docs")
+      .from(TRANSACTION_BUCKET)
       .upload(path, file, { upsert: true });
     fail("recordPOD(upload)", upErr);
 
@@ -939,7 +933,7 @@ export const supabaseApi: DataService = {
         version: 1,
         file_path: path,
         generated_by: userId,
-        payload: { fileName: file.name },
+        payload: asJson({ fileName: file.name }),
       })
       .select(DOC_SELECT)
       .single();
@@ -957,9 +951,10 @@ export const supabaseApi: DataService = {
 
   // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
   async updateUserRole(userId, role): Promise<void> {
-    const dbRole =
-      role === "Source" ? "source_user" : role === "Admin" ? "operations_admin" : "demand_user";
-    const { error } = await supabase.from("profiles").update({ role: dbRole }).eq("id", userId);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ role: dbRole(role) })
+      .eq("id", userId);
     fail("updateUserRole", error);
   },
 
@@ -1127,7 +1122,8 @@ export const supabaseApi: DataService = {
       .from("price_alerts")
       .select("id,lane,mode,threshold,direction,created_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(LIST_LIMIT);
     fail("listPriceAlerts", error);
     type Row = {
       id: string;

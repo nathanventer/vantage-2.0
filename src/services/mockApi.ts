@@ -14,6 +14,8 @@ import type {
   RateSubscription,
   Transaction,
 } from "@/types";
+import { formatReference } from "@/lib/references";
+import { COMPLIANCE_BUCKET, complianceDocPath, TRANSACTION_BUCKET } from "@/lib/storagePaths";
 import type { DataService } from "./DataService";
 
 const delay = (ms = 250) => new Promise((r) => setTimeout(r, ms));
@@ -29,8 +31,11 @@ const MACRO_STAGES: MacroStage[] = [
 const stageForStep = (step: number): MacroStage =>
   MACRO_STAGES[Math.min(Math.floor((step - 1) / 3), MACRO_STAGES.length - 1)];
 
-/** In-memory reference counter, seeded past the 24 generated demo shipments. */
-let refCounter = 1000 + M.transactions.length;
+/** In-memory blob store for offline compliance/POD uploads. */
+const mockBlobs = new Map<string, Blob>();
+
+/** In-memory reference counter, seeded past generated demo shipments. */
+let refCounter = 1125;
 let docCounter = M.documents.length;
 
 /** Pulse subscription + alerts (mutable demo state). */
@@ -42,7 +47,7 @@ const notifications: NotificationItem[] = [
   {
     id: "ntf-1",
     title: "Quote received",
-    body: "Maersk SA Forwarding quoted VTG-TXN-1003.",
+    body: "Southern Cross quoted TXN-1002 — R128,800 all-in.",
     kind: "info",
     link: "/transactions",
     createdAt: new Date(Date.now() - 36e5).toISOString(),
@@ -50,19 +55,35 @@ const notifications: NotificationItem[] = [
   {
     id: "ntf-2",
     title: "Registration approved",
-    body: "Cape Imports (Pty) Ltd is now active.",
+    body: "Ubuntu Retail Imports (Pty) Ltd is now active.",
     kind: "success",
     link: "/admin/registrations",
     createdAt: new Date(Date.now() - 9e6).toISOString(),
   },
   {
     id: "ntf-3",
-    title: "Shipment exception",
-    body: "Customs hold on VTG-TXN-1007.",
+    title: "Customs inspection hold",
+    body: "SARS hold on TXN-1004 — documentation review required.",
     kind: "warning",
     link: "/transactions",
     readAt: new Date(Date.now() - 8e6).toISOString(),
     createdAt: new Date(Date.now() - 9e6).toISOString(),
+  },
+  {
+    id: "ntf-4",
+    title: "Payment verified",
+    body: "INV-5001 (R203,000) settled for TXN-1001.",
+    kind: "success",
+    link: "/payments",
+    createdAt: new Date(Date.now() - 2e6).toISOString(),
+  },
+  {
+    id: "ntf-5",
+    title: "Shipment delivered",
+    body: "TXN-1003 completed — POD uploaded.",
+    kind: "info",
+    link: "/transactions",
+    createdAt: new Date(Date.now() - 5e6).toISOString(),
   },
 ];
 
@@ -209,8 +230,16 @@ export const mockApi: DataService = {
     await delay();
     return "mock-company";
   },
-  async recordComplianceDocument() {
+  async recordComplianceDocument(companyId, docType, file) {
     await delay();
+    const path = complianceDocPath(companyId, docType, file.name);
+    mockBlobs.set(`${COMPLIANCE_BUCKET}:${path}`, file);
+  },
+  async getSignedStorageUrl(bucket, path) {
+    await delay();
+    const blob = mockBlobs.get(`${bucket}:${path}`);
+    if (!blob) throw new Error(`[mockApi] object not found: ${bucket}/${path}`);
+    return URL.createObjectURL(blob);
   },
   async capturePopiaConsent() {
     await delay();
@@ -230,7 +259,7 @@ export const mockApi: DataService = {
   async createShipment(input) {
     await delay();
     refCounter += 1;
-    const reference = `VTG-TXN-${refCounter}`;
+    const reference = formatReference("TXN", refCounter);
     const demand = M.companies[0];
     const matched = M.providers.slice(0, 4);
     const quotes: Quote[] = matched.map((p, i) => ({
@@ -428,6 +457,8 @@ export const mockApi: DataService = {
     await delay();
     const tx = M.transactions.find((t) => t.id === shipmentId);
     if (!tx) throw new Error(`[mockApi] shipment not found: ${shipmentId}`);
+    const path = `${tx.demandCompanyId}/pod/${tx.reference}-${Date.now()}.pdf`;
+    mockBlobs.set(`${TRANSACTION_BUCKET}:${path}`, file);
     docCounter += 1;
     const doc: DocumentRecord = {
       id: `doc-pod-${docCounter}`,

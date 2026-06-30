@@ -154,10 +154,10 @@ function RegisterPage() {
     }
   }
 
-  async function markUploaded(type: string, label: string) {
+  async function markUploaded(type: string, label: string, file: File) {
     if (!companyId) return toast.error("Save your company details first.");
     try {
-      await api.recordComplianceDocument(companyId, type);
+      await api.recordComplianceDocument(companyId, type, file);
       setUploaded((u) => ({ ...u, [type]: true }));
       toast.success(`${label} uploaded`);
     } catch (e) {
@@ -396,7 +396,8 @@ function RegisterPage() {
                             type="file"
                             className="hidden"
                             onChange={(e) => {
-                              if (e.target.files?.length) markUploaded(d.type, d.label);
+                              const f = e.target.files?.[0];
+                              if (f) markUploaded(d.type, d.label, f);
                             }}
                           />
                         </label>

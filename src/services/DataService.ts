@@ -62,7 +62,12 @@ export interface DataService {
   // ── Onboarding write-path (applicant) ────────────────────────────────────
   setRoleIntent(role: "demand" | "source"): Promise<void>;
   saveCompany(input: CompanyInput): Promise<string>;
-  recordComplianceDocument(companyId: string, docType: string): Promise<void>;
+  recordComplianceDocument(companyId: string, docType: string, file: File): Promise<void>;
+  /** Time-limited signed URL for a private storage object (compliance or transaction docs). */
+  getSignedStorageUrl(
+    bucket: "compliance-docs" | "transaction-docs",
+    path: string,
+  ): Promise<string>;
   capturePopiaConsent(policyVersion: string): Promise<void>;
   submitCompanyForReview(companyId: string): Promise<void>;
   updateOnboardingStep(step: number): Promise<void>;

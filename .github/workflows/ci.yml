@@ -27,6 +27,15 @@ jobs:
       - name: Unit tests
         run: bun run test
 
+      - name: Install Playwright browser
+        run: bunx playwright install chromium --with-deps
+
+      - name: E2E tests (mock backend)
+        run: bun run test:e2e e2e/mock-smoke.spec.ts
+        env:
+          VITE_DATA_BACKEND: mock
+          CI: true
+
       - name: Build
         run: bun run build
         env:

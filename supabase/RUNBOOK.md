@@ -1,5 +1,19 @@
 # Vantage Phase 2 — go-live runbook
 
+## Phase C (must-ship subset) — quick start
+
+```bash
+bun install
+supabase db push                              # apply all migrations (incl. phase_c_hardening)
+supabase db execute --file supabase/seed.sql  # idempotent demo data
+bash scripts/verify-phase-c.sh               # tsc + lint + test + build + bundle grep
+VITE_DATA_BACKEND=mock bun run test:e2e e2e/mock-smoke.spec.ts   # CI smoke
+VITE_DATA_BACKEND=supabase bun run test:e2e:supabase           # scenarios 1–3 (needs .env.local)
+bun run types:gen                             # refresh src/types/supabase.ts (requires supabase CLI login)
+```
+
+See [`RLS_MATRIX.md`](./RLS_MATRIX.md) for the 7-role access matrix.
+
 Everything in Phase 2 ships **offline-safe**: the app runs on the mock backend and
 sandbox adapters until you apply the migrations, deploy the edge functions, set the
 secrets, and flip two env flags. Nothing here drops Phase-1 data — every migration is
@@ -21,13 +35,13 @@ supabase db push        # applies everything in supabase/migrations in order
 
 Phase-2 migrations, in apply order:
 
-| Migration                              | Adds                                                                    |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| `20260630130000_ops_execution.sql`     | `shipment_events`, doc columns, `can_see_shipment()`, RLS + audit trig  |
+| Migration                                    | Adds                                                                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `20260630130000_ops_execution.sql`           | `shipment_events`, doc columns, `can_see_shipment()`, RLS + audit trig                                            |
 | `20260630140000_pulse_rate_intelligence.sql` | `rate_cards`, `lane_rates`, `market_benchmarks`, `rate_subscriptions`, `price_alerts`, `has_active_pulse()` + RLS |
-| `20260630150000_notifications.sql`     | `notifications`, `notification_preferences`, RLS, realtime publication  |
-| `20260630160000_pulse_aggregates.sql`  | `mv_cost_by_route`, `refresh_pulse_aggregates()`, summary/trend RPCs     |
-| `20260630170000_rbac_roles.sql`        | granular `user_role` enum values + scoped admin helpers                 |
+| `20260630150000_notifications.sql`           | `notifications`, `notification_preferences`, RLS, realtime publication                                            |
+| `20260630160000_pulse_aggregates.sql`        | `mv_cost_by_route`, `refresh_pulse_aggregates()`, summary/trend RPCs                                              |
+| `20260630170000_rbac_roles.sql`              | granular `user_role` enum values + scoped admin helpers                                                           |
 
 ## 2. Seed Phase-2 demo data (optional, idempotent)
 
@@ -86,9 +100,9 @@ transparent to every component.
 
 ## 7. Verify
 
-- **RLS matrix** — sign in as each role and confirm visibility:
-  `super_admin`, `operations_admin`, `finance_admin`, `compliance_admin`,
-  `demand_user`, `source_user`, `subscriber`.
+- **RLS matrix** — see [`RLS_MATRIX.md`](./RLS_MATRIX.md); sign in as each role and confirm visibility.
+- **Phase C script** — `bash scripts/verify-phase-c.sh` (typecheck, lint, test, build, bundle grep).
+- **E2E** — `bun run test:e2e` (mock smoke in CI); for live DB scenarios 1–3 set `VITE_DATA_BACKEND=supabase` + Supabase env vars.
 - **Payments** — settle a sandbox invoice → `stripe-webhook` marks it paid (never the client).
 - **Pulse** — checkout a plan → `rate_subscriptions` row → Pulse unlocks.
 - **Realtime** — write a `shipment_events` row → dashboard updates live.
