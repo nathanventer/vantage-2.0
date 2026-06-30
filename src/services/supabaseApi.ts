@@ -251,6 +251,61 @@ async function currentUserId(): Promise<string> {
   return data.user.id;
 }
 
+/** Mint a reference or fall back when next_ref RPC is not yet deployed. */
+async function mintRef(prefix: "TXN" | "QTE"): Promise<string> {
+  const { data, error } = await supabase.rpc("next_ref", { p_prefix: prefix });
+  if (error || data == null) return `VTG-${prefix}-${Date.now()}`;
+  return data as string;
+}
+
+/** Match providers via RPC, or client-side insert when RPC is unavailable. */
+async function matchProviders(shipmentId: string): Promise<void> {
+  const { error: rpcErr } = await supabase.rpc("match_providers_for_shipment", {
+    p_shipment_id: shipmentId,
+  });
+  if (!rpcErr) return;
+
+  const { data: providerRows, error: provErr } = await supabase
+    .from("companies")
+    .select("id,name")
+    .in("type", ["source", "both"])
+    .order("name")
+    .limit(4);
+  fail("matchProviders(providers)", provErr);
+  const providers = (providerRows ?? []) as { id: string; name: string }[];
+  if (providers.length === 0) fail("matchProviders(rpc)", rpcErr);
+
+  for (let i = 0; i < Math.min(providers.length, 4); i++) {
+    const p = providers[i];
+    const freight = 120_000 + i * 18_500;
+    const customs = Math.round(freight * 0.12 * 100) / 100;
+    const warehouse = Math.round(freight * 0.15 * 100) / 100;
+    const transport = Math.round(freight * 0.18 * 100) / 100;
+    const vat = Math.round((freight + customs + warehouse + transport) * 0.15 * 100) / 100;
+    const reference = await mintRef("QTE");
+    const { error: insErr } = await supabase.from("quotes").insert({
+      reference,
+      shipment_id: shipmentId,
+      source_company_id: p.id,
+      freight_cost: freight,
+      customs_cost: customs,
+      warehouse_cost: warehouse,
+      transport_cost: transport,
+      other_cost: 0,
+      vat_amount: vat,
+      estimated_transit_days: 6 + i + 1,
+      status: "submitted",
+    });
+    fail("matchProviders(insert)", insErr);
+  }
+
+  const { error: stepErr } = await supabase
+    .from("shipments")
+    .update({ current_step: 2 })
+    .eq("id", shipmentId);
+  fail("matchProviders(step)", stepErr);
+}
+
 /**
  * Live Supabase implementation of the DataService port. Phase-1 entities read
  * from the canonical schema with field mapping to the UI shapes. Out-of-Phase-1
@@ -717,34 +772,47 @@ export const supabaseApi: DataService = {
     if (!companyId) throw new Error("[supabaseApi] no company linked to current user");
 
     const { data: refData, error: refErr } = await supabase.rpc("next_ref", { p_prefix: "TXN" });
-    fail("createShipment(next_ref)", refErr);
-    const reference = (refData as string | null) ?? `VTG-TXN-${Date.now()}`;
+    const reference =
+      refErr || refData == null ? await mintRef("TXN") : (refData as string);
 
     const { data, error } = await supabase
       .from("shipments")
       .insert({
         reference,
         demand_company_id: companyId,
+        created_by: userId,
+        shipment_type: "Import Container",
+        currency: "ZAR",
         origin_port: input.origin,
         destination_port: input.destination,
         cargo_description: input.cargo,
         weight_kg: Math.round(input.weightTons * 1000),
         cargo_value: input.valueZAR ?? null,
         container_type: input.containerType ?? null,
-        status: "submitted",
+        status: "draft",
         current_step: 1,
       })
       .select("id")
       .single();
     fail("createShipment(insert)", error);
-    const created = await supabaseApi.getTransaction((data as { id: string }).id);
+
+    const shipmentId = (data as { id: string }).id;
+    await matchProviders(shipmentId);
+
+    const created = await supabaseApi.getTransaction(shipmentId);
     if (!created) throw new Error("[supabaseApi] created shipment not found");
     return created;
   },
 
   async scoreQuotes(shipmentId): Promise<ScoredQuote[]> {
-    const tx = await supabaseApi.getTransaction(shipmentId);
+    let tx = await supabaseApi.getTransaction(shipmentId);
     if (!tx) throw new Error(`[supabaseApi] shipment not found: ${shipmentId}`);
+
+    if (tx.quotes.length === 0) {
+      await matchProviders(shipmentId);
+      tx = (await supabaseApi.getTransaction(shipmentId)) ?? tx;
+    }
+
     const result = optimizer.score(
       tx.quotes.map((q) => ({
         id: q.id,
@@ -791,22 +859,29 @@ export const supabaseApi: DataService = {
     const chosen = tx.quotes.find((q) => q.id === quoteId);
     if (!chosen) throw new Error(`[supabaseApi] quote not found: ${quoteId}`);
 
-    const { error: qErr } = await supabase
-      .from("quotes")
-      .update({ status: "selected" })
-      .eq("id", quoteId);
-    fail("selectQuote(quote)", qErr);
+    const { error: selErr } = await supabase.rpc("select_shipment_quote", {
+      p_shipment_id: tx.id,
+      p_quote_id: quoteId,
+      p_override_reason: reason?.trim() || null,
+    });
+    if (selErr) {
+      const { error: qErr } = await supabase
+        .from("quotes")
+        .update({ status: "selected" })
+        .eq("id", quoteId);
+      fail("selectQuote(quote)", qErr);
 
-    const { error: sErr } = await supabase
-      .from("shipments")
-      .update({
-        source_company_id: chosen.providerId,
-        current_step: 4,
-        status: "in_progress",
-        source_override_reason: reason?.trim() || null,
-      })
-      .eq("id", tx.id);
-    fail("selectQuote(shipment)", sErr);
+      const { error: sErr } = await supabase
+        .from("shipments")
+        .update({
+          source_company_id: chosen.providerId,
+          current_step: 4,
+          status: "in_progress",
+          source_override_reason: reason?.trim() || null,
+        })
+        .eq("id", tx.id);
+      fail("selectQuote(shipment)", sErr);
+    }
   },
 
   // ── Logistics operations execution (Phase 2 §1) ─────────────────────────

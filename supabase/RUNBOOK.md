@@ -4,7 +4,8 @@
 
 ```bash
 bun install
-supabase db push                              # apply all migrations (incl. phase_c_hardening)
+supabase login && supabase link --project-ref qzckmlhaoehsngxjlgfk
+supabase db push                              # apply all migrations (incl. phase1_shipment_write_path)
 supabase db execute --file supabase/seed.sql  # idempotent demo data
 bash scripts/verify-phase-c.sh               # tsc + lint + test + build + bundle grep
 VITE_DATA_BACKEND=mock bun run test:e2e mock-smoke   # CI smoke (dev server on :8080)

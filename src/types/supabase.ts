@@ -316,6 +316,9 @@ export type Database = {
           reference: string;
           demand_company_id: string;
           source_company_id: string | null;
+          created_by: string | null;
+          shipment_type: string | null;
+          currency: string | null;
           origin_port: string | null;
           destination_port: string | null;
           final_delivery_location: string | null;
@@ -339,6 +342,11 @@ export type Database = {
     Views: Record<string, never>;
     Functions: {
       next_ref: { Args: { p_prefix: string }; Returns: string };
+      match_providers_for_shipment: { Args: { p_shipment_id: string }; Returns: number };
+      select_shipment_quote: {
+        Args: { p_shipment_id: string; p_quote_id: string; p_override_reason?: string | null };
+        Returns: undefined;
+      };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       my_company: { Args: Record<string, never>; Returns: string };
       has_active_pulse: { Args: Record<string, never>; Returns: boolean };

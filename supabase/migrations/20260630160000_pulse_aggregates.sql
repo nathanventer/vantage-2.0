@@ -16,7 +16,7 @@ select
   avg(q.total) as avg_cost
 from public.shipments s
 join public.quotes q
-  on q.shipment_id = s.id and q.status in ('selected', 'accepted')
+  on q.shipment_id = s.id and q.status = 'selected'
 group by s.origin_port, s.destination_port;
 
 create unique index if not exists mv_cost_by_route_idx
@@ -42,8 +42,8 @@ security invoker
 as $$
   select json_build_object(
     'active_shipments', (select count(*) from public.shipments where status = 'in_progress'),
-    'closed_shipments', (select count(*) from public.shipments where status = 'closed'),
-    'total_quoted_value', coalesce((select sum(total) from public.quotes where status in ('selected','accepted')), 0),
+    'closed_shipments', (select count(*) from public.shipments where status = 'completed'),
+    'total_quoted_value', coalesce((select sum(total) from public.quotes where status = 'selected'), 0),
     'open_exceptions', (select count(*) from public.shipment_events where event_type = 'exception'),
     'generated_at', now()
   );
@@ -60,7 +60,7 @@ as $$
          avg(q.estimated_transit_days)::numeric as avg_transit_days,
          count(distinct s.id) as shipments
   from public.shipments s
-  join public.quotes q on q.shipment_id = s.id and q.status in ('selected','accepted')
+  join public.quotes q on q.shipment_id = s.id and q.status = 'selected'
   group by to_char(s.created_at, 'YYYY-MM')
   order by 1;
 $$;
