@@ -30,4 +30,11 @@ describe("document type reconciliation", () => {
   it("falls back safely for an unknown DB value", () => {
     expect(labelFromDb("not_a_real_type")).toBe("Transaction Summary");
   });
+
+  it("links every template to a valid 1–16 lifecycle step", () => {
+    for (const t of DOC_TEMPLATES) {
+      expect(t.step).toBeGreaterThanOrEqual(1);
+      expect(t.step).toBeLessThanOrEqual(16);
+    }
+  });
 });

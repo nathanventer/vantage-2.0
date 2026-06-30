@@ -71,9 +71,35 @@ export function dbFromLabel(label: DocumentType): DbDocType {
 export interface TemplateMeta {
   label: DocumentType;
   db: DbDocType;
-  /** Phase-1 templates are usable now; Phase-2 are disabled scaffolds. */
+  /** Provenance: 1 = core trade doc, 2 = logistics doc (promoted live in Phase 2). */
   phase: 1 | 2;
+  /** Lifecycle step (1–16) this document is associated with / gates. */
+  step: number;
 }
+
+/** Lifecycle step each template is linked to (required-doc gating + grouping). */
+const STEP_LINK: Record<DbDocType, number> = {
+  rfq: 1,
+  source_selection: 2,
+  formal_quote: 3,
+  purchase_order: 4,
+  proforma_invoice: 5,
+  insurance_certificate: 6,
+  commercial_invoice: 7,
+  packing_list: 7,
+  bill_of_lading: 8,
+  customs_declaration: 9,
+  import_permit: 9,
+  sars_clearing: 9,
+  warehouse_receipt: 10,
+  transport_manifest: 11,
+  proof_of_service: 12,
+  delivery_note: 12,
+  proof_of_delivery: 13,
+  tax_invoice: 14,
+  proof_of_payment: 15,
+  transaction_summary: 16,
+};
 
 const ORDER: DbDocType[] = [
   "rfq",
@@ -113,7 +139,25 @@ export const DOC_TEMPLATES: TemplateMeta[] = ORDER.map((db) => ({
   db,
   label: DOC_DB_TO_LABEL[db],
   phase: PHASE2.has(db) ? 2 : 1,
+  step: STEP_LINK[db],
 }));
 
 export const PHASE1_TEMPLATES = DOC_TEMPLATES.filter((t) => t.phase === 1);
 export const PHASE2_TEMPLATES = DOC_TEMPLATES.filter((t) => t.phase === 2);
+
+/** Templates whose lifecycle step matches — used for required-doc gating. */
+export function templatesForStep(step: number): TemplateMeta[] {
+  return DOC_TEMPLATES.filter((t) => t.step === step);
+}
+
+/**
+ * Documents that gate progression past a step (Phase 2 §4 required-doc gating).
+ * A shipment should not advance beyond these steps without the listed document.
+ */
+export const STEP_REQUIRED_DOCS: Record<number, DbDocType[]> = {
+  8: ["bill_of_lading"],
+  9: ["customs_declaration"],
+  11: ["transport_manifest"],
+  13: ["proof_of_delivery"],
+  14: ["tax_invoice"],
+};

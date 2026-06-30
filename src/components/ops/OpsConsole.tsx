@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { useAuth } from "@/contexts/AuthContext";
 import { STEP_LABELS } from "@/data/mock";
+import { DOC_DB_TO_LABEL, STEP_REQUIRED_DOCS } from "@/lib/documents";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,9 +51,26 @@ export function OpsConsole({ transaction }: { transaction: Transaction }) {
   });
   const events = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);
 
+  const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments });
+  const linkedDocTypes = useMemo(
+    () =>
+      new Set(
+        (docsQ.data ?? [])
+          .filter((d) => d.transactionRef === transaction.reference)
+          .map((d) => d.type),
+      ),
+    [docsQ.data, transaction.reference],
+  );
+
   const step = currentStep(transaction);
   const nextStep = Math.min(STEP_LABELS.length, step + 1);
   const atEnd = step >= STEP_LABELS.length;
+
+  // Required-doc gating (Phase 2 §4): cannot advance past a gated step without it.
+  const missingDocs = (STEP_REQUIRED_DOCS[step] ?? [])
+    .map((db) => DOC_DB_TO_LABEL[db])
+    .filter((label) => !linkedDocTypes.has(label));
+  const blockedByDocs = missingDocs.length > 0;
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["shipment-events", transaction.id] });
@@ -125,12 +143,16 @@ export function OpsConsole({ transaction }: { transaction: Transaction }) {
                 <ArrowUpRight className="h-4 w-4 text-accent" /> Advance milestone
               </div>
               <p className="mb-3 min-h-8 text-xs text-muted-foreground">
-                {atEnd ? "Lifecycle complete." : `Next: ${STEP_LABELS[nextStep - 1]}`}
+                {atEnd
+                  ? "Lifecycle complete."
+                  : blockedByDocs
+                    ? `Requires: ${missingDocs.join(", ")}`
+                    : `Next: ${STEP_LABELS[nextStep - 1]}`}
               </p>
               <Button
                 size="sm"
                 className="w-full"
-                disabled={atEnd || advanceMut.isPending}
+                disabled={atEnd || blockedByDocs || advanceMut.isPending}
                 onClick={() => advanceMut.mutate()}
               >
                 {advanceMut.isPending ? "Advancing…" : "Advance step"}

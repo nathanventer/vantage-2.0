@@ -4,7 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { documentRenderer, type RenderDoc } from "@/adapters";
 import { useAuth } from "@/contexts/AuthContext";
-import { PHASE1_TEMPLATES, PHASE2_TEMPLATES } from "@/lib/documents";
+import {
+  DOC_TEMPLATES,
+  PHASE1_TEMPLATES,
+  PHASE2_TEMPLATES,
+  type TemplateMeta,
+} from "@/lib/documents";
 import { formatZAR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
@@ -232,7 +237,7 @@ function DocsPage() {
                   className="h-10 w-full rounded-md border border-input bg-inset px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="all">All types</option>
-                  {PHASE1_TEMPLATES.map((t) => (
+                  {DOC_TEMPLATES.map((t) => (
                     <option key={t.db} value={t.label}>
                       {t.label}
                     </option>
@@ -259,55 +264,22 @@ function DocsPage() {
             <>
               <section>
                 <h3 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Phase 1 templates
+                  Trade documents
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {PHASE1_TEMPLATES.map((t) => (
-                    <div
-                      key={t.db}
-                      className="flex flex-col rounded-xl border bg-card p-4 transition hover:shadow-sm"
-                    >
-                      <FileText className="h-5 w-5 text-brand" />
-                      <div className="mt-2 truncate text-sm font-medium" title={t.label}>
-                        {t.label}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Structured · versioned</div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="mt-3"
-                        onClick={() => openCreate(t.label)}
-                      >
-                        <FilePlus2 className="mr-1.5 h-3.5 w-3.5" /> Use
-                      </Button>
-                    </div>
+                    <TemplateCard key={t.db} t={t} onUse={() => openCreate(t.label)} />
                   ))}
                 </div>
               </section>
 
               <section>
                 <h3 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Logistics templates
+                  Logistics documents
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {PHASE2_TEMPLATES.map((t) => (
-                    <div
-                      key={t.db}
-                      className="flex flex-col rounded-xl border border-dashed bg-inset/30 p-4 opacity-70"
-                    >
-                      <div className="flex items-center justify-between">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
-                        <span className="rounded-full border bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          Phase 2
-                        </span>
-                      </div>
-                      <div className="mt-2 truncate text-sm font-medium" title={t.label}>
-                        {t.label}
-                      </div>
-                      <Button size="sm" variant="ghost" className="mt-3" disabled>
-                        Coming soon
-                      </Button>
-                    </div>
+                    <TemplateCard key={t.db} t={t} onUse={() => openCreate(t.label)} />
                   ))}
                 </div>
               </section>
@@ -528,6 +500,26 @@ function DocsPage() {
           </div>
         )}
       </DetailDrawer>
+    </div>
+  );
+}
+
+function TemplateCard({ t, onUse }: { t: TemplateMeta; onUse: () => void }) {
+  return (
+    <div className="flex flex-col rounded-xl border bg-card p-4 transition hover:shadow-sm">
+      <div className="flex items-center justify-between">
+        <FileText className="h-5 w-5 text-brand" />
+        <span className="rounded-full border bg-surface-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Step {t.step}
+        </span>
+      </div>
+      <div className="mt-2 truncate text-sm font-medium" title={t.label}>
+        {t.label}
+      </div>
+      <div className="text-xs text-muted-foreground">Structured · versioned · e-signable</div>
+      <Button size="sm" variant="outline" className="mt-3" onClick={onUse}>
+        <FilePlus2 className="mr-1.5 h-3.5 w-3.5" /> Use
+      </Button>
     </div>
   );
 }
