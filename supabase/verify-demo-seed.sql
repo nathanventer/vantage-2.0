@@ -1,5 +1,5 @@
 -- Post-seed verification for the TradeHub demo dataset.
--- Run: supabase db execute --file supabase/verify-demo-seed.sql
+-- Run: bunx supabase db query --linked -f supabase/verify-demo-seed.sql
 
 select 'auth_users' as check_name, count(*)::text as value
 from auth.users

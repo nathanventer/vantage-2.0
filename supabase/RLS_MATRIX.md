@@ -50,7 +50,7 @@ Password: `Demo@123`
 ```bash
 # 1. Apply migrations + seed
 supabase db push
-supabase db execute --file supabase/seed.sql
+bunx supabase db query --linked -f supabase/seed.sql
 
 # 2. Manual spot-check (sign in as each role in the app)
 #    - demand: sees Ubuntu shipments only

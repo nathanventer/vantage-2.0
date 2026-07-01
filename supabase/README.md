@@ -40,7 +40,7 @@ documents. Source: `TradeHub_Pulse_Demo_Workbook.xlsx` +
 After seeding, verify counts:
 
 ```bash
-supabase db execute --file supabase/verify-demo-seed.sql
+supabase db query --linked -f supabase/verify-demo-seed.sql
 ```
 
 ## Notes

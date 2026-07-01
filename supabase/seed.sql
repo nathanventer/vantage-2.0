@@ -481,15 +481,15 @@ begin
       for di in 1..array_length(doc_types, 1) loop
         if not exists (
           select 1 from public.shipment_documents
-          where shipment_id = v_ship and doc_type = doc_types[di] and reference = ref || '-D' || di
+          where shipment_id = v_ship and doc_type = doc_types[di]::doc_type and reference = ref || '-D' || di
         ) then
           insert into public.shipment_documents (
             shipment_id, doc_type, reference, status, version, generated_by
           ) values (
             v_ship,
-            doc_types[di],
+            doc_types[di]::doc_type,
             ref || '-D' || di,
-            case when di % 4 = 0 then 'approved' when di % 3 = 0 then 'verified' else 'submitted' end,
+            (case when di % 4 = 0 then 'approved' when di % 3 = 0 then 'uploaded' else 'submitted' end)::doc_status,
             1 + (di % 3),
             v_buyer
           );
@@ -500,12 +500,12 @@ begin
 
   if to_regclass('public.notifications') is not null and v_buyer is not null then
     if not exists (select 1 from public.notifications where user_id = v_buyer and title = 'Demo dataset loaded') then
-      insert into public.notifications (user_id, title, body, kind, link) values
-        (v_buyer, 'Demo dataset loaded', '125 TradeHub shipments are available in your workspace.', 'success', '/transactions'),
-        (v_buyer, 'Quote received', 'Southern Cross quoted TXN-1002 — R128,800 all-in.', 'info', '/transactions'),
-        (v_buyer, 'Customs inspection hold', 'SARS hold on TXN-1004 — documentation review required.', 'warning', '/transactions'),
-        (v_buyer, 'Payment verified', 'INV-5001 (R203,000) settled for TXN-1001.', 'success', '/payments'),
-        (v_buyer, 'Shipment delivered', 'TXN-1003 completed — POD uploaded.', 'info', '/transactions');
+      insert into public.notifications (user_id, title, body, link) values
+        (v_buyer, 'Demo dataset loaded', '125 TradeHub shipments are available in your workspace.', '/transactions'),
+        (v_buyer, 'Quote received', 'Southern Cross quoted TXN-1002 — R128,800 all-in.', '/transactions'),
+        (v_buyer, 'Customs inspection hold', 'SARS hold on TXN-1004 — documentation review required.', '/transactions'),
+        (v_buyer, 'Payment verified', 'INV-5001 (R203,000) settled for TXN-1001.', '/payments'),
+        (v_buyer, 'Shipment delivered', 'TXN-1003 completed — POD uploaded.', '/transactions');
     end if;
   end if;
 
