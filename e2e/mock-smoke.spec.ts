@@ -12,7 +12,7 @@ test.describe("Mock smoke", () => {
   test("transactions list shows seeded TradeHub data", async ({ page }) => {
     await asMockRole(page, "demand");
     await page.goto("/transactions");
-    await expect(page.getByRole("link", { name: /VTG-TXN-/i }).first()).toBeVisible({
+    await expect(page.getByRole("link", { name: /TXN-/i }).first()).toBeVisible({
       timeout: 15_000,
     });
   });

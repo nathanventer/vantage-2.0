@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { subscribeTable } from "@/lib/realtime";
 import { useRole } from "@/contexts/RoleContext";
+import { buildRoleKpis } from "@/lib/demoKpis";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -12,18 +13,7 @@ import { Button } from "@/components/ui/button";
 import { MonthlySpendChart } from "@/components/dashboard/MonthlySpendChart";
 import { CostByRoutePanel } from "@/components/dashboard/CostByRoutePanel";
 import { LifecycleProgress } from "@/components/dashboard/LifecycleProgress";
-import {
-  Ship,
-  Clock,
-  FileWarning,
-  Wallet,
-  Inbox,
-  Truck,
-  ShieldCheck,
-  TrendingUp,
-  Activity,
-  Package,
-} from "lucide-react";
+import { Package } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_app/dashboard")({
@@ -38,17 +28,12 @@ function Dashboard() {
   const { role } = useRole();
   const qc = useQueryClient();
   const txQ = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
-  const seriesQ = useQuery({ queryKey: ["series"], queryFn: api.dashboardSeries });
-  const invQ = useQuery({ queryKey: ["inv"], queryFn: api.listInvoices });
-  const reqQ = useQuery({ queryKey: ["req"], queryFn: api.listShipmentRequests });
-  const regQ = useQuery({ queryKey: ["reg"], queryFn: api.listRegistrations });
-  const cfQ = useQuery({ queryKey: ["cf"], queryFn: api.listComplianceFlags });
-  const aeQ = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
+  const metricsQ = useQuery({ queryKey: ["dashboard-metrics"], queryFn: api.getDashboardMetrics });
 
-  // Live dashboard: refresh when ops events / shipments change (no-op under mock).
   useEffect(() => {
     const refresh = () => {
       qc.invalidateQueries({ queryKey: ["tx"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-metrics"] });
       qc.invalidateQueries({ queryKey: ["series"] });
       qc.invalidateQueries({ queryKey: ["ae"] });
     };
@@ -60,7 +45,7 @@ function Dashboard() {
     };
   }, [qc]);
 
-  if (txQ.isLoading || seriesQ.isLoading) {
+  if (txQ.isLoading || metricsQ.isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -69,9 +54,10 @@ function Dashboard() {
       </div>
     );
   }
+
   const txs = txQ.data ?? [];
-  const inv = invQ.data ?? [];
-  const series = seriesQ.data;
+  const metrics = metricsQ.data;
+  const kpis = metrics ? buildRoleKpis(role, metrics) : [];
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-ZA", {
@@ -79,85 +65,6 @@ function Dashboard() {
       currency: "ZAR",
       maximumFractionDigits: 0,
     }).format(n);
-
-  const demandKpis = [
-    {
-      label: "Active shipments",
-      value: txs.filter((t) => t.status !== "Closed").length,
-      icon: Ship,
-      tone: "default" as const,
-    },
-    {
-      label: "In transit",
-      value: txs.filter((t) => t.currentStage === "Transport").length,
-      icon: Truck,
-      tone: "info" as const,
-    },
-    {
-      label: "Pending approvals",
-      value: inv.filter((i) => i.status === "Unpaid").length,
-      icon: Clock,
-      tone: "warning" as const,
-    },
-    {
-      label: "Spend this month",
-      value: fmt(2_840_000),
-      delta: "+12% vs last month",
-      icon: Wallet,
-      tone: "success" as const,
-    },
-  ];
-  const sourceKpis = [
-    {
-      label: "Incoming requests",
-      value: (reqQ.data ?? []).filter((r) => r.status === "Open").length,
-      icon: Inbox,
-      tone: "info" as const,
-    },
-    {
-      label: "Jobs in progress",
-      value: txs.filter((t) => t.status === "In Progress").length,
-      icon: Activity,
-      tone: "warning" as const,
-    },
-    {
-      label: "Fleet utilisation",
-      value: "78%",
-      delta: "Target 75%",
-      icon: Truck,
-      tone: "success" as const,
-    },
-    { label: "Settlements due", value: fmt(1_245_000), icon: Wallet, tone: "default" as const },
-  ];
-  const adminKpis = [
-    {
-      label: "Pending registrations",
-      value: (regQ.data ?? []).filter((r) => r.status === "Under Review").length,
-      icon: Clock,
-      tone: "warning" as const,
-    },
-    {
-      label: "Compliance flags",
-      value: (cfQ.data ?? []).filter((c) => c.status !== "Closed").length,
-      icon: FileWarning,
-      tone: "info" as const,
-    },
-    {
-      label: "Audit events (30d)",
-      value: (aeQ.data ?? []).length,
-      icon: ShieldCheck,
-      tone: "default" as const,
-    },
-    {
-      label: "Platform volume",
-      value: fmt(48_300_000),
-      delta: "Last 30 days",
-      icon: TrendingUp,
-      tone: "success" as const,
-    },
-  ];
-
-  const kpis = role === "demand" ? demandKpis : role === "source" ? sourceKpis : adminKpis;
 
   return (
     <div>
@@ -191,7 +98,7 @@ function Dashboard() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-5">
         <div className="rounded-xl border bg-card p-5 lg:col-span-3">
-          <MonthlySpendChart data={series?.monthlySpend ?? []} />
+          <MonthlySpendChart data={metrics?.series.monthlySpend ?? []} />
         </div>
 
         <div className="lg:col-span-2">

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabaseClient";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
+import { computeDashboardMetrics } from "@/lib/demoKpis";
 import { buildRateBenchmarks } from "@/lib/pulse";
 import { formatReference } from "@/lib/references";
 import {
@@ -84,7 +85,7 @@ const isUuid = (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
 const asJson = (v: unknown): Json => v as Json;
-const LIST_LIMIT = 200;
+const LIST_LIMIT = 250;
 
 /* ── Status mappers live in @/lib/statusMappers (unit-tested) ─────────────── */
 function stageFor(step: number): MacroStage {
@@ -1254,6 +1255,27 @@ export const supabaseApi: DataService = {
   async dashboardSeries(): Promise<DashboardSeries> {
     const txs = await supabaseApi.listTransactions();
     return buildDashboardSeriesFromTransactions(txs);
+  },
+  async getDashboardMetrics() {
+    const [transactions, invoices, trips, registrations, complianceFlags, auditEvents, shipmentRequests] =
+      await Promise.all([
+        supabaseApi.listTransactions(),
+        mockApi.listInvoices(),
+        mockApi.listTrips(),
+        mockApi.listRegistrations(),
+        mockApi.listComplianceFlags(),
+        supabaseApi.listAuditEvents(),
+        supabaseApi.listShipmentRequests(),
+      ]);
+    return computeDashboardMetrics({
+      transactions,
+      invoices,
+      trips,
+      registrations,
+      complianceFlags,
+      auditEvents,
+      shipmentRequests,
+    });
   },
   listWarehouseJobs() {
     return mockApi.listWarehouseJobs();

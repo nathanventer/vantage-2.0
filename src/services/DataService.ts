@@ -32,6 +32,7 @@ import type {
   NotificationItem,
   NotificationPreferences,
 } from "@/types";
+import type { DashboardMetrics } from "@/lib/demoKpis";
 import type { ScoredQuote } from "@/adapters/optimizer";
 
 /**
@@ -79,6 +80,7 @@ export interface DataService {
   listDocuments(): Promise<DocumentRecord[]>;
   listAuditEvents(): Promise<AuditEvent[]>;
   dashboardSeries(): Promise<DashboardSeries>;
+  getDashboardMetrics(): Promise<DashboardMetrics>;
 
   // ── Shipment & quote write-path (Section F) ─────────────────────────────
   /** Create a shipment/RFQ; reference generated via next_ref(). */

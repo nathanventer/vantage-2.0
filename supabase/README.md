@@ -32,9 +32,16 @@ All demo accounts use password **`Demo@123`** (created by `seed.sql`):
 | transport@sclogistics.com | source_user      | Southern Cross Logistics |
 | customs@sclogistics.com   | source_user      | Southern Cross Logistics |
 
-Seeded data: 2 companies, 8 users, 5 shipments (TXN-1001..1005), 5 quotes, and
-verified compliance documents. Source: `TradeHub_Pulse_Demo_Workbook.xlsx` +
-`DEMO TradeHub Demo Participants for Pulse Reporting.docx`.
+Seeded data: 2 companies, 8 users, **125 shipments** (TXN-1001..1125), matching quotes,
+shipment documents, notifications (Phase 3), Pulse lane rates, and verified compliance
+documents. Source: `TradeHub_Pulse_Demo_Workbook.xlsx` +
+`DEMO TradeHub Demo Participants for Pulse Reporting.docx` + `src/data/demoDataset.ts`.
+
+After seeding, verify counts:
+
+```bash
+supabase db execute --file supabase/verify-demo-seed.sql
+```
 
 ## Notes
 

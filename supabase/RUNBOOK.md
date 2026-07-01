@@ -6,7 +6,8 @@
 bun install
 supabase login && supabase link --project-ref qzckmlhaoehsngxjlgfk
 supabase db push                              # apply all migrations (incl. phase1_shipment_write_path)
-supabase db execute --file supabase/seed.sql  # idempotent demo data
+supabase db execute --file supabase/seed.sql  # idempotent demo data (125 shipments)
+supabase db execute --file supabase/verify-demo-seed.sql
 bash scripts/verify-phase-c.sh               # tsc + lint + test + build + bundle grep
 VITE_DATA_BACKEND=mock bun run test:e2e mock-smoke   # CI smoke (dev server on :8080)
 VITE_DATA_BACKEND=supabase bun run test:e2e:supabase           # scenarios 1–3 (needs .env.local)

@@ -1,5 +1,6 @@
 import * as M from "@/data/mock";
 import { buildDashboardSeriesFromTransactions } from "@/lib/dashboardSeries";
+import { computeDashboardMetrics } from "@/lib/demoKpis";
 import { buildRateBenchmarks } from "@/lib/pulse";
 import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { signatureProvider } from "@/adapters/signatureProvider";
@@ -38,8 +39,12 @@ const mockBlobs = new Map<string, Blob>();
 let refCounter = 1125;
 let docCounter = M.documents.length;
 
-/** Pulse subscription + alerts (mutable demo state). */
-let pulseSub: RateSubscription = { status: "none" };
+/** Pulse subscription + alerts (mutable demo state). Pre-active for buyer demos. */
+let pulseSub: RateSubscription = {
+  status: "active",
+  plan: "standard",
+  currentPeriodEnd: new Date(Date.now() + 30 * 864e5).toISOString(),
+};
 const priceAlerts: PriceAlert[] = [];
 
 /** Notifications (mutable demo state). */
@@ -253,6 +258,18 @@ export const mockApi: DataService = {
   async dashboardSeries() {
     await delay();
     return buildDashboardSeriesFromTransactions(M.transactions);
+  },
+  async getDashboardMetrics() {
+    await delay();
+    return computeDashboardMetrics({
+      transactions: M.transactions,
+      invoices: M.invoices,
+      trips: M.trips,
+      registrations: M.registrations,
+      complianceFlags: M.complianceFlags,
+      auditEvents: M.auditEvents,
+      shipmentRequests: M.shipmentRequests,
+    });
   },
 
   // ── Shipment & quote write-path (Section F) ──────────────────────────────

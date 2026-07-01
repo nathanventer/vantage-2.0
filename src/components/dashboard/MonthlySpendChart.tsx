@@ -9,6 +9,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatZAR } from "@/lib/format";
+import { latestMonthWithData } from "@/lib/demoKpis";
 import type { MonthlySpendPoint } from "@/types";
 
 const GRID = "color-mix(in oklab, var(--color-border) 100%, transparent)";
@@ -57,7 +58,7 @@ function SpendTooltip({
 }
 
 export function MonthlySpendChart({ data }: { data: MonthlySpendPoint[] }) {
-  const latest = data.at(-1);
+  const latest = latestMonthWithData(data);
   const peak = data.length
     ? data.reduce((best, row) => (row.spendZAR > best.spendZAR ? row : best), data[0])
     : { spendZAR: 0, month: "—", shipments: 0 };

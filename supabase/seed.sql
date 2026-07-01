@@ -165,8 +165,9 @@ begin
     select c.cid, d.dt
     from (values (v_ubuntu), (v_sc)) c(cid)
     cross join (values
-      ('company_registration'), ('tax_clearance'), ('vat_certificate'),
-      ('bank_confirmation'), ('sars_registration')
+      ('company_registration'), ('tax_clearance'), ('bank_confirmation'),
+      ('director_id'), ('sars_registration'), ('insurance'),
+      ('operating_license'), ('bbbee_certificate')
     ) d(dt)
   loop
     if not exists (
@@ -276,4 +277,237 @@ begin
       end loop;
     end if;
   end if;
+end $$;
+
+-- ============================================================================
+-- Phase 3 — bulk demo parity (TXN-1006..1125 + docs + 12-month spread).
+-- Mirrors src/data/demoDataset.ts. Idempotent — safe to re-run.
+-- ============================================================================
+do $$
+declare
+  v_ubuntu uuid;
+  v_sc uuid;
+  v_buyer uuid;
+  n integer;
+  ref text;
+  v_ship uuid;
+  v_step integer;
+  st public.shipment_status;
+  statuses text[] := array[
+    'draft','submitted','quoted','approved','in_progress','completed',
+    'invoiced','paid','cancelled','disputed','archived'
+  ];
+  origins text[] := array[
+    'Durban Port','Cape Town Port','Port Elizabeth','Durban Port',
+    'Cape Town Port','Richards Bay','Durban Port','Cape Town Port',
+    'Shanghai','Shenzhen','Mumbai','Singapore','Hamburg'
+  ];
+  dests text[] := array[
+    'Johannesburg','Stellenbosch','Pretoria','Bloemfontein',
+    'Johannesburg','Witbank','Polokwane','Kimberley',
+    'Durban','Durban','Durban','Durban','Cape Town'
+  ];
+  cargos text[] := array[
+    'Consumer Electronics','Textiles','Automotive Parts','FMCG Products',
+    'Industrial Equipment','Containerised electronics','Refrigerated produce',
+    'Bulk maize','Mining equipment','Wine pallets','Steel coils'
+  ];
+  doc_types text[] := array[
+    'rfq','source_selection','formal_quote','purchase_order','proforma_invoice',
+    'proof_of_service','tax_invoice','proof_of_payment','transaction_summary',
+    'commercial_invoice','packing_list','import_permit','insurance_certificate'
+  ];
+  o text;
+  d text;
+  cargo text;
+  freight numeric;
+  customs numeric;
+  wh numeric;
+  tr numeric;
+  vat numeric;
+  qi integer;
+  di integer;
+  v_src uuid;
+begin
+  select id into v_ubuntu from public.companies where name = 'Ubuntu Retail Imports (Pty) Ltd';
+  select id into v_sc from public.companies where name = 'Southern Cross Logistics Solutions';
+  select id into v_buyer from auth.users where email = 'buyer@ubuntuimports.com';
+
+  if v_ubuntu is null or v_sc is null or v_buyer is null then
+    raise notice 'Phase-3 seed skipped — Phase-1 companies/users missing.';
+    return;
+  end if;
+
+  for n in 1006..1110 loop
+    ref := 'TXN-' || n;
+    o := origins[1 + ((n - 1006) % array_length(origins, 1))];
+    d := dests[1 + ((n - 1006) % array_length(dests, 1))];
+    cargo := cargos[1 + ((n - 1006) % array_length(cargos, 1))];
+    st := 'in_progress';
+    v_step := 4 + ((n - 1006) % 11);
+    v_src := v_sc;
+
+    insert into public.shipments (
+      reference, demand_company_id, source_company_id, created_by,
+      shipment_type, cargo_description, origin_port, destination_port,
+      final_delivery_location, container_type, cargo_value, currency, status, current_step,
+      created_at
+    ) values (
+      ref, v_ubuntu, v_src, v_buyer,
+      'Import Container', cargo, o, d,
+      d || ' DC', '40FT',
+      (120000 + ((n - 1006) * 47000) % 3800000)::numeric(14,2),
+      'ZAR', st, v_step,
+      make_timestamptz(2026, 1 + ((n - 1001) % 12), 1 + ((n * 3) % 27), 10, 0, 0)
+    )
+    on conflict (reference) do update set
+      demand_company_id = excluded.demand_company_id,
+      source_company_id = excluded.source_company_id,
+      cargo_description = excluded.cargo_description,
+      origin_port = excluded.origin_port,
+      destination_port = excluded.destination_port,
+      status = excluded.status,
+      current_step = excluded.current_step,
+      created_at = excluded.created_at,
+      updated_at = now()
+    returning id into v_ship;
+
+    if v_ship is null then
+      select id into v_ship from public.shipments where reference = ref;
+    end if;
+
+    for qi in 0..2 loop
+      freight := (95000 + ((n - 1006) % 17) * 8500 + qi * 4200)::numeric(14,2);
+      customs := round(freight * 0.12, 2);
+      wh := round(freight * 0.15, 2);
+      tr := round(freight * 0.18, 2);
+      vat := round((freight + customs + wh + tr) * 0.15, 2);
+
+      insert into public.quotes (
+        reference, shipment_id, source_company_id,
+        freight_cost, customs_cost, warehouse_cost, transport_cost, other_cost, vat_amount,
+        estimated_transit_days, cost_score, service_score, compliance_score, capacity_score,
+        risk_score, total_score, status
+      ) values (
+        'QTE-' || n || '-' || qi, v_ship, v_sc,
+        freight, customs, wh, tr, 0, vat,
+        5 + qi + ((n - 1006) % 8),
+        25, 25, 20, 15, 15, 90 + qi,
+        case when qi = 0 and v_step >= 4 then 'selected'::quote_status else 'submitted'::quote_status end
+      )
+      on conflict (reference) do update set
+        shipment_id = excluded.shipment_id,
+        freight_cost = excluded.freight_cost,
+        status = excluded.status;
+    end loop;
+  end loop;
+
+  for n in 1111..1125 loop
+    ref := 'TXN-' || n;
+    o := origins[1 + ((n - 1006) % array_length(origins, 1))];
+    d := dests[1 + ((n - 1006) % array_length(dests, 1))];
+    cargo := cargos[1 + ((n - 1006) % array_length(cargos, 1))];
+    st := statuses[1 + ((n - 1111) % array_length(statuses, 1))]::public.shipment_status;
+    v_step := case st
+      when 'draft' then 1 when 'submitted' then 2 when 'quoted' then 3 when 'approved' then 4
+      when 'in_progress' then 8 when 'completed' then 16 when 'invoiced' then 14 when 'paid' then 15
+      when 'cancelled' then 6 when 'disputed' then 9 when 'archived' then 16 else 4 end;
+    v_src := case when st in ('draft','submitted','quoted') then null else v_sc end;
+
+    insert into public.shipments (
+      reference, demand_company_id, source_company_id, created_by,
+      shipment_type, cargo_description, origin_port, destination_port,
+      final_delivery_location, container_type, cargo_value, currency, status, current_step,
+      created_at
+    ) values (
+      ref, v_ubuntu, v_src, v_buyer,
+      'Import Container', cargo, o, d,
+      d || ' DC', '40FT',
+      (120000 + ((n - 1006) * 47000) % 3800000)::numeric(14,2),
+      'ZAR', st, v_step,
+      make_timestamptz(2026, 1 + ((n - 1001) % 12), 1 + ((n * 3) % 27), 10, 0, 0)
+    )
+    on conflict (reference) do update set
+      status = excluded.status,
+      current_step = excluded.current_step,
+      source_company_id = excluded.source_company_id,
+      created_at = excluded.created_at,
+      updated_at = now()
+    returning id into v_ship;
+
+    if v_ship is null then
+      select id into v_ship from public.shipments where reference = ref;
+    end if;
+
+    for qi in 0..2 loop
+      freight := (95000 + ((n - 1006) % 17) * 8500 + qi * 4200)::numeric(14,2);
+      customs := round(freight * 0.12, 2);
+      wh := round(freight * 0.15, 2);
+      tr := round(freight * 0.18, 2);
+      vat := round((freight + customs + wh + tr) * 0.15, 2);
+      insert into public.quotes (
+        reference, shipment_id, source_company_id,
+        freight_cost, customs_cost, warehouse_cost, transport_cost, other_cost, vat_amount,
+        estimated_transit_days, cost_score, service_score, compliance_score, capacity_score,
+        risk_score, total_score, status
+      ) values (
+        'QTE-' || n || '-' || qi, v_ship, v_sc,
+        freight, customs, wh, tr, 0, vat,
+        5 + qi, 25, 25, 20, 15, 15, 90 + qi,
+        case when qi = 0 and v_step >= 4 then 'selected'::quote_status else 'submitted'::quote_status end
+      )
+      on conflict (reference) do update set status = excluded.status;
+    end loop;
+  end loop;
+
+  -- Backfill created_at for workbook rows TXN-1001..1005 (12-month spread).
+  for n in 1001..1005 loop
+    update public.shipments
+    set created_at = make_timestamptz(2026, 1 + ((n - 1001) % 12), 5, 10, 0, 0)
+    where reference = 'TXN-' || n;
+  end loop;
+
+  insert into public.ref_sequences (prefix, last_value) values ('TXN', 1125)
+  on conflict (prefix) do update set last_value = greatest(public.ref_sequences.last_value, 1125);
+  insert into public.ref_sequences (prefix, last_value) values ('QTE', 1125)
+  on conflict (prefix) do update set last_value = greatest(public.ref_sequences.last_value, 1125);
+
+  if to_regclass('public.shipment_documents') is not null then
+    for v_ship, v_step, ref in
+      select s.id, s.current_step, s.reference
+      from public.shipments s
+      where s.reference ~ '^TXN-1[0-9]{3}$' and s.current_step >= 4
+    loop
+      for di in 1..array_length(doc_types, 1) loop
+        if not exists (
+          select 1 from public.shipment_documents
+          where shipment_id = v_ship and doc_type = doc_types[di] and reference = ref || '-D' || di
+        ) then
+          insert into public.shipment_documents (
+            shipment_id, doc_type, reference, status, version, generated_by
+          ) values (
+            v_ship,
+            doc_types[di],
+            ref || '-D' || di,
+            case when di % 4 = 0 then 'approved' when di % 3 = 0 then 'verified' else 'submitted' end,
+            1 + (di % 3),
+            v_buyer
+          );
+        end if;
+      end loop;
+    end loop;
+  end if;
+
+  if to_regclass('public.notifications') is not null and v_buyer is not null then
+    if not exists (select 1 from public.notifications where user_id = v_buyer and title = 'Demo dataset loaded') then
+      insert into public.notifications (user_id, title, body, kind, link) values
+        (v_buyer, 'Demo dataset loaded', '125 TradeHub shipments are available in your workspace.', 'success', '/transactions'),
+        (v_buyer, 'Quote received', 'Southern Cross quoted TXN-1002 — R128,800 all-in.', 'info', '/transactions'),
+        (v_buyer, 'Customs inspection hold', 'SARS hold on TXN-1004 — documentation review required.', 'warning', '/transactions'),
+        (v_buyer, 'Payment verified', 'INV-5001 (R203,000) settled for TXN-1001.', 'success', '/payments'),
+        (v_buyer, 'Shipment delivered', 'TXN-1003 completed — POD uploaded.', 'info', '/transactions');
+    end if;
+  end if;
+
+  raise notice 'Phase-3 bulk seed complete (TXN-1006..1125, 12-month spread, docs).';
 end $$;
