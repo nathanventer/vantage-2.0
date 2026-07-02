@@ -79,8 +79,7 @@ export function PaperDocument(p: PaperDocumentProps) {
       style={{
         background: "linear-gradient(160deg, #f0ede6 0%, #e9e5dc 55%, #eeebe3 100%)",
         color: "#171614",
-        fontFamily:
-          'ui-sans-serif, "Helvetica Neue", Helvetica, Arial, sans-serif',
+        fontFamily: 'ui-sans-serif, "Helvetica Neue", Helvetica, Arial, sans-serif',
       }}
     >
       {/* Header */}
@@ -183,7 +182,10 @@ export function PaperDocument(p: PaperDocumentProps) {
       {/* Services */}
       {lines.length > 0 && (
         <div className="mt-8">
-          <div className="flex items-end justify-between border-b pb-1.5" style={{ borderColor: "#171614" }}>
+          <div
+            className="flex items-end justify-between border-b pb-1.5"
+            style={{ borderColor: "#171614" }}
+          >
             <span className="text-[15px] font-extrabold uppercase tracking-tight">
               {p.sectionTitle ?? "Services"}
             </span>
@@ -207,11 +209,17 @@ export function PaperDocument(p: PaperDocumentProps) {
       {lines.length > 0 && (
         <div className="mt-6 flex justify-end">
           <div className="w-full max-w-[280px] text-[13px]">
-            <div className="flex justify-between border-b py-1.5" style={{ borderColor: "#c9c5ba" }}>
+            <div
+              className="flex justify-between border-b py-1.5"
+              style={{ borderColor: "#c9c5ba" }}
+            >
               <span style={{ color: "#45433e" }}>Subtotal</span>
               <span className="tabular-nums">R{fmt(subtotal)}</span>
             </div>
-            <div className="flex justify-between border-b py-1.5" style={{ borderColor: "#c9c5ba" }}>
+            <div
+              className="flex justify-between border-b py-1.5"
+              style={{ borderColor: "#c9c5ba" }}
+            >
               <span style={{ color: "#45433e" }}>VAT ({Math.round(vatRate * 100)}%)</span>
               <span className="tabular-nums">R{fmt(vat)}</span>
             </div>
@@ -239,7 +247,10 @@ export function PaperDocument(p: PaperDocumentProps) {
           >
             <span className="text-[15px] font-extrabold uppercase tracking-tight">Notes</span>
           </div>
-          <p className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed" style={{ color: "#45433e" }}>
+          <p
+            className="mt-3 whitespace-pre-wrap text-[13px] leading-relaxed"
+            style={{ color: "#45433e" }}
+          >
             {p.bodyText}
           </p>
         </div>
@@ -251,7 +262,11 @@ export function PaperDocument(p: PaperDocumentProps) {
           <div>
             <div className="text-[13px] font-extrabold uppercase tracking-tight">Bank details</div>
             <div className="mt-2 space-y-1 text-[12.5px]" style={{ color: "#45433e" }}>
-              {p.bank.name && <div className="font-semibold" style={{ color: "#171614" }}>{p.bank.name}</div>}
+              {p.bank.name && (
+                <div className="font-semibold" style={{ color: "#171614" }}>
+                  {p.bank.name}
+                </div>
+              )}
               {p.bank.iban && <div className="tabular-nums">{p.bank.iban}</div>}
               {p.bank.swift && <div>SWIFT&nbsp;&nbsp;{p.bank.swift}</div>}
             </div>
@@ -312,15 +327,18 @@ export function PaperDocument(p: PaperDocumentProps) {
                 className="mt-3 inline-block rounded-md border px-3 py-2 text-left"
                 style={{ borderColor: "#c9c5ba" }}
               >
-                <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: "#8a877f" }}>
+                <div
+                  className="text-[10px] font-bold uppercase tracking-[0.12em]"
+                  style={{ color: "#8a877f" }}
+                >
                   Signature token
                 </div>
                 <div className="mt-0.5 text-[13px] font-semibold tabular-nums">
                   {p.signature.token}
                 </div>
                 <div className="mt-1 text-[10.5px]" style={{ color: "#45433e" }}>
-                  Electronically signed on the Vantage platform. Verify this token in the
-                  document audit trail.
+                  Electronically signed on the Vantage platform. Verify this token in the document
+                  audit trail.
                 </div>
               </div>
             </div>

@@ -235,7 +235,9 @@ function TrackingPage() {
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-display font-semibold tracking-tight">{t.reference}</span>
+                      <span className="font-display font-semibold tracking-tight">
+                        {t.reference}
+                      </span>
                       <OpsChip status={ops.status} risk={ops.risk} />
                     </div>
                     <div className="mt-0.5 truncate text-xs text-muted-foreground" title={t.cargo}>
@@ -504,7 +506,10 @@ function ActivityFeed({ trips }: { trips: Trip[] }) {
       </div>
       <ul className="space-y-1.5">
         {visible.map((e) => (
-          <li key={`${e.id}-${e.minsAgo}`} className="flex items-baseline justify-between gap-3 text-sm">
+          <li
+            key={`${e.id}-${e.minsAgo}`}
+            className="flex items-baseline justify-between gap-3 text-sm"
+          >
             <span className="min-w-0 truncate" title={e.text}>
               {e.text}
             </span>
@@ -568,8 +573,16 @@ function JourneyTimeline({ trip }: { trip: Trip }) {
 function LinkedRecords({ trip }: { trip: Trip }) {
   const ref = trip.shipmentRef;
   const whQ = useQuery({ queryKey: ["rep-wh"], queryFn: api.listWarehouseJobs, enabled: !!ref });
-  const contQ = useQuery({ queryKey: ["rep-cont"], queryFn: api.listContainerJobs, enabled: !!ref });
-  const cargoQ = useQuery({ queryKey: ["rep-cargo"], queryFn: api.listCargoHandling, enabled: !!ref });
+  const contQ = useQuery({
+    queryKey: ["rep-cont"],
+    queryFn: api.listContainerJobs,
+    enabled: !!ref,
+  });
+  const cargoQ = useQuery({
+    queryKey: ["rep-cargo"],
+    queryFn: api.listCargoHandling,
+    enabled: !!ref,
+  });
   const invQ = useQuery({ queryKey: ["inv"], queryFn: api.listInvoices, enabled: !!ref });
   const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments, enabled: !!ref });
 
@@ -769,15 +782,7 @@ function Stat({
   );
 }
 
-function Fact({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Truck;
-  label: string;
-  value: string;
-}) {
+function Fact({ icon: Icon, label, value }: { icon: typeof Truck; label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-inset/40 p-3">
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -813,7 +818,9 @@ function DriverPanel({ trip }: { trip: Trip }) {
         <Button
           size="sm"
           onClick={() =>
-            toast.info(`Calling ${trip.driver}… (voice channel ships with the telematics integration)`)
+            toast.info(
+              `Calling ${trip.driver}… (voice channel ships with the telematics integration)`,
+            )
           }
         >
           <Phone className="mr-1.5 h-3.5 w-3.5" /> Call
@@ -821,7 +828,9 @@ function DriverPanel({ trip }: { trip: Trip }) {
         <Button
           size="sm"
           variant="outline"
-          onClick={() => toast.info("In-app driver chat arrives with the driver mobile app (Phase 2).")}
+          onClick={() =>
+            toast.info("In-app driver chat arrives with the driver mobile app (Phase 2).")
+          }
         >
           <MessageSquare className="mr-1.5 h-3.5 w-3.5" /> Chat
         </Button>

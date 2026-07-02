@@ -32,16 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Eye,
-  FilePlus2,
-  FileText,
-  Lock,
-  PenLine,
-  Printer,
-  Save,
-  ShieldCheck,
-} from "lucide-react";
+import { Eye, FilePlus2, FileText, Lock, PenLine, Printer, Save, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { DocumentPayload, DocumentRecord, DocumentType } from "@/types";
 
@@ -97,7 +88,12 @@ function buildPaperDoc(doc: DocumentRecord, companyName?: string): PaperDocument
     ],
     lines:
       typeof p.amountZAR === "number" && p.amountZAR > 0
-        ? [{ label: `${doc.type} — ${doc.transactionRef}`, amountZAR: Math.round(p.amountZAR / 1.15) }]
+        ? [
+            {
+              label: `${doc.type} — ${doc.transactionRef}`,
+              amountZAR: Math.round(p.amountZAR / 1.15),
+            },
+          ]
         : undefined,
     bodyText: p.notes ? String(p.notes) : undefined,
     issuedAt: doc.uploadedAt,
@@ -174,8 +170,7 @@ function DocsPage() {
   });
 
   const signMut = useMutation({
-    mutationFn: ({ docId, name }: { docId: string; name: string }) =>
-      api.signDocument(docId, name),
+    mutationFn: ({ docId, name }: { docId: string; name: string }) => api.signDocument(docId, name),
     onSuccess: (doc) => {
       invalidate();
       setSignTarget(null);
@@ -592,8 +587,8 @@ function DocsPage() {
                 autoFocus
               />
               <p className="text-xs text-muted-foreground">
-                Typing your name creates a binding electronic signature with a verifiable
-                signature token, recorded in the audit trail.
+                Typing your name creates a binding electronic signature with a verifiable signature
+                token, recorded in the audit trail.
               </p>
             </div>
             {signName.trim() && (
@@ -642,7 +637,9 @@ function TemplateCard({ t, onUse }: { t: TemplateMeta; onUse: () => void }) {
       <div className="mt-2 truncate text-sm font-medium" title={t.label}>
         {t.label}
       </div>
-      <div className="text-xs text-muted-foreground">Structured · versioned · e-signature ready</div>
+      <div className="text-xs text-muted-foreground">
+        Structured · versioned · e-signature ready
+      </div>
       <Button size="sm" variant="outline" className="mt-3" onClick={onUse}>
         <FilePlus2 className="mr-1.5 h-3.5 w-3.5" /> Use template
       </Button>

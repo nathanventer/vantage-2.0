@@ -824,8 +824,7 @@ export const supabaseApi: DataService = {
     const companyId = await resolveDemandCompanyId();
 
     const { data: refData, error: refErr } = await supabase.rpc("next_ref", { p_prefix: "TXN" });
-    const reference =
-      refErr || refData == null ? await mintRef("TXN") : (refData as string);
+    const reference = refErr || refData == null ? await mintRef("TXN") : (refData as string);
 
     const { data, error } = await supabase
       .from("shipments")
@@ -1308,16 +1307,23 @@ export const supabaseApi: DataService = {
     return buildDashboardSeriesFromTransactions(txs);
   },
   async getDashboardMetrics() {
-    const [transactions, invoices, trips, registrations, complianceFlags, auditEvents, shipmentRequests] =
-      await Promise.all([
-        supabaseApi.listTransactions(),
-        supabaseApi.listInvoices(),
-        supabaseApi.listTrips(),
-        supabaseApi.listRegistrations(),
-        supabaseApi.listComplianceFlags(),
-        supabaseApi.listAuditEvents(),
-        supabaseApi.listShipmentRequests(),
-      ]);
+    const [
+      transactions,
+      invoices,
+      trips,
+      registrations,
+      complianceFlags,
+      auditEvents,
+      shipmentRequests,
+    ] = await Promise.all([
+      supabaseApi.listTransactions(),
+      supabaseApi.listInvoices(),
+      supabaseApi.listTrips(),
+      supabaseApi.listRegistrations(),
+      supabaseApi.listComplianceFlags(),
+      supabaseApi.listAuditEvents(),
+      supabaseApi.listShipmentRequests(),
+    ]);
     return computeDashboardMetrics({
       transactions,
       invoices,
@@ -1335,15 +1341,21 @@ export const supabaseApi: DataService = {
       .from("warehouse_jobs")
       .select(
         "id,reference,warehouse_type,client_company_id,location,status,checklist," +
-        "client:companies!warehouse_jobs_client_company_id_fkey(name)," +
-        "shipment:shipments!warehouse_jobs_shipment_id_fkey(reference)",
+          "client:companies!warehouse_jobs_client_company_id_fkey(name)," +
+          "shipment:shipments!warehouse_jobs_shipment_id_fkey(reference)",
       )
       .order("created_at", { ascending: false });
     fail("listWarehouseJobs", error);
     type Row = {
-      id: string; reference: string; warehouse_type: string; client_company_id: string;
-      location: string; status: string; checklist: { step: string; done: boolean }[];
-      client: { name: string } | null; shipment: { reference: string } | null;
+      id: string;
+      reference: string;
+      warehouse_type: string;
+      client_company_id: string;
+      location: string;
+      status: string;
+      checklist: { step: string; done: boolean }[];
+      client: { name: string } | null;
+      shipment: { reference: string } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,
@@ -1363,13 +1375,18 @@ export const supabaseApi: DataService = {
       .from("container_jobs")
       .select(
         "id,container_no,job_type,vessel,dwell_days,damage,status," +
-        "shipment:shipments!container_jobs_shipment_id_fkey(reference)",
+          "shipment:shipments!container_jobs_shipment_id_fkey(reference)",
       )
       .order("created_at", { ascending: false });
     fail("listContainerJobs", error);
     type Row = {
-      id: string; container_no: string; job_type: string; vessel: string | null;
-      dwell_days: number; damage: boolean; status: string;
+      id: string;
+      container_no: string;
+      job_type: string;
+      vessel: string | null;
+      dwell_days: number;
+      damage: boolean;
+      status: string;
       shipment: { reference: string } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -1389,13 +1406,18 @@ export const supabaseApi: DataService = {
       .from("cargo_handling")
       .select(
         "id,reference,operation,weight_kg,condition,handled_at," +
-        "shipment:shipments!cargo_handling_shipment_id_fkey(reference)",
+          "shipment:shipments!cargo_handling_shipment_id_fkey(reference)",
       )
       .order("handled_at", { ascending: false });
     fail("listCargoHandling", error);
     type Row = {
-      id: string; reference: string; operation: string; weight_kg: number;
-      condition: string; handled_at: string; shipment: { reference: string } | null;
+      id: string;
+      reference: string;
+      operation: string;
+      weight_kg: number;
+      condition: string;
+      handled_at: string;
+      shipment: { reference: string } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,
@@ -1413,16 +1435,30 @@ export const supabaseApi: DataService = {
       .from("trips")
       .select(
         "id,reference,vehicle,driver,origin,destination,status,progress_pct,pod_uploaded,lat,lng,client_company_id,created_at," +
-        "shipment:shipments!trips_shipment_id_fkey(reference,cargo_description,required_date)," +
-        "clientco:companies!trips_client_company_id_fkey(name)",
+          "shipment:shipments!trips_shipment_id_fkey(reference,cargo_description,required_date)," +
+          "clientco:companies!trips_client_company_id_fkey(name)",
       )
       .order("created_at", { ascending: false });
     fail("listTrips", error);
     type Row = {
-      id: string; reference: string; vehicle: string; driver: string; origin: string;
-      destination: string; status: string; progress_pct: number; pod_uploaded: boolean;
-      lat: number | null; lng: number | null; client_company_id: string | null; created_at: string;
-      shipment: { reference: string; cargo_description: string | null; required_date: string | null } | null;
+      id: string;
+      reference: string;
+      vehicle: string;
+      driver: string;
+      origin: string;
+      destination: string;
+      status: string;
+      progress_pct: number;
+      pod_uploaded: boolean;
+      lat: number | null;
+      lng: number | null;
+      client_company_id: string | null;
+      created_at: string;
+      shipment: {
+        reference: string;
+        cargo_description: string | null;
+        required_date: string | null;
+      } | null;
       clientco: { name: string } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -1474,10 +1510,19 @@ export const supabaseApi: DataService = {
     fail("getCompanyProfile", error);
     if (!c) return null;
     type Row = {
-      id: string; name: string; type: string; registration_number: string | null;
-      vat_number: string | null; city: string | null; country: string | null;
-      contact_person: string | null; contact_email: string | null; contact_phone: string | null;
-      risk_rating: string | null; approval_status: string; created_at: string;
+      id: string;
+      name: string;
+      type: string;
+      registration_number: string | null;
+      vat_number: string | null;
+      city: string | null;
+      country: string | null;
+      contact_person: string | null;
+      contact_email: string | null;
+      contact_phone: string | null;
+      risk_rating: string | null;
+      approval_status: string;
+      created_at: string;
     };
     const row = c as unknown as Row;
 
@@ -1529,15 +1574,22 @@ export const supabaseApi: DataService = {
       .from("invoices")
       .select(
         "id,number,transaction_ref,client_company_id,provider_company_id,amount_cents,issued_at,due_at,status," +
-        "client:companies!invoices_client_company_id_fkey(name),provider:companies!invoices_provider_company_id_fkey(name)",
+          "client:companies!invoices_client_company_id_fkey(name),provider:companies!invoices_provider_company_id_fkey(name)",
       )
       .order("issued_at", { ascending: false });
     fail("listInvoices", error);
     type Row = {
-      id: string; number: string; transaction_ref: string | null; client_company_id: string;
-      provider_company_id: string | null; amount_cents: number; issued_at: string;
-      due_at: string | null; status: string;
-      client: { name: string } | null; provider: { name: string } | null;
+      id: string;
+      number: string;
+      transaction_ref: string | null;
+      client_company_id: string;
+      provider_company_id: string | null;
+      amount_cents: number;
+      issued_at: string;
+      due_at: string | null;
+      status: string;
+      client: { name: string } | null;
+      provider: { name: string } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,
@@ -1561,8 +1613,12 @@ export const supabaseApi: DataService = {
       .order("created_at", { ascending: false });
     fail("listPayments", error);
     type Row = {
-      id: string; invoice_number: string | null; amount_cents: number; method: string;
-      gateway_status: string; settled_at: string | null;
+      id: string;
+      invoice_number: string | null;
+      amount_cents: number;
+      method: string;
+      gateway_status: string;
+      settled_at: string | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,
@@ -1581,8 +1637,13 @@ export const supabaseApi: DataService = {
       .order("noted_at", { ascending: false });
     fail("listComplianceFlags", error);
     type Row = {
-      id: string; entity_company_id: string | null; entity_label: string; area: string;
-      severity: string; status: string; noted_at: string;
+      id: string;
+      entity_company_id: string | null;
+      entity_label: string;
+      area: string;
+      severity: string;
+      status: string;
+      noted_at: string;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
       id: r.id,

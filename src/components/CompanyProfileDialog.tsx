@@ -89,11 +89,7 @@ export function CompanyProfileDialog({
             {/* Activity stats */}
             <div className="grid grid-cols-3 gap-3">
               <Stat icon={Ship} label="Shipments" value={String(p.stats.shipments)} />
-              <Stat
-                icon={Wallet}
-                label="Invoiced"
-                value={formatZAR(p.stats.invoicesTotalZAR)}
-              />
+              <Stat icon={Wallet} label="Invoiced" value={formatZAR(p.stats.invoicesTotalZAR)} />
               <Stat
                 icon={Wallet}
                 label="Outstanding"
@@ -124,15 +120,7 @@ export function CompanyProfileDialog({
   );
 }
 
-function Row({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Mail;
-  label: string;
-  value: string;
-}) {
+function Row({ icon: Icon, label, value }: { icon: typeof Mail; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
@@ -205,7 +193,11 @@ export function CompanyLink({
       >
         {name}
       </button>
-      <CompanyProfileDialog companyId={open ? companyId : null} open={open} onOpenChange={setOpen} />
+      <CompanyProfileDialog
+        companyId={open ? companyId : null}
+        open={open}
+        onOpenChange={setOpen}
+      />
     </>
   );
 }

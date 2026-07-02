@@ -2,12 +2,7 @@
  * Mock data facade — canonical TradeHub demo dataset (125 shipments) lives in
  * demoDataset.ts; this module re-exports it for mockApi and legacy imports.
  */
-export {
-  STEP_LABELS,
-  makeLifecycleSteps,
-  macroForStep,
-  currentStepOf,
-} from "@/data/mockLifecycle";
+export { STEP_LABELS, makeLifecycleSteps, macroForStep, currentStepOf } from "@/data/mockLifecycle";
 
 export {
   DEMO_SHIPMENT_COUNT,

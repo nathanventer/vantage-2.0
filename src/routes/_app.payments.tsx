@@ -305,7 +305,11 @@ function InvoiceSummary({ invoice }: { invoice: Invoice }) {
     lines: items.filter((i) => !i.label.startsWith("VAT")),
     issuedAt: invoice.issuedAt,
     dueAt: invoice.dueAt,
-    bank: { name: "Standard Bank · Current", iban: "ZA44 5005 0010 5175 4075 2493 1", swift: "SBZAZAJJ" },
+    bank: {
+      name: "Standard Bank · Current",
+      iban: "ZA44 5005 0010 5175 4075 2493 1",
+      swift: "SBZAZAJJ",
+    },
     footnote: `Vantage · Integrated Trade & Logistics · ${invoice.number}`,
   };
   return (

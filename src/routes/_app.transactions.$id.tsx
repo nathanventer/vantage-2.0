@@ -177,10 +177,26 @@ function TxDetail() {
                                 },
                                 sectionTitle: "Quotation",
                                 lines: [
-                                  { label: `Freight — ${data.origin} → ${data.destination}`, amountZAR: Math.round((q.priceZAR / 1.15) * 0.62) },
-                                  { label: "Customs clearing & duties", amountZAR: Math.round((q.priceZAR / 1.15) * 0.14) },
-                                  { label: "Handling & warehousing", amountZAR: Math.round((q.priceZAR / 1.15) * 0.18) },
-                                  { label: `Cargo insurance · transit ${q.etaDays} days`, amountZAR: Math.round(q.priceZAR / 1.15) - Math.round((q.priceZAR / 1.15) * 0.62) - Math.round((q.priceZAR / 1.15) * 0.14) - Math.round((q.priceZAR / 1.15) * 0.18) },
+                                  {
+                                    label: `Freight — ${data.origin} → ${data.destination}`,
+                                    amountZAR: Math.round((q.priceZAR / 1.15) * 0.62),
+                                  },
+                                  {
+                                    label: "Customs clearing & duties",
+                                    amountZAR: Math.round((q.priceZAR / 1.15) * 0.14),
+                                  },
+                                  {
+                                    label: "Handling & warehousing",
+                                    amountZAR: Math.round((q.priceZAR / 1.15) * 0.18),
+                                  },
+                                  {
+                                    label: `Cargo insurance · transit ${q.etaDays} days`,
+                                    amountZAR:
+                                      Math.round(q.priceZAR / 1.15) -
+                                      Math.round((q.priceZAR / 1.15) * 0.62) -
+                                      Math.round((q.priceZAR / 1.15) * 0.14) -
+                                      Math.round((q.priceZAR / 1.15) * 0.18),
+                                  },
                                 ],
                                 terms: `Quotation valid for 14 days. Estimated transit ${q.etaDays} days. Subject to Vantage master service terms.`,
                                 footnote: `Vantage · Quotation for ${data.reference}`,

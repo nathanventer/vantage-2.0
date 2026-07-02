@@ -169,13 +169,9 @@ function ReportsPage() {
       ? Math.round((steps.filter((s) => s.done).length / steps.length) * 100)
       : 0;
     const fleetUtil = trips.length
-      ? Math.round(
-          (trips.filter((t) => t.status !== "Scheduled").length / trips.length) * 100,
-        )
+      ? Math.round((trips.filter((t) => t.status !== "Scheduled").length / trips.length) * 100)
       : 0;
-    const avgDwell = conts.length
-      ? conts.reduce((s, c) => s + c.dwellDays, 0) / conts.length
-      : 0;
+    const avgDwell = conts.length ? conts.reduce((s, c) => s + c.dwellDays, 0) / conts.length : 0;
     const delivered = trips.filter((t) => t.status === "Delivered");
     const sla = delivered.length
       ? Math.round((delivered.filter((t) => t.podUploaded).length / delivered.length) * 100)
@@ -203,7 +199,14 @@ function ReportsPage() {
   // ── Compliance coverage per area = share of flags resolved (no flags → 100) ─
   const compliance = useMemo(() => {
     const flags = flagQ.data ?? [];
-    const AREAS = ["SARS", "Customs", "Documentation", "Transport", "Environmental", "SOP"] as const;
+    const AREAS = [
+      "SARS",
+      "Customs",
+      "Documentation",
+      "Transport",
+      "Environmental",
+      "SOP",
+    ] as const;
     const coverage = AREAS.map((area) => {
       const inArea = flags.filter((f) => f.area === area);
       const closed = inArea.filter((f) => f.status === "Closed").length;
@@ -483,7 +486,11 @@ function ReportsPage() {
                 value={`${ops.fleetUtil}%`}
                 tone={ops.fleetUtil >= 70 ? "success" : "warning"}
               />
-              <StatCard label="Container turn." value={`${ops.avgDwell.toFixed(1)} d`} tone="info" />
+              <StatCard
+                label="Container turn."
+                value={`${ops.avgDwell.toFixed(1)} d`}
+                tone="info"
+              />
               <StatCard
                 label="POD compliance"
                 value={`${ops.sla}%`}
@@ -549,11 +556,7 @@ function ReportsPage() {
                 </span>
               </h4>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart
-                  layout="vertical"
-                  data={compliance.coverage}
-                  margin={{ left: 24 }}
-                >
+                <BarChart layout="vertical" data={compliance.coverage} margin={{ left: 24 }}>
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" domain={[0, 100]} fontSize={12} stroke={AXIS} />
                   <YAxis type="category" dataKey="area" fontSize={12} stroke={AXIS} width={90} />

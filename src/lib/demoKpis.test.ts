@@ -17,7 +17,16 @@ function tx(over: Partial<Transaction> & { createdAt: string }): Transaction {
     status: "In Progress",
     currentStage: "Transport",
     steps: [],
-    quotes: [{ id: "q1", providerId: "p1", providerName: "P", priceZAR: 100_000, etaDays: 5, status: "Accepted" }],
+    quotes: [
+      {
+        id: "q1",
+        providerId: "p1",
+        providerName: "P",
+        priceZAR: 100_000,
+        etaDays: 5,
+        status: "Accepted",
+      },
+    ],
     ...over,
   };
 }
@@ -38,7 +47,21 @@ describe("demoKpis", () => {
     const m = computeDashboardMetrics({
       transactions: [tx({ createdAt: jan }), tx({ createdAt: feb, reference: "TXN-1002" })],
       invoices: [],
-      trips: [{ id: "1", reference: "TR-1", vehicle: "ZN", driver: "A", origin: "A", destination: "B", status: "In Transit", progressPct: 50, podUploaded: false, lat: 0, lng: 0 }],
+      trips: [
+        {
+          id: "1",
+          reference: "TR-1",
+          vehicle: "ZN",
+          driver: "A",
+          origin: "A",
+          destination: "B",
+          status: "In Transit",
+          progressPct: 50,
+          podUploaded: false,
+          lat: 0,
+          lng: 0,
+        },
+      ],
       registrations: [],
       complianceFlags: [],
       auditEvents: [],

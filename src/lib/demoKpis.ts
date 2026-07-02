@@ -1,7 +1,4 @@
-import {
-  buildDashboardSeriesFromTransactions,
-  shipmentCost,
-} from "@/lib/dashboardSeries";
+import { buildDashboardSeriesFromTransactions, shipmentCost } from "@/lib/dashboardSeries";
 import { formatZAR } from "@/lib/format";
 import type {
   AuditEvent,
@@ -79,9 +76,7 @@ export function computeDashboardMetrics(input: DashboardMetricsInput): Dashboard
 
   const spendThisMonthZAR = latest?.spendZAR ?? 0;
   const spendDeltaPct =
-    prev && prev.spendZAR > 0
-      ? ((spendThisMonthZAR - prev.spendZAR) / prev.spendZAR) * 100
-      : null;
+    prev && prev.spendZAR > 0 ? ((spendThisMonthZAR - prev.spendZAR) / prev.spendZAR) * 100 : null;
 
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 30);
@@ -106,8 +101,7 @@ export function computeDashboardMetrics(input: DashboardMetricsInput): Dashboard
     settlementsDueZAR: input.invoices
       .filter((i) => i.status === "Unpaid" || i.status === "Overdue")
       .reduce((sum, i) => sum + i.amountZAR, 0),
-    pendingRegistrations: input.registrations.filter((r) => r.status === "Under Review")
-      .length,
+    pendingRegistrations: input.registrations.filter((r) => r.status === "Under Review").length,
     openComplianceFlags: input.complianceFlags.filter((c) => c.status !== "Closed").length,
     auditEvents30d: input.auditEvents.length,
     platformVolumeZAR,

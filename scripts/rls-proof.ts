@@ -49,20 +49,14 @@ async function main() {
   // Resolve company ids via each user's own profile.
   const myCompany = async (c: SupabaseClient) => {
     const { data: u } = await c.auth.getUser();
-    const { data } = await c
-      .from("profiles")
-      .select("company_id")
-      .eq("id", u.user!.id)
-      .single();
+    const { data } = await c.from("profiles").select("company_id").eq("id", u.user!.id).single();
     return (data as { company_id: string }).company_id;
   };
   const ubuntuId = await myCompany(buyer);
   const scId = await myCompany(provider);
 
   // 1. Demand scoping on shipments
-  const { data: buyerShipments } = await buyer
-    .from("shipments")
-    .select("id, demand_company_id");
+  const { data: buyerShipments } = await buyer.from("shipments").select("id, demand_company_id");
   const buyerLeaks = (buyerShipments ?? []).filter((s) => s.demand_company_id !== ubuntuId);
   assert(
     "Demand sees only own-company shipments",
@@ -71,9 +65,7 @@ async function main() {
   );
 
   // 2. Source scoping on shipments
-  const { data: provShipments } = await provider
-    .from("shipments")
-    .select("id, source_company_id");
+  const { data: provShipments } = await provider.from("shipments").select("id, source_company_id");
   const provForeign = (provShipments ?? []).filter(
     (s) => s.source_company_id !== null && s.source_company_id !== scId,
   );

@@ -202,7 +202,10 @@ export function deriveOps(trip: Trip): TripOps {
       ? null
       : trip.status === "Scheduled"
         ? totalHours
-        : Math.max(1, Math.round(totalHours * (1 - trip.progressPct / 100)) + (status === "Delayed" ? 4 : 0));
+        : Math.max(
+            1,
+            Math.round(totalHours * (1 - trip.progressPct / 100)) + (status === "Delayed" ? 4 : 0),
+          );
 
   const risk = status === "Delayed" && hashN(r + "r", 3) === 0;
 
@@ -251,15 +254,32 @@ export function buildTimeline(trip: Trip): { label: string; done: boolean; at?: 
   return [
     { label: "Booking confirmed", done: true, at: at(0) },
     { label: `Collection scheduled — ${trip.origin}`, done: true, at: at(1) },
-    { label: "Cargo collected & documentation verified", done: started, at: started ? at(2) : undefined },
-    { label: "Departed origin hub", done: started && p > 10, at: started && p > 10 ? at(3) : undefined },
     {
-      label: ops.status === "Customs Clearance" ? "Customs inspection in progress" : "Customs cleared",
+      label: "Cargo collected & documentation verified",
+      done: started,
+      at: started ? at(2) : undefined,
+    },
+    {
+      label: "Departed origin hub",
+      done: started && p > 10,
+      at: started && p > 10 ? at(3) : undefined,
+    },
+    {
+      label:
+        ops.status === "Customs Clearance" ? "Customs inspection in progress" : "Customs cleared",
       done: started && p > 35,
       at: started && p > 35 ? at(4) : undefined,
     },
-    { label: "In transit — main corridor leg", done: started && p > 50, at: started && p > 50 ? at(5) : undefined },
-    { label: `Out for delivery — ${trip.destination}`, done: p > 85, at: p > 85 ? at(6) : undefined },
+    {
+      label: "In transit — main corridor leg",
+      done: started && p > 50,
+      at: started && p > 50 ? at(5) : undefined,
+    },
+    {
+      label: `Out for delivery — ${trip.destination}`,
+      done: p > 85,
+      at: p > 85 ? at(6) : undefined,
+    },
     { label: "Delivered & POD signed", done: delivered, at: delivered ? at(7) : undefined },
   ];
 }

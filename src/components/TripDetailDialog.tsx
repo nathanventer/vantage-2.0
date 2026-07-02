@@ -105,15 +105,7 @@ export function TripDetailDialog({
   );
 }
 
-function Meta({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Truck;
-  label: string;
-  value: string;
-}) {
+function Meta({ icon: Icon, label, value }: { icon: typeof Truck; label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-inset/40 p-3">
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -199,7 +191,14 @@ function RouteMap({ trip, waypoints }: { trip: Trip; waypoints: TripWaypoint[] }
         {/* waypoints */}
         {pts.slice(0, -1).map((p, i) => (
           <g key={i}>
-            <circle cx={x(p.lng)} cy={y(p.lat)} r="4" fill="var(--bg-surface)" stroke="var(--brand)" strokeWidth="1.5" />
+            <circle
+              cx={x(p.lng)}
+              cy={y(p.lat)}
+              r="4"
+              fill="var(--bg-surface)"
+              stroke="var(--brand)"
+              strokeWidth="1.5"
+            />
             {p.label && (
               <text
                 x={x(p.lng)}

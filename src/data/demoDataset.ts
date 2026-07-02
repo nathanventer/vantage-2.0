@@ -262,9 +262,15 @@ function shipmentProfile(index: number): {
     };
   }
   if (index < 110) {
-    const activeDb = ["submitted", "quoted", "approved", "in_progress", "in_progress", "invoiced", "disputed"][
-      index % 7
-    ];
+    const activeDb = [
+      "submitted",
+      "quoted",
+      "approved",
+      "in_progress",
+      "in_progress",
+      "invoiced",
+      "disputed",
+    ][index % 7];
     const currentStep = stepForDbStatus(activeDb);
     return { closed: false, currentStep, status: dbStatusToUi(activeDb) };
   }
@@ -423,8 +429,7 @@ export function buildDemoDataset() {
         providerName: p,
         priceZAR: quoteBase + qi * 18_500 + (i % 5) * 2_100,
         etaDays: 5 + qi + (i % 4),
-        status:
-          qi === 0 && profile.currentStep >= 4 ? ("Accepted" as const) : ("Quoted" as const),
+        status: qi === 0 && profile.currentStep >= 4 ? ("Accepted" as const) : ("Quoted" as const),
       })),
     };
   });
@@ -579,14 +584,14 @@ export function buildDemoDataset() {
   }
 
   const invoices: Invoice[] = transactions.slice(0, 95).map((t, i) => ({
-      id: `inv-${pad(i + 1)}`,
-      number: `INV-${pad(5000 + i)}`,
-      transactionRef: t.reference,
-      clientId: t.demandCompanyId,
-      client: t.demandCompany,
-      providerId: t.sourceProviderId,
-      provider: t.sourceProvider,
-      amountZAR: t.quotes.find((q) => q.status === "Accepted")?.priceZAR ?? 120_000 + i * 3_500,
+    id: `inv-${pad(i + 1)}`,
+    number: `INV-${pad(5000 + i)}`,
+    transactionRef: t.reference,
+    clientId: t.demandCompanyId,
+    client: t.demandCompany,
+    providerId: t.sourceProviderId,
+    provider: t.sourceProvider,
+    amountZAR: t.quotes.find((q) => q.status === "Accepted")?.priceZAR ?? 120_000 + i * 3_500,
     issuedAt: t.createdAt,
     dueAt: daysAgo(i - 12),
     status: (["Unpaid", "Paid", "Overdue", "Paid"] as InvoiceStatus[])[i % 4],
@@ -668,9 +673,7 @@ export function buildDemoDataset() {
       contactName: rand(["A. Mahlangu", "J. Pretorius", "S. Naidoo", "T. Khumo"], i),
       contactEmail: `contact${i + 1}@example.co.za`,
       submittedAt: daysAgo(i),
-      status: (["Under Review", "Approved", "Pending", "Rejected"] as RegistrationStatus[])[
-        i % 4
-      ],
+      status: (["Under Review", "Approved", "Pending", "Rejected"] as RegistrationStatus[])[i % 4],
       governance: GOV_ITEMS.map((item, idx) => ({
         item,
         status: (["Verified", "Pending", "Failed"] as GovernanceStatus[])[(i + idx) % 3],

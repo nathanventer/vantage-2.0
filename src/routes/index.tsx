@@ -206,7 +206,9 @@ function Landing() {
 
               <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                 <div className="h-px flex-1 bg-border" /> Demo — password{" "}
-                <span className="font-mono normal-case tracking-normal text-foreground">Demo@123</span>{" "}
+                <span className="font-mono normal-case tracking-normal text-foreground">
+                  Demo@123
+                </span>{" "}
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="grid grid-cols-3 gap-2">
