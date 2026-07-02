@@ -120,9 +120,11 @@ function TrackingPage() {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(320px,380px)_1fr]">
+      {/* Map/canvas renders FIRST on stacked (narrow) layouts so tracking is
+          immediately visible; the trip list moves below it. Side-by-side ≥ lg. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(300px,360px)_1fr]">
         {/* ── Trip list ─────────────────────────────────────────────── */}
-        <aside className="min-w-0">
+        <aside className="order-2 min-w-0 lg:order-1">
           <div className="mb-3 flex items-baseline justify-between">
             <h2 className="font-display text-lg font-semibold">
               Trips <span className="text-muted-foreground">{filtered.length}</span>
@@ -157,7 +159,7 @@ function TrackingPage() {
             ))}
           </div>
 
-          <ul className="space-y-2 xl:max-h-[calc(100vh-26rem)] xl:overflow-y-auto xl:pr-1">
+          <ul className="max-h-[26rem] space-y-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-26rem)]">
             {filtered.map((t) => (
               <li key={t.id}>
                 <button
@@ -207,7 +209,7 @@ function TrackingPage() {
         </aside>
 
         {/* ── Tracking canvas ───────────────────────────────────────── */}
-        <section className="min-w-0">
+        <section className="order-1 min-w-0 lg:order-2">
           {!trip ? (
             <div className="flex h-96 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
               Select a trip to start tracking.
