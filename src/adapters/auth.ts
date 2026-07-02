@@ -20,14 +20,28 @@ function mapDbRole(r: string): Role {
   return "admin"; // super_admin / operations_admin / finance_admin / compliance_admin
 }
 
+function authErrorMessage(message: string): string {
+  if (/invalid api key/i.test(message)) {
+    return "Invalid Supabase API key — check VITE_SUPABASE_ANON_KEY in .env.local and restart the dev server.";
+  }
+  if (/invalid login credentials/i.test(message)) {
+    return "Invalid email or password. Demo accounts use password Demo@123 (capital D, @ symbol).";
+  }
+  if (/email not confirmed/i.test(message)) {
+    return "Email not confirmed. Use a seeded demo account or confirm your email in Supabase Auth.";
+  }
+  return message;
+}
+
 async function loadProfile(userId: string, fallbackEmail: string): Promise<AuthUser> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .select(
       "id,email,full_name,role,company_id,onboarding_step,company:companies(name,approval_status)",
     )
     .eq("id", userId)
     .maybeSingle();
+  if (error) throw new Error(authErrorMessage(error.message));
   const p = data as {
     email: string | null;
     full_name: string | null;
@@ -36,17 +50,23 @@ async function loadProfile(userId: string, fallbackEmail: string): Promise<AuthU
     onboarding_step: number | null;
     company: { name: string; approval_status: string } | null;
   } | null;
-  const role = mapDbRole(p?.role ?? "demand_user");
+  if (!p) {
+    await supabase.auth.signOut();
+    throw new Error(
+      "Signed in but no profile was found. Re-run supabase/seed.sql or contact your administrator.",
+    );
+  }
+  const role = mapDbRole(p.role ?? "demand_user");
   return {
     id: userId,
-    email: p?.email ?? fallbackEmail,
-    fullName: p?.full_name || p?.email || fallbackEmail,
+    email: p.email ?? fallbackEmail,
+    fullName: p.full_name || p.email || fallbackEmail,
     role,
-    companyId: p?.company_id ?? undefined,
-    companyName: p?.company?.name ?? undefined,
+    companyId: p.company_id ?? undefined,
+    companyName: p.company?.name ?? undefined,
     // Admins have no trading company but are never gated; everyone else needs approval.
-    companyApproved: role === "admin" || p?.company?.approval_status === "approved",
-    onboardingStep: p?.onboarding_step ?? 1,
+    companyApproved: role === "admin" || p.company?.approval_status === "approved",
+    onboardingStep: p.onboarding_step ?? 1,
   };
 }
 
@@ -59,7 +79,7 @@ const supabaseAuth: AuthAdapter = {
   },
   async signIn(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(authErrorMessage(error.message));
     return loadProfile(data.user.id, data.user.email ?? email);
   },
   async signUp(email, password, fullName) {

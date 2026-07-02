@@ -35,3 +35,6 @@ blob-report/
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI temp
+supabase/.temp/

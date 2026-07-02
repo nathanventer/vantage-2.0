@@ -27,8 +27,10 @@ import { Route as AppContainersRouteImport } from './routes/_app.containers'
 import { Route as AppCargoRouteImport } from './routes/_app.cargo'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppTransactionsIndexRouteImport } from './routes/_app.transactions.index'
+import { Route as AppTrackingIndexRouteImport } from './routes/_app.tracking.index'
 import { Route as AppTransactionsNewRouteImport } from './routes/_app.transactions.new'
 import { Route as AppTransactionsIdRouteImport } from './routes/_app.transactions.$id'
+import { Route as AppTrackingTripIdRouteImport } from './routes/_app.tracking.$tripId'
 import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppAdminRegistrationsRouteImport } from './routes/_app.admin.registrations'
 import { Route as AppAdminComplianceRouteImport } from './routes/_app.admin.compliance'
@@ -123,6 +125,11 @@ const AppTransactionsIndexRoute = AppTransactionsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppTransactionsRoute,
 } as any)
+const AppTrackingIndexRoute = AppTrackingIndexRouteImport.update({
+  id: '/tracking/',
+  path: '/tracking/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTransactionsNewRoute = AppTransactionsNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -132,6 +139,11 @@ const AppTransactionsIdRoute = AppTransactionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppTrackingTripIdRoute = AppTrackingTripIdRouteImport.update({
+  id: '/tracking/$tripId',
+  path: '/tracking/$tripId',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
@@ -175,8 +187,10 @@ export interface FileRoutesByFullPath {
   '/admin/compliance': typeof AppAdminComplianceRoute
   '/admin/registrations': typeof AppAdminRegistrationsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/tracking/$tripId': typeof AppTrackingTripIdRoute
   '/transactions/$id': typeof AppTransactionsIdRoute
   '/transactions/new': typeof AppTransactionsNewRoute
+  '/tracking/': typeof AppTrackingIndexRoute
   '/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -199,8 +213,10 @@ export interface FileRoutesByTo {
   '/admin/compliance': typeof AppAdminComplianceRoute
   '/admin/registrations': typeof AppAdminRegistrationsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/tracking/$tripId': typeof AppTrackingTripIdRoute
   '/transactions/$id': typeof AppTransactionsIdRoute
   '/transactions/new': typeof AppTransactionsNewRoute
+  '/tracking': typeof AppTrackingIndexRoute
   '/transactions': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesById {
@@ -226,8 +242,10 @@ export interface FileRoutesById {
   '/_app/admin/compliance': typeof AppAdminComplianceRoute
   '/_app/admin/registrations': typeof AppAdminRegistrationsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/tracking/$tripId': typeof AppTrackingTripIdRoute
   '/_app/transactions/$id': typeof AppTransactionsIdRoute
   '/_app/transactions/new': typeof AppTransactionsNewRoute
+  '/_app/tracking/': typeof AppTrackingIndexRoute
   '/_app/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -253,8 +271,10 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/registrations'
     | '/admin/users'
+    | '/tracking/$tripId'
     | '/transactions/$id'
     | '/transactions/new'
+    | '/tracking/'
     | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -277,8 +297,10 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/registrations'
     | '/admin/users'
+    | '/tracking/$tripId'
     | '/transactions/$id'
     | '/transactions/new'
+    | '/tracking'
     | '/transactions'
   id:
     | '__root__'
@@ -303,8 +325,10 @@ export interface FileRouteTypes {
     | '/_app/admin/compliance'
     | '/_app/admin/registrations'
     | '/_app/admin/users'
+    | '/_app/tracking/$tripId'
     | '/_app/transactions/$id'
     | '/_app/transactions/new'
+    | '/_app/tracking/'
     | '/_app/transactions/'
   fileRoutesById: FileRoutesById
 }
@@ -442,6 +466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionsIndexRouteImport
       parentRoute: typeof AppTransactionsRoute
     }
+    '/_app/tracking/': {
+      id: '/_app/tracking/'
+      path: '/tracking'
+      fullPath: '/tracking/'
+      preLoaderRoute: typeof AppTrackingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/transactions/new': {
       id: '/_app/transactions/new'
       path: '/new'
@@ -455,6 +486,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/transactions/$id'
       preLoaderRoute: typeof AppTransactionsIdRouteImport
       parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/tracking/$tripId': {
+      id: '/_app/tracking/$tripId'
+      path: '/tracking/$tripId'
+      fullPath: '/tracking/$tripId'
+      preLoaderRoute: typeof AppTrackingTripIdRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/admin/users': {
       id: '/_app/admin/users'
@@ -536,6 +574,8 @@ interface AppRouteChildren {
   AppTransactionsRoute: typeof AppTransactionsRouteWithChildren
   AppTransportRoute: typeof AppTransportRoute
   AppWarehouseRoute: typeof AppWarehouseRoute
+  AppTrackingTripIdRoute: typeof AppTrackingTripIdRoute
+  AppTrackingIndexRoute: typeof AppTrackingIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -553,6 +593,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppTransactionsRoute: AppTransactionsRouteWithChildren,
   AppTransportRoute: AppTransportRoute,
   AppWarehouseRoute: AppWarehouseRoute,
+  AppTrackingTripIdRoute: AppTrackingTripIdRoute,
+  AppTrackingIndexRoute: AppTrackingIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

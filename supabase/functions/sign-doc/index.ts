@@ -27,13 +27,15 @@ Deno.serve(async (req) => {
     const sigToken = `VTG-SIG-${token(fullName + signedAt)}`;
 
     const db = adminClient();
+    // doc_status enum: draft|generated|uploaded|submitted|approved|rejected|archived.
+    // Signing promotes to `submitted`; signature columns carry the signed state.
     const { data, error } = await db
       .from("shipment_documents")
       .update({
         signed_by: fullName,
         signed_at: signedAt,
         signature_token: sigToken,
-        status: "verified",
+        status: "submitted",
       })
       .eq("id", documentId)
       .select("id, shipment_id")
@@ -42,9 +44,10 @@ Deno.serve(async (req) => {
 
     await db.from("audit_logs").insert({
       action: "document.signed",
-      entity: documentId,
-      actor: userId,
-      metadata: { token: sigToken, method: "typed-name" },
+      entity: "shipment_documents",
+      entity_id: documentId,
+      actor_id: userId,
+      after: { token: sigToken, method: "typed-name" },
     });
 
     return json({ signedBy: fullName, signedAt, token: sigToken, shipmentId: data?.shipment_id });

@@ -116,7 +116,7 @@ function Landing() {
           }}
         />
         <div className="relative">
-          <VantageLogo size="lg" tone="light" />
+          <VantageLogo size="lg" tone="light" className="max-w-[min(100%,18rem)]" />
         </div>
         <div className="relative max-w-md">
           <h1 className="font-display text-[2.6rem] font-bold leading-[1.05] tracking-tight">
@@ -148,7 +148,7 @@ function Landing() {
       <div className="flex items-center justify-center bg-app p-6 sm:p-10">
         <div className="glass w-full max-w-md rounded-2xl border p-6 shadow-lg sheen sm:p-8">
           <div className="mb-8 flex justify-center lg:hidden">
-            <VantageLogo size="md" />
+            <VantageLogo size="md" className="object-center" />
           </div>
 
           {/* Segmented control */}
@@ -205,7 +205,8 @@ function Landing() {
               </form>
 
               <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                <div className="h-px flex-1 bg-border" /> Demo — sign in as{" "}
+                <div className="h-px flex-1 bg-border" /> Demo — password{" "}
+                <span className="font-mono normal-case tracking-normal text-foreground">Demo@123</span>{" "}
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="grid grid-cols-3 gap-2">

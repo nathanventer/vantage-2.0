@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "vantage-brain": {
+      "command": "/Users/nathanventer/.bun/bin/bunx",
+      "args": [
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/nathanventer/Library/Mobile Documents/iCloud~md~obsidian/Documents/VANTAGE 2.0/VANTAGE2.0",
+        "/Users/nathanventer/vantage-2.0"
+      ]
+    }
+  }
+}

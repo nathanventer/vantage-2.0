@@ -15,6 +15,7 @@ import {
   ScrollText,
   UserCheck,
   Users,
+  Radar,
 } from "lucide-react";
 import {
   Sidebar,
@@ -37,6 +38,7 @@ type Item = { title: string; url: string; icon: typeof LayoutDashboard };
 const COMMON: Item[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Transactions", url: "/transactions", icon: FileBox },
+  { title: "Tracking", url: "/tracking", icon: Radar },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Payments", url: "/payments", icon: CreditCard },
   { title: "Reports", url: "/reports", icon: BarChart3 },
@@ -67,12 +69,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border px-2 py-3">
+      <SidebarHeader className="border-b border-sidebar-border px-2 py-3.5">
         <Link
           to="/dashboard"
           className={cn(
             "flex items-center overflow-hidden",
-            collapsed ? "justify-center" : "justify-start px-1",
+            collapsed ? "justify-center px-0.5" : "justify-start px-1.5",
           )}
         >
           <VantageLogo size={collapsed ? "sm" : "md"} tone="sidebar" compact={collapsed} />

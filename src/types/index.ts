@@ -215,6 +215,8 @@ export interface WarehouseJob {
   location: string;
   status: WarehouseStatus;
   checklist: { step: string; done: boolean }[];
+  /** Linked shipment reference (live backend). */
+  shipmentRef?: string;
 }
 
 export interface ContainerJob {
@@ -225,6 +227,8 @@ export interface ContainerJob {
   dwellDays: number;
   damage: boolean;
   status: ContainerStatus;
+  /** Linked shipment reference (live backend). */
+  shipmentRef?: string;
 }
 
 export interface CargoHandling {
@@ -234,6 +238,8 @@ export interface CargoHandling {
   weightKg: number;
   condition: "Good" | "Damaged" | "Pending Inspection";
   timestamp: string;
+  /** Linked shipment reference (live backend). */
+  shipmentRef?: string;
 }
 
 export interface Trip {
@@ -248,6 +254,46 @@ export interface Trip {
   podUploaded: boolean;
   lat: number;
   lng: number;
+  /** Linked shipment + client (populated on the live backend). */
+  shipmentRef?: string;
+  cargo?: string;
+  clientCompanyId?: string;
+  client?: string;
+  createdAt?: string;
+  etaAt?: string;
+}
+
+/** GPS breadcrumb along a trip's route (telemetry history). */
+export interface TripWaypoint {
+  seq: number;
+  lat: number;
+  lng: number;
+  label?: string;
+  recordedAt: string;
+}
+
+/** Rich company/client profile for detail views (drawn RLS-scoped). */
+export interface CompanyProfile {
+  id: string;
+  name: string;
+  type: "Demand" | "Source";
+  registrationNumber?: string;
+  vatNumber?: string;
+  city?: string;
+  country?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  riskRating?: string;
+  approvalStatus: string;
+  memberSince: string;
+  stats: {
+    shipments: number;
+    invoicesTotalZAR: number;
+    invoicesOutstandingZAR: number;
+    complianceDocs: number;
+    complianceVerified: number;
+  };
 }
 
 export type DocumentType =

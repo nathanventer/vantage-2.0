@@ -149,10 +149,73 @@ function within(t: Transaction, period: Period): boolean {
 function ReportsPage() {
   const { role } = useAuth();
   const txQ = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
+  const whQ = useQuery({ queryKey: ["rep-wh"], queryFn: api.listWarehouseJobs });
+  const tripQ = useQuery({ queryKey: ["rep-trips"], queryFn: api.listTrips });
+  const contQ = useQuery({ queryKey: ["rep-cont"], queryFn: api.listContainerJobs });
+  const cargoQ = useQuery({ queryKey: ["rep-cargo"], queryFn: api.listCargoHandling });
+  const flagQ = useQuery({ queryKey: ["rep-flags"], queryFn: api.listComplianceFlags });
   const [period, setPeriod] = useState<Period>("90");
   const periodLabel = PERIODS.find((p) => p.key === period)!.label;
 
   const txs = useMemo(() => (txQ.data ?? []).filter((t) => within(t, period)), [txQ.data, period]);
+
+  // ── Operational KPIs (computed from live ops data) ────────────────────────
+  const ops = useMemo(() => {
+    const jobs = whQ.data ?? [];
+    const trips = tripQ.data ?? [];
+    const conts = contQ.data ?? [];
+    const steps = jobs.flatMap((j) => j.checklist);
+    const whUtil = steps.length
+      ? Math.round((steps.filter((s) => s.done).length / steps.length) * 100)
+      : 0;
+    const fleetUtil = trips.length
+      ? Math.round(
+          (trips.filter((t) => t.status !== "Scheduled").length / trips.length) * 100,
+        )
+      : 0;
+    const avgDwell = conts.length
+      ? conts.reduce((s, c) => s + c.dwellDays, 0) / conts.length
+      : 0;
+    const delivered = trips.filter((t) => t.status === "Delivered");
+    const sla = delivered.length
+      ? Math.round((delivered.filter((t) => t.podUploaded).length / delivered.length) * 100)
+      : 100;
+    return { whUtil, fleetUtil, avgDwell, sla };
+  }, [whQ.data, tripQ.data, contQ.data]);
+
+  // Productivity per cargo operation = share handled in good condition.
+  const productivity = useMemo(() => {
+    const ops_ = cargoQ.data ?? [];
+    const AREAS: { area: string; match: string[] }[] = [
+      { area: "Receiving", match: ["Bulk Handling"] },
+      { area: "Destuffing", match: ["Offloading"] },
+      { area: "Palletising", match: ["Palletising"] },
+      { area: "Dispatch", match: ["Loading"] },
+      { area: "Weighbridge", match: ["Weighbridge"] },
+    ];
+    return AREAS.map(({ area, match }) => {
+      const subset = ops_.filter((o) => match.includes(o.operation));
+      const good = subset.filter((o) => o.condition === "Good").length;
+      return { area, v: subset.length ? Math.round((good / subset.length) * 100) : 0 };
+    });
+  }, [cargoQ.data]);
+
+  // ── Compliance coverage per area = share of flags resolved (no flags → 100) ─
+  const compliance = useMemo(() => {
+    const flags = flagQ.data ?? [];
+    const AREAS = ["SARS", "Customs", "Documentation", "Transport", "Environmental", "SOP"] as const;
+    const coverage = AREAS.map((area) => {
+      const inArea = flags.filter((f) => f.area === area);
+      const closed = inArea.filter((f) => f.status === "Closed").length;
+      return {
+        area,
+        v: inArea.length ? Math.round((closed / inArea.length) * 100) : 100,
+      };
+    });
+    const capaOpen = flags.filter((f) => f.status !== "Closed").length;
+    const pct = (area: string) => coverage.find((c) => c.area === area)?.v ?? 100;
+    return { coverage, capaOpen, pct };
+  }, [flagQ.data]);
 
   const totalValue = txs.reduce((s, t) => s + t.valueZAR, 0);
   const routeRows = useMemo(() => buildRouteCostRows(txs), [txs]);
@@ -401,32 +464,41 @@ function ReportsPage() {
               title: "Operational report",
               columns: ["Metric", "Value"],
               rows: [
-                ["Warehouse utilisation", "82%"],
-                ["Fleet utilisation", "78%"],
-                ["Container turn (days)", "3.2"],
-                ["SLA on-time", "94%"],
+                ["Warehouse utilisation", `${ops.whUtil}%`],
+                ["Fleet utilisation", `${ops.fleetUtil}%`],
+                ["Container turn (days)", ops.avgDwell.toFixed(1)],
+                ["POD compliance", `${ops.sla}%`],
               ],
               meta: [{ label: "Period", value: periodLabel }],
             })}
           >
             <div className="grid gap-4 md:grid-cols-4">
-              <StatCard label="Warehouse util." value="82%" tone="success" />
-              <StatCard label="Fleet util." value="78%" tone="success" />
-              <StatCard label="Container turn." value="3.2 d" tone="info" />
-              <StatCard label="SLA on-time" value="94%" tone="success" />
+              <StatCard
+                label="Warehouse util."
+                value={`${ops.whUtil}%`}
+                tone={ops.whUtil >= 70 ? "success" : "warning"}
+              />
+              <StatCard
+                label="Fleet util."
+                value={`${ops.fleetUtil}%`}
+                tone={ops.fleetUtil >= 70 ? "success" : "warning"}
+              />
+              <StatCard label="Container turn." value={`${ops.avgDwell.toFixed(1)} d`} tone="info" />
+              <StatCard
+                label="POD compliance"
+                value={`${ops.sla}%`}
+                tone={ops.sla >= 90 ? "success" : "warning"}
+              />
             </div>
             <div className="rounded-xl border bg-card p-5">
-              <h4 className="mb-3 font-display font-semibold">Productivity index</h4>
+              <h4 className="mb-3 font-display font-semibold">
+                Productivity index{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (share handled in good condition)
+                </span>
+              </h4>
               <ResponsiveContainer width="100%" height={260}>
-                <BarChart
-                  data={[
-                    { area: "Receiving", v: 88 },
-                    { area: "Destuffing", v: 79 },
-                    { area: "Palletising", v: 92 },
-                    { area: "Dispatch", v: 84 },
-                    { area: "Last-mile", v: 76 },
-                  ]}
-                >
+                <BarChart data={productivity}>
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="area" fontSize={12} stroke={AXIS} />
                   <YAxis fontSize={12} stroke={AXIS} />
@@ -447,40 +519,43 @@ function ReportsPage() {
               name: `vantage-compliance-${period}`,
               title: "Compliance report",
               columns: ["Area", "Coverage %"],
-              rows: [
-                ["SARS", 97],
-                ["Customs", 96],
-                ["Documentation", 91],
-                ["Transport", 88],
-                ["Environmental", 84],
-                ["SOP", 93],
-              ],
+              rows: compliance.coverage.map((c) => [c.area, c.v]),
               meta: [{ label: "Period", value: periodLabel }],
             })}
           >
             <div className="grid gap-4 md:grid-cols-4">
-              <StatCard label="SARS reconciled" value="97%" tone="success" />
-              <StatCard label="Customs" value="96%" tone="success" />
-              <StatCard label="Documentation" value="91%" tone="warning" />
-              <StatCard label="CAPA open" value="6" tone="info" />
+              <StatCard
+                label="SARS reconciled"
+                value={`${compliance.pct("SARS")}%`}
+                tone={compliance.pct("SARS") >= 90 ? "success" : "warning"}
+              />
+              <StatCard
+                label="Customs"
+                value={`${compliance.pct("Customs")}%`}
+                tone={compliance.pct("Customs") >= 90 ? "success" : "warning"}
+              />
+              <StatCard
+                label="Documentation"
+                value={`${compliance.pct("Documentation")}%`}
+                tone={compliance.pct("Documentation") >= 90 ? "success" : "warning"}
+              />
+              <StatCard label="CAPA open" value={String(compliance.capaOpen)} tone="info" />
             </div>
             <div className="rounded-xl border bg-card p-5">
-              <h4 className="mb-3 font-display font-semibold">Compliance coverage</h4>
+              <h4 className="mb-3 font-display font-semibold">
+                Compliance coverage{" "}
+                <span className="text-xs font-normal text-muted-foreground">
+                  (share of flags resolved per area)
+                </span>
+              </h4>
               <ResponsiveContainer width="100%" height={260}>
                 <BarChart
                   layout="vertical"
-                  data={[
-                    { area: "SARS", v: 97 },
-                    { area: "Customs", v: 96 },
-                    { area: "Docs", v: 91 },
-                    { area: "Transport", v: 88 },
-                    { area: "Environmental", v: 84 },
-                    { area: "SOP", v: 93 },
-                  ]}
+                  data={compliance.coverage}
                   margin={{ left: 24 }}
                 >
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" domain={[60, 100]} fontSize={12} stroke={AXIS} />
+                  <XAxis type="number" domain={[0, 100]} fontSize={12} stroke={AXIS} />
                   <YAxis type="category" dataKey="area" fontSize={12} stroke={AXIS} width={90} />
                   <Tooltip cursor={{ fill: "var(--color-surface-2)" }} content={<ChartTooltip />} />
                   <Bar

@@ -1,5 +1,5 @@
 // FleetTracker (real). Returns the latest position/ETA for a transport trip.
-// Sources from device pings recorded in shipment_events, optionally enriched via
+// Sources from the trips table (+ waypoint history), optionally enriched via
 // a maps provider (ETA/road distance). Maps key stays server-side.
 //
 // Deploy:  supabase functions deploy fleet-position
@@ -18,26 +18,29 @@ Deno.serve(async (req) => {
     if (!tripRef) return json({ error: "tripRef required" }, 400);
 
     const db = adminClient();
-    // Latest GPS ping for this trip from the ops event stream.
-    const { data: ping } = await db
-      .from("shipment_events")
-      .select("payload, created_at")
-      .eq("trip_ref", tripRef)
-      .eq("event_type", "gps_ping")
-      .order("created_at", { ascending: false })
-      .limit(1)
+    // Latest position straight from the trips table.
+    const { data: trip } = await db
+      .from("trips")
+      .select("id, reference, lat, lng, progress_pct, status, updated_at")
+      .eq("reference", tripRef)
       .maybeSingle();
+    if (!trip) return json(null);
 
-    if (!ping) return json(null);
+    // Waypoint history for the route trace.
+    const { data: waypoints } = await db
+      .from("trip_waypoints")
+      .select("seq, lat, lng, label, recorded_at")
+      .eq("trip_id", trip.id)
+      .order("seq");
 
-    const p = ping.payload as { lat: number; lng: number; progressPct?: number };
-    // TODO: enrich ETA via MAPS_API_KEY when distance/traffic data is needed.
     return json({
       tripRef,
-      lat: p.lat,
-      lng: p.lng,
-      progressPct: p.progressPct ?? 0,
-      updatedAt: ping.created_at,
+      lat: trip.lat,
+      lng: trip.lng,
+      progressPct: trip.progress_pct ?? 0,
+      status: trip.status,
+      updatedAt: trip.updated_at,
+      waypoints: waypoints ?? [],
     });
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : "unknown error" }, 500);

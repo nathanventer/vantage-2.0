@@ -177,6 +177,57 @@ export const mockApi: DataService = {
     await delay();
     return M.trips;
   },
+  async listTripWaypoints(tripId) {
+    await delay();
+    const trip = M.trips.find((t) => t.id === tripId || t.reference === tripId);
+    if (!trip) return [];
+    // Deterministic 5-point trace along the DBN→JHB corridor toward the
+    // trip's current position (mirrors the live trip_waypoints seed).
+    const LABELS = ["Depart port", "N3 Pietermaritzburg", "N3 Harrismith", "N3 Villiers", "Arrive"];
+    const n = trip.status === "Delivered" ? 5 : Math.max(1, Math.floor(trip.progressPct / 20));
+    const from = { lat: -29.8587, lng: 31.0218 };
+    return Array.from({ length: n }, (_, i) => {
+      const f = (i + 1) / 5;
+      return {
+        seq: i + 1,
+        lat: from.lat + (trip.lat - from.lat) * f,
+        lng: from.lng + (trip.lng - from.lng) * f,
+        label: LABELS[i],
+        recordedAt: new Date(Date.now() - (n - i) * 3 * 3_600_000).toISOString(),
+      };
+    });
+  },
+  async getCompanyProfile(companyId) {
+    await delay();
+    const c =
+      M.companies.find((x) => x.id === companyId) ??
+      M.providers.find((x) => x.id === companyId) ??
+      null;
+    if (!c) return null;
+    const invoices = M.invoices.filter(
+      (i) => i.clientId === companyId || i.providerId === companyId,
+    );
+    return {
+      id: c.id,
+      name: c.name,
+      type: c.category,
+      city: "Johannesburg",
+      country: "South Africa",
+      approvalStatus: "approved",
+      memberSince: "2025-02-01T00:00:00Z",
+      stats: {
+        shipments: M.transactions.filter(
+          (t) => t.demandCompanyId === companyId || t.sourceProviderId === companyId,
+        ).length,
+        invoicesTotalZAR: invoices.reduce((s, i) => s + i.amountZAR, 0),
+        invoicesOutstandingZAR: invoices
+          .filter((i) => i.status !== "Paid")
+          .reduce((s, i) => s + i.amountZAR, 0),
+        complianceDocs: 8,
+        complianceVerified: 7,
+      },
+    };
+  },
   async listDocuments() {
     await delay();
     return M.documents;

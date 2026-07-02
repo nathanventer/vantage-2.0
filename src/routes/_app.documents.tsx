@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
-import { documentRenderer, type RenderDoc } from "@/adapters";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DOC_TEMPLATES,
@@ -16,11 +15,33 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { EmptyState } from "@/components/EmptyState";
 import { DetailDrawer } from "@/components/DetailDrawer";
+import {
+  PaperDocumentDialog,
+  type PaperDocumentProps,
+  type PaperStatus,
+} from "@/components/PaperDocument";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Download, Eye, FilePlus2, FileText, Lock, PenLine, Save, ShieldCheck } from "lucide-react";
+import {
+  Eye,
+  FilePlus2,
+  FileText,
+  Lock,
+  PenLine,
+  Printer,
+  Save,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { DocumentPayload, DocumentRecord, DocumentType } from "@/types";
 
@@ -32,37 +53,60 @@ export const Route = createFileRoute("/_app/documents")({
 type Source = "templates" | "uploaded" | "all";
 const SOURCES: { key: Source; label: string }[] = [
   { key: "templates", label: "Templates" },
-  { key: "uploaded", label: "Uploaded" },
+  { key: "uploaded", label: "Documents" },
   { key: "all", label: "All" },
 ];
 
-function buildRenderDoc(doc: DocumentRecord): RenderDoc {
+/** Map a document's lifecycle status onto the paper sheet's badge. */
+function paperStatus(doc: DocumentRecord): PaperStatus {
+  if (doc.status === "Approved") return { label: "Approved", tone: "ok" };
+  if (doc.signed) return { label: "Signed", tone: "ok" };
+  if (doc.status === "Submitted") return { label: "Submitted", tone: "info" };
+  if (doc.status === "Verified") return { label: "Verified", tone: "ok" };
+  return { label: "Draft", tone: "muted" };
+}
+
+/** Build the unified paper sheet for any document type. */
+function buildPaperDoc(doc: DocumentRecord, companyName?: string): PaperDocumentProps {
   const p = doc.payload ?? {};
-  const fields = [
-    { label: "Document type", value: doc.type },
-    { label: "Shipment", value: doc.transactionRef },
-    { label: "Version", value: `v${doc.version}` },
-    { label: "Status", value: doc.status },
-    { label: "Counterparty", value: p.counterparty ? String(p.counterparty) : "—" },
-    {
-      label: "Amount",
-      value: typeof p.amountZAR === "number" ? formatZAR(p.amountZAR) : "—",
-    },
-    { label: "Issued", value: p.issuedDate ? String(p.issuedDate) : "—" },
-    { label: "Notes", value: p.notes ? String(p.notes) : "—" },
-  ];
-  if (doc.signedBy) {
-    fields.push({
-      label: "Signed by",
-      value: `${doc.signedBy} (${doc.signatureToken ?? "signed"})`,
-    });
-  }
   return {
-    title: doc.type,
-    subtitle: "VANTAGE document",
-    reference: doc.transactionRef,
-    fields,
-    footer: `Generated ${new Date().toLocaleString("en-ZA")} · ${doc.type} · v${doc.version}`,
+    kind: doc.type,
+    reference: `${doc.transactionRef} · v${doc.version}`,
+    from: {
+      name: companyName ?? "Vantage Platform",
+      email: "documents@vantage.co.za",
+      address: ["Vantage Trade & Logistics", "South Africa"],
+    },
+    to: {
+      name: p.counterparty ? String(p.counterparty) : "Counterparty on record",
+      address: [doc.transactionRef],
+    },
+    status: paperStatus(doc),
+    meta: [
+      { label: "Document type", value: doc.type },
+      { label: "Shipment", value: doc.transactionRef },
+      { label: "Version", value: `v${doc.version}` },
+      {
+        label: "Issued",
+        value: p.issuedDate
+          ? String(p.issuedDate)
+          : new Date(doc.uploadedAt).toLocaleDateString("en-ZA"),
+      },
+      { label: "Prepared by", value: doc.uploadedBy },
+      { label: "Status", value: doc.signed && doc.status !== "Approved" ? "Signed" : doc.status },
+    ],
+    lines:
+      typeof p.amountZAR === "number" && p.amountZAR > 0
+        ? [{ label: `${doc.type} — ${doc.transactionRef}`, amountZAR: Math.round(p.amountZAR / 1.15) }]
+        : undefined,
+    bodyText: p.notes ? String(p.notes) : undefined,
+    issuedAt: doc.uploadedAt,
+    signature: doc.signed
+      ? { signedBy: doc.signedBy, signedAt: doc.signedAt, token: doc.signatureToken }
+      : "unsigned",
+    terms:
+      "This document was generated on the Vantage platform and forms part of the shipment record. All amounts are in South African Rand unless stated otherwise.",
+    footnote: `Vantage · Integrated Trade & Logistics · ${doc.type} · ${doc.transactionRef}`,
   };
 }
 
@@ -83,6 +127,11 @@ function DocsPage() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<DocumentPayload & { shipmentRef?: string }>({});
 
+  // Unified paper preview + e-signature dialogs.
+  const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
+  const [signTarget, setSignTarget] = useState<DocumentRecord | null>(null);
+  const [signName, setSignName] = useState("");
+
   const invalidate = () => qc.invalidateQueries({ queryKey: ["doc"] });
 
   const createMut = useMutation({
@@ -102,9 +151,9 @@ function DocsPage() {
       setActiveDoc(doc);
       setMode("view");
       setEditing(false);
-      toast.success(`${doc.type} created (${doc.transactionRef})`);
+      toast.success(`Document created — ${doc.type} for ${doc.transactionRef}`);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not create document"),
+    onError: () => toast.error("Unable to create the document. Please try again."),
   });
 
   const versionMut = useMutation({
@@ -119,20 +168,22 @@ function DocsPage() {
       invalidate();
       setActiveDoc(doc);
       setEditing(false);
-      toast.success(`Saved v${doc.version}`);
+      toast.success(`Version v${doc.version} saved`);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not save version"),
+    onError: () => toast.error("Unable to save this version. Please try again."),
   });
 
   const signMut = useMutation({
-    mutationFn: (docId: string) =>
-      api.signDocument(docId, user?.fullName ?? "Authorized Signatory"),
+    mutationFn: ({ docId, name }: { docId: string; name: string }) =>
+      api.signDocument(docId, name),
     onSuccess: (doc) => {
       invalidate();
-      setActiveDoc(doc);
-      toast.success(`Signed by ${doc.signedBy}`);
+      setSignTarget(null);
+      if (activeDoc?.id === doc.id) setActiveDoc(doc);
+      if (previewDoc?.id === doc.id) setPreviewDoc(doc);
+      toast.success("Document signed successfully");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not sign"),
+    onError: () => toast.error("Unable to sign the document. Please try again."),
   });
 
   const approveMut = useMutation({
@@ -140,9 +191,9 @@ function DocsPage() {
     onSuccess: (doc) => {
       invalidate();
       setActiveDoc(doc);
-      toast.success(`${doc.type} approved`);
+      toast.success("Document approved");
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Could not approve"),
+    onError: () => toast.error("Unable to approve the document. Please try again."),
   });
 
   const docs = useMemo(() => docsQ.data ?? [], [docsQ.data]);
@@ -178,16 +229,16 @@ function DocsPage() {
     setForm({ shipmentRef: txQ.data?.[0]?.reference });
     setMode("create");
   }
-  function exportPdf(doc: DocumentRecord) {
-    documentRenderer.download(buildRenderDoc(doc), `${doc.type}-${doc.transactionRef}`);
-    toast.success("PDF exported");
+  function openSign(doc: DocumentRecord) {
+    setSignTarget(doc);
+    setSignName(user?.fullName ?? "");
   }
 
   return (
     <div>
       <PageHeader
         title="Document management"
-        description="Templates, structured documents, versioning, e-signature and PDF export."
+        description="Create, version, e-sign and export trade documents — company-scoped and fully audited."
       />
 
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
@@ -220,16 +271,16 @@ function DocsPage() {
           {source !== "templates" && (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="doc-search">Search</Label>
+                <Label htmlFor="doc-search">Search documents</Label>
                 <Input
                   id="doc-search"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Type, shipment, party…"
+                  placeholder="Type, shipment or counterparty…"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="doc-type">Type</Label>
+                <Label htmlFor="doc-type">Document type</Label>
                 <select
                   id="doc-type"
                   value={typeFilter}
@@ -252,8 +303,8 @@ function DocsPage() {
               <Lock className="h-3.5 w-3.5" /> Access control
             </div>
             <p className="mt-1.5">
-              Documents are company-scoped. Editing creates a new version; admins approve and
-              archive.
+              Documents are visible to your company only. Editing creates a new version;
+              administrators approve and archive.
             </p>
           </div>
         </aside>
@@ -264,7 +315,7 @@ function DocsPage() {
             <>
               <section>
                 <h3 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Trade documents
+                  Trade document templates
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {PHASE1_TEMPLATES.map((t) => (
@@ -275,7 +326,7 @@ function DocsPage() {
 
               <section>
                 <h3 className="mb-3 font-display text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Logistics documents
+                  Logistics document templates
                 </h3>
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {PHASE2_TEMPLATES.map((t) => (
@@ -293,8 +344,8 @@ function DocsPage() {
           ) : grouped.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title="No documents match"
-              description="Adjust the filter or create one from a template."
+              title="No documents found"
+              description="Adjust your filters, or create a document from a template."
             />
           ) : (
             grouped.map(([ref, list]) => (
@@ -327,13 +378,16 @@ function DocsPage() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
+                        {d.signed && d.status === "Approved" && (
+                          <StatusChip status="Verified" label="Signed" />
+                        )}
                         <StatusChip status={d.status} />
-                        {d.signed && <StatusChip status="Verified" />}
                         <div className="flex items-center">
                           <Button
                             size="icon"
                             variant="ghost"
-                            aria-label="View"
+                            aria-label="View details"
+                            title="View details"
                             onClick={() => openView(d)}
                           >
                             <Eye className="h-4 w-4" />
@@ -341,17 +395,19 @@ function DocsPage() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            aria-label="Export PDF"
-                            onClick={() => exportPdf(d)}
+                            aria-label="Preview and export"
+                            title="Preview & export"
+                            onClick={() => setPreviewDoc(d)}
                           >
-                            <Download className="h-4 w-4" />
+                            <Printer className="h-4 w-4" />
                           </Button>
                           <Button
                             size="icon"
                             variant="ghost"
-                            aria-label="E-sign"
+                            aria-label="Sign document"
+                            title={d.signed ? "Already signed" : "Sign document"}
                             disabled={d.signed || signMut.isPending}
-                            onClick={() => signMut.mutate(d.id)}
+                            onClick={() => openSign(d)}
                           >
                             <PenLine className="h-4 w-4" />
                           </Button>
@@ -366,6 +422,7 @@ function DocsPage() {
         </div>
       </div>
 
+      {/* View / edit / create drawer */}
       <DetailDrawer
         open={mode !== "closed"}
         onOpenChange={(v) => !v && setMode("closed")}
@@ -384,20 +441,22 @@ function DocsPage() {
                 Cancel
               </Button>
               <Button disabled={createMut.isPending} onClick={() => createMut.mutate()}>
-                <FilePlus2 className="mr-1.5 h-4 w-4" /> Create document
+                <FilePlus2 className="mr-1.5 h-4 w-4" />
+                {createMut.isPending ? "Creating…" : "Create document"}
               </Button>
             </div>
           ) : activeDoc ? (
             <div className="flex flex-wrap justify-end gap-2">
-              <Button variant="outline" onClick={() => exportPdf(activeDoc)}>
-                <Download className="mr-1.5 h-4 w-4" /> Export PDF
+              <Button variant="outline" onClick={() => setPreviewDoc(activeDoc)}>
+                <Printer className="mr-1.5 h-4 w-4" /> Preview & export
               </Button>
               {editing ? (
                 <Button
                   disabled={versionMut.isPending}
                   onClick={() => versionMut.mutate(activeDoc.id)}
                 >
-                  <Save className="mr-1.5 h-4 w-4" /> Save version
+                  <Save className="mr-1.5 h-4 w-4" />
+                  {versionMut.isPending ? "Saving…" : "Save version"}
                 </Button>
               ) : (
                 <Button variant="outline" onClick={() => setEditing(true)}>
@@ -409,7 +468,8 @@ function DocsPage() {
                   disabled={approveMut.isPending}
                   onClick={() => approveMut.mutate(activeDoc.id)}
                 >
-                  <ShieldCheck className="mr-1.5 h-4 w-4" /> Approve
+                  <ShieldCheck className="mr-1.5 h-4 w-4" />
+                  {approveMut.isPending ? "Approving…" : "Approve"}
                 </Button>
               )}
             </div>
@@ -469,7 +529,7 @@ function DocsPage() {
                     {i + 1 === activeDoc.version ? (
                       <StatusChip status={activeDoc.status} />
                     ) : (
-                      <span className="text-xs text-muted-foreground">superseded</span>
+                      <span className="text-xs text-muted-foreground">Superseded</span>
                     )}
                   </li>
                 ))}
@@ -482,7 +542,7 @@ function DocsPage() {
                 <div className="rounded-lg border border-ok-bd bg-ok-bg/40 p-3 text-sm">
                   <div className="font-medium text-ok">Signed by {activeDoc.signedBy}</div>
                   <div className="text-xs text-muted-foreground">
-                    {activeDoc.signatureToken} ·{" "}
+                    {activeDoc.signatureToken ? `${activeDoc.signatureToken} · ` : ""}
                     {activeDoc.signedAt ? new Date(activeDoc.signedAt).toLocaleString("en-ZA") : ""}
                   </div>
                 </div>
@@ -491,15 +551,81 @@ function DocsPage() {
                   variant="outline"
                   size="sm"
                   disabled={signMut.isPending}
-                  onClick={() => signMut.mutate(activeDoc.id)}
+                  onClick={() => openSign(activeDoc)}
                 >
-                  <PenLine className="mr-1.5 h-4 w-4" /> E-sign (typed name)
+                  <PenLine className="mr-1.5 h-4 w-4" /> Sign document
                 </Button>
               )}
             </section>
           </div>
         )}
       </DetailDrawer>
+
+      {/* Unified paper preview (Print / PDF) */}
+      <PaperDocumentDialog
+        open={!!previewDoc}
+        onOpenChange={(o) => !o && setPreviewDoc(null)}
+        doc={previewDoc ? buildPaperDoc(previewDoc, user?.companyName) : null}
+      />
+
+      {/* E-signature capture */}
+      <Dialog open={!!signTarget} onOpenChange={(o) => !o && setSignTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-display">
+              <PenLine className="h-4 w-4 text-brand" /> Sign document
+            </DialogTitle>
+            <DialogDescription>
+              {signTarget
+                ? `${signTarget.type} · ${signTarget.transactionRef} · v${signTarget.version}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="sign-name">Full legal name</Label>
+              <Input
+                id="sign-name"
+                value={signName}
+                onChange={(e) => setSignName(e.target.value)}
+                placeholder="e.g. Jane Pretorius"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Typing your name creates a binding electronic signature with a verifiable
+                signature token, recorded in the audit trail.
+              </p>
+            </div>
+            {signName.trim() && (
+              <div className="rounded-lg border bg-inset/40 px-4 py-3">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  Signature preview
+                </div>
+                <div
+                  className="mt-1 text-xl"
+                  style={{ fontFamily: '"Snell Roundhand", "Segoe Script", cursive' }}
+                >
+                  {signName.trim()}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSignTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!signName.trim() || signMut.isPending}
+              onClick={() =>
+                signTarget && signMut.mutate({ docId: signTarget.id, name: signName.trim() })
+              }
+            >
+              <PenLine className="mr-1.5 h-4 w-4" />
+              {signMut.isPending ? "Signing…" : "Sign document"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -516,9 +642,9 @@ function TemplateCard({ t, onUse }: { t: TemplateMeta; onUse: () => void }) {
       <div className="mt-2 truncate text-sm font-medium" title={t.label}>
         {t.label}
       </div>
-      <div className="text-xs text-muted-foreground">Structured · versioned · e-signable</div>
+      <div className="text-xs text-muted-foreground">Structured · versioned · e-signature ready</div>
       <Button size="sm" variant="outline" className="mt-3" onClick={onUse}>
-        <FilePlus2 className="mr-1.5 h-3.5 w-3.5" /> Use
+        <FilePlus2 className="mr-1.5 h-3.5 w-3.5" /> Use template
       </Button>
     </div>
   );
@@ -539,6 +665,7 @@ function PayloadForm({
           id="p-party"
           value={value.counterparty ?? ""}
           onChange={(e) => onChange({ ...value, counterparty: e.target.value })}
+          placeholder="Company or contact this document is addressed to"
         />
       </div>
       <div className="space-y-1.5">
@@ -548,10 +675,11 @@ function PayloadForm({
           type="number"
           value={value.amountZAR ?? ""}
           onChange={(e) => onChange({ ...value, amountZAR: Number(e.target.value) })}
+          placeholder="0.00"
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="p-date">Issued date</Label>
+        <Label htmlFor="p-date">Issue date</Label>
         <Input
           id="p-date"
           type="date"
@@ -566,6 +694,7 @@ function PayloadForm({
           rows={3}
           value={value.notes ?? ""}
           onChange={(e) => onChange({ ...value, notes: e.target.value })}
+          placeholder="Optional clauses, instructions or context"
           className="w-full rounded-md border border-input bg-inset px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
       </div>

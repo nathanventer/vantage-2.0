@@ -29,14 +29,30 @@ Deno.serve(async (req) => {
     // Resolve the invoice via service role (re-validate the amount server-side).
     const { data: invoice, error } = await db
       .from("invoices")
-      .select("id, number, amount, currency, company_id")
+      .select("id, number, amount_cents, client_company_id")
       .eq("number", invoiceNumber)
       .single();
     if (error || !invoice) return json({ error: "invoice not found" }, 404);
 
+    // SANDBOX: no Stripe key configured — record a pending EFT-style initiation
+    // so the settlement flow is exercisable end-to-end. Settlement still only
+    // happens server-side (manual verify / webhook), never from the client.
+    if (!Deno.env.get("STRIPE_SECRET_KEY")) {
+      const reference = `SBX-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+      await db.from("payments").insert({
+        invoice_id: invoice.id,
+        invoice_number: invoice.number,
+        amount_cents: invoice.amount_cents,
+        method: method ?? "EFT",
+        gateway_status: "Pending",
+        gateway_ref: reference,
+      });
+      return json({ clientSecret: null, reference });
+    }
+
     const intent = await stripe.paymentIntents.create({
-      amount: Math.round(Number(invoice.amount) * 100),
-      currency: (invoice.currency ?? "zar").toLowerCase(),
+      amount: Number(invoice.amount_cents),
+      currency: "zar",
       metadata: {
         invoice_id: invoice.id,
         invoice_number: invoice.number,
@@ -49,10 +65,10 @@ Deno.serve(async (req) => {
     // Record the initiation (NOT settlement) for the timeline + audit.
     await db.from("payments").insert({
       invoice_id: invoice.id,
-      amount: invoice.amount,
-      currency: invoice.currency ?? "ZAR",
+      invoice_number: invoice.number,
+      amount_cents: invoice.amount_cents,
       method: method ?? "Card",
-      gateway_status: "initiated",
+      gateway_status: "Pending",
       gateway_ref: intent.id,
     });
 

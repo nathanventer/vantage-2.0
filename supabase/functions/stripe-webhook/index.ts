@@ -33,10 +33,10 @@ Deno.serve(async (req) => {
         const invoiceId = pi.metadata.invoice_id;
         await db
           .from("payments")
-          .update({ gateway_status: "settled", settled_at: new Date().toISOString() })
+          .update({ gateway_status: "Verified", settled_at: new Date().toISOString() })
           .eq("gateway_ref", pi.id);
         if (invoiceId) {
-          await db.from("invoices").update({ status: "paid" }).eq("id", invoiceId);
+          await db.from("invoices").update({ status: "Paid" }).eq("id", invoiceId);
         }
         break;
       }

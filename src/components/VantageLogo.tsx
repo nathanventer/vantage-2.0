@@ -1,21 +1,30 @@
+import wordmark from "@/assets/vantage-wordmark.png";
+import icon from "@/assets/vantage-icon.png";
 import { cn } from "@/lib/utils";
 
-const sizes = {
-  sm: "text-xs tracking-[0.14em]",
-  md: "text-xl tracking-[0.16em] sm:text-2xl sm:tracking-[0.18em]",
-  lg: "text-3xl tracking-[0.18em]",
+const wordmarkHeights = {
+  sm: "h-6",
+  md: "h-8 sm:h-9",
+  lg: "h-11 sm:h-12",
 } as const;
 
+const iconHeights = {
+  sm: "h-8 w-8",
+  md: "h-9 w-9",
+  lg: "h-11 w-11",
+} as const;
+
+/** White assets on dark surfaces; monochrome on light surfaces. */
 const tones = {
-  default: "text-foreground",
-  light: "text-white",
-  sidebar: "text-sidebar-foreground",
+  default: "brightness-0",
+  light: "",
+  sidebar: "",
 } as const;
 
 type VantageLogoProps = {
-  size?: keyof typeof sizes;
+  size?: keyof typeof wordmarkHeights;
   tone?: keyof typeof tones;
-  /** Sidebar icon mode — single-letter mark */
+  /** Collapsed sidebar — V icon mark only */
   compact?: boolean;
   className?: string;
 };
@@ -26,16 +35,23 @@ export function VantageLogo({
   compact = false,
   className,
 }: VantageLogoProps) {
+  const src = compact ? icon : wordmark;
+  const alt = compact ? "Vantage" : "VANTAGE";
+
   return (
-    <span
+    <img
+      src={src}
+      alt={alt}
+      width={compact ? 36 : 200}
+      height={compact ? 36 : 32}
+      decoding="async"
+      draggable={false}
       className={cn(
-        "font-display shrink-0 font-bold uppercase leading-none",
-        sizes[size],
+        "block shrink-0 select-none object-contain object-left",
+        compact ? iconHeights[size] : wordmarkHeights[size],
         tones[tone],
         className,
       )}
-    >
-      {compact ? "V" : "VANTAGE"}
-    </span>
+    />
   );
 }

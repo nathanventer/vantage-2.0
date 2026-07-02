@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PaperDocumentDialog, type PaperDocumentProps } from "@/components/PaperDocument";
 import {
   ArrowLeft,
   Ship,
@@ -21,6 +22,7 @@ import {
   Download,
   FileText,
   Check,
+  Radar,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { StatusLabel } from "@/types";
@@ -40,7 +42,14 @@ function TxDetail() {
   });
   const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments });
   const auditQ = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
+  const tripsQ = useQuery({ queryKey: ["tp"], queryFn: api.listTrips });
   const [acceptedId, setAcceptedId] = useState<string | null>(null);
+  const [quoteDoc, setQuoteDoc] = useState<PaperDocumentProps | null>(null);
+
+  const linkedTrip = useMemo(
+    () => (tripsQ.data ?? []).find((t) => t.shipmentRef === data?.reference),
+    [tripsQ.data, data?.reference],
+  );
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-ZA", {
@@ -80,7 +89,18 @@ function TxDetail() {
       <PageHeader
         title={data.reference}
         description={`${data.demandCompany} · ${data.sourceProvider}`}
-        actions={<StatusBadge status={data.status} />}
+        actions={
+          <div className="flex items-center gap-2">
+            {linkedTrip && (
+              <Button asChild size="sm" variant="outline">
+                <Link to="/tracking/$tripId" params={{ tripId: linkedTrip.id }}>
+                  <Radar className="mr-1.5 h-3.5 w-3.5" /> Track live
+                </Link>
+              </Button>
+            )}
+            <StatusBadge status={data.status} />
+          </div>
+        }
       />
 
       <MacroJourney current={data.currentStage} />
@@ -133,6 +153,42 @@ function TxDetail() {
                         </div>
                         <div className="flex items-center gap-2">
                           <StatusBadge status={status} />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              setQuoteDoc({
+                                kind: "QUOTE",
+                                reference: `${data.reference} · ${q.providerName.split(" ")[0].toUpperCase()}`,
+                                status:
+                                  status === "Accepted"
+                                    ? { label: "Accepted", tone: "ok" }
+                                    : status === "Rejected"
+                                      ? { label: "Not selected", tone: "muted" }
+                                      : { label: "Quotation", tone: "info" },
+                                from: {
+                                  name: q.providerName,
+                                  email: "quotes@provider.co.za",
+                                  address: ["Durban 4001, South Africa"],
+                                },
+                                to: {
+                                  name: data.demandCompany,
+                                  address: [`${data.origin} → ${data.destination}`],
+                                },
+                                sectionTitle: "Quotation",
+                                lines: [
+                                  { label: `Freight — ${data.origin} → ${data.destination}`, amountZAR: Math.round((q.priceZAR / 1.15) * 0.62) },
+                                  { label: "Customs clearing & duties", amountZAR: Math.round((q.priceZAR / 1.15) * 0.14) },
+                                  { label: "Handling & warehousing", amountZAR: Math.round((q.priceZAR / 1.15) * 0.18) },
+                                  { label: `Cargo insurance · transit ${q.etaDays} days`, amountZAR: Math.round(q.priceZAR / 1.15) - Math.round((q.priceZAR / 1.15) * 0.62) - Math.round((q.priceZAR / 1.15) * 0.14) - Math.round((q.priceZAR / 1.15) * 0.18) },
+                                ],
+                                terms: `Quotation valid for 14 days. Estimated transit ${q.etaDays} days. Subject to Vantage master service terms.`,
+                                footnote: `Vantage · Quotation for ${data.reference}`,
+                              })
+                            }
+                          >
+                            View quote
+                          </Button>
                           {!acceptedId && q.status !== "Accepted" && (
                             <Button
                               size="sm"
@@ -152,6 +208,11 @@ function TxDetail() {
                     );
                   })}
                 </ul>
+                <PaperDocumentDialog
+                  open={!!quoteDoc}
+                  onOpenChange={(o) => !o && setQuoteDoc(null)}
+                  doc={quoteDoc}
+                />
                 {(acceptedId || data.quotes.some((q) => q.status === "Accepted")) && (
                   <div className="mt-4 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                     Quote accepted — service agreement available in the <strong>Agreement</strong>{" "}

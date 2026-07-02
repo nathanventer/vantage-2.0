@@ -31,6 +31,8 @@ import type {
   NewPriceAlertInput,
   NotificationItem,
   NotificationPreferences,
+  TripWaypoint,
+  CompanyProfile,
 } from "@/types";
 import type { DashboardMetrics } from "@/lib/demoKpis";
 import type { ScoredQuote } from "@/adapters/optimizer";
@@ -150,6 +152,10 @@ export interface DataService {
   listContainerJobs(): Promise<ContainerJob[]>;
   listCargoHandling(): Promise<CargoHandling[]>;
   listTrips(): Promise<Trip[]>;
+  /** GPS breadcrumb history for a trip (route trace on the detail map). */
+  listTripWaypoints(tripId: string): Promise<TripWaypoint[]>;
+  /** Rich client/provider profile + activity stats for detail views. */
+  getCompanyProfile(companyId: string): Promise<CompanyProfile | null>;
   listInvoices(): Promise<Invoice[]>;
   listPayments(): Promise<Payment[]>;
   listComplianceFlags(): Promise<ComplianceFlag[]>;

@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { StatusChip } from "@/components/StatusChip";
+import { CompanyLink } from "@/components/CompanyProfileDialog";
+import { PaperDocumentDialog, type PaperDocumentProps } from "@/components/PaperDocument";
 import { EmptyState } from "@/components/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -283,6 +285,29 @@ function PaymentsPage() {
 
 function InvoiceSummary({ invoice }: { invoice: Invoice }) {
   const items = lineItems(invoice);
+  const [docOpen, setDocOpen] = useState(false);
+  const doc: PaperDocumentProps = {
+    kind: "INVOICE",
+    reference: invoice.number,
+    status:
+      invoice.status === "Paid"
+        ? { label: "Paid", tone: "ok" }
+        : invoice.status === "Overdue"
+          ? { label: "Overdue", tone: "warn" }
+          : { label: "Awaiting payment", tone: "info" },
+    from: {
+      name: invoice.provider,
+      email: "accounts@sclogistics.co.za",
+      phone: "+27 31 205 4410",
+      address: ["12 Bayhead Road", "Durban 4001, South Africa"],
+    },
+    to: { name: invoice.client, address: [invoice.transactionRef, "Johannesburg, South Africa"] },
+    lines: items.filter((i) => !i.label.startsWith("VAT")),
+    issuedAt: invoice.issuedAt,
+    dueAt: invoice.dueAt,
+    bank: { name: "Standard Bank · Current", iban: "ZA44 5005 0010 5175 4075 2493 1", swift: "SBZAZAJJ" },
+    footnote: `Vantage · Integrated Trade & Logistics · ${invoice.number}`,
+  };
   return (
     <section className="rounded-xl border bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -297,11 +322,19 @@ function InvoiceSummary({ invoice }: { invoice: Invoice }) {
             className="mt-1 truncate text-sm text-muted-foreground"
             title={`${invoice.client} → ${invoice.provider}`}
           >
-            {invoice.client} → {invoice.provider} · {invoice.transactionRef}
+            <CompanyLink companyId={invoice.clientId} name={invoice.client} /> →{" "}
+            <CompanyLink companyId={invoice.providerId} name={invoice.provider} /> ·{" "}
+            {invoice.transactionRef}
           </p>
         </div>
-        <StatusChip status={invoice.status} />
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setDocOpen(true)}>
+            <FileText className="mr-1.5 h-3.5 w-3.5" /> View invoice
+          </Button>
+          <StatusChip status={invoice.status} />
+        </div>
       </div>
+      <PaperDocumentDialog open={docOpen} onOpenChange={setDocOpen} doc={doc} />
 
       <ul className="mt-4 divide-y border-y">
         {items.map((li) => (

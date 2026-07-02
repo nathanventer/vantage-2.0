@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { CompanyLink } from "@/components/CompanyProfileDialog";
 import { Check, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ function WarehousePage() {
                       <div>
                         <div className="font-display font-semibold">{j.reference}</div>
                         <div className="text-xs text-muted-foreground">
-                          {j.client} · {j.location}
+                          <CompanyLink companyId={j.clientId} name={j.client} /> · {j.location}
                         </div>
                       </div>
                       <StatusBadge status={j.status} />

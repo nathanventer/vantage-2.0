@@ -25,7 +25,6 @@ import { optimizer, type ScoredQuote } from "@/adapters/optimizer";
 import { dbFromLabel, labelFromDb } from "@/lib/documents";
 import { signatureProvider } from "@/adapters/signatureProvider";
 import { notifier } from "@/adapters/notifier";
-import { mockApi } from "./mockApi";
 import type { DataService } from "./DataService";
 import type { Json } from "@/types/supabase";
 import type {
@@ -50,6 +49,15 @@ import type {
   PriceAlert,
   NotificationItem,
   NotificationPreferences,
+  WarehouseJob,
+  ContainerJob,
+  CargoHandling,
+  Trip,
+  TripWaypoint,
+  CompanyProfile,
+  Invoice,
+  Payment,
+  ComplianceFlag,
 } from "@/types";
 
 /* ── Canonical lifecycle (blueprint §4.5.2, mirrors shipments.current_step) ── */
@@ -105,7 +113,7 @@ const docType = labelFromDb;
 
 const DOC_SELECT =
   "id,shipment_id,doc_type,reference,status,version,created_at,payload," +
-  "signed_by,signed_at,shipment:shipments(reference),generated_by";
+  "signed_by,signed_at,signature_token,shipment:shipments(reference),generated_by";
 
 interface DocRow {
   id: string;
@@ -118,6 +126,7 @@ interface DocRow {
   payload: Record<string, unknown> | null;
   signed_by: string | null;
   signed_at: string | null;
+  signature_token: string | null;
   shipment: { reference: string } | null;
   generated_by: string | null;
 }
@@ -131,13 +140,16 @@ function mapDocument(d: DocRow): DocumentRecord {
     uploadedById: d.generated_by ?? "",
     uploadedBy: d.signed_by ?? d.generated_by ?? "—",
     uploadedAt: d.created_at,
-    status: docStatus(d.status),
+    // The doc_status enum has no "signed" value — a signed document stays
+    // `submitted` in the DB until approval, and reads as Verified in the UI.
+    status: d.signed_by && d.status !== "approved" ? "Verified" : docStatus(d.status),
     signed: !!d.signed_by,
     sarsVerified: d.status === "approved",
     version: d.version,
     payload: (d.payload as DocumentRecord["payload"]) ?? undefined,
     signedBy: d.signed_by ?? undefined,
     signedAt: d.signed_at ?? undefined,
+    signatureToken: d.signature_token ?? undefined,
   };
 }
 
@@ -250,6 +262,32 @@ async function currentUserId(): Promise<string> {
   const { data } = await supabase.auth.getUser();
   if (!data.user) throw new Error("[supabaseApi] not authenticated");
   return data.user.id;
+}
+
+/** Demand-side company for shipment writes — RLS-aligned via my_company(). */
+async function resolveDemandCompanyId(): Promise<string> {
+  const { data: own, error: mcErr } = await supabase.rpc("my_company");
+  fail("resolveDemandCompanyId(my_company)", mcErr);
+  if (own) return own as string;
+
+  const { data: adminFlag, error: adminErr } = await supabase.rpc("is_admin");
+  fail("resolveDemandCompanyId(is_admin)", adminErr);
+  if (adminFlag) {
+    const { data: row, error } = await supabase
+      .from("companies")
+      .select("id")
+      .in("type", ["demand", "both"])
+      .eq("approval_status", "approved")
+      .order("name")
+      .limit(1)
+      .maybeSingle();
+    fail("resolveDemandCompanyId(admin demand co)", error);
+    if (row?.id) return row.id;
+  }
+
+  throw new Error(
+    "[supabaseApi] no company linked to current user — complete registration before creating shipments",
+  );
 }
 
 /** Mint a reference or fall back when next_ref RPC is not yet deployed. */
@@ -672,10 +710,29 @@ export const supabaseApi: DataService = {
   },
 
   async signDocument(docId, fullName): Promise<DocumentRecord> {
+    if (EDGE_LIVE) {
+      // Server-side stamp: sign-doc writes signed_by/at + signature_token and
+      // the audit row via service role, so the stamp can't be forged client-side.
+      await invokeEdge("sign-doc", { documentId: docId, fullName });
+      const { data, error } = await supabase
+        .from("shipment_documents")
+        .select(DOC_SELECT)
+        .eq("id", docId)
+        .single();
+      fail("signDocument", error);
+      return mapDocument(data as unknown as DocRow);
+    }
     const sig = signatureProvider.sign(fullName);
+    // doc_status enum: draft|generated|uploaded|submitted|approved|rejected|archived.
+    // Signing promotes to `submitted`; the signature fields carry the signed state.
     const { data, error } = await supabase
       .from("shipment_documents")
-      .update({ signed_by: sig.signedBy, signed_at: sig.signedAt, status: "verified" })
+      .update({
+        signed_by: sig.signedBy,
+        signed_at: sig.signedAt,
+        signature_token: sig.token,
+        status: "submitted",
+      })
       .eq("id", docId)
       .select(DOC_SELECT)
       .single();
@@ -764,13 +821,7 @@ export const supabaseApi: DataService = {
   // ── Shipment & quote write-path (Section F) ──────────────────────────────
   async createShipment(input): Promise<Transaction> {
     const userId = await currentUserId();
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("id", userId)
-      .maybeSingle();
-    const companyId = (prof as { company_id: string | null } | null)?.company_id;
-    if (!companyId) throw new Error("[supabaseApi] no company linked to current user");
+    const companyId = await resolveDemandCompanyId();
 
     const { data: refData, error: refErr } = await supabase.rpc("next_ref", { p_prefix: "TXN" });
     const reference =
@@ -1260,10 +1311,10 @@ export const supabaseApi: DataService = {
     const [transactions, invoices, trips, registrations, complianceFlags, auditEvents, shipmentRequests] =
       await Promise.all([
         supabaseApi.listTransactions(),
-        mockApi.listInvoices(),
-        mockApi.listTrips(),
-        mockApi.listRegistrations(),
-        mockApi.listComplianceFlags(),
+        supabaseApi.listInvoices(),
+        supabaseApi.listTrips(),
+        supabaseApi.listRegistrations(),
+        supabaseApi.listComplianceFlags(),
         supabaseApi.listAuditEvents(),
         supabaseApi.listShipmentRequests(),
       ]);
@@ -1277,25 +1328,270 @@ export const supabaseApi: DataService = {
       shipmentRequests,
     });
   },
-  listWarehouseJobs() {
-    return mockApi.listWarehouseJobs();
+
+  // ── Ops modules: live tables (RLS-scoped to client/provider company) ─────
+  async listWarehouseJobs(): Promise<WarehouseJob[]> {
+    const { data, error } = await supabase
+      .from("warehouse_jobs")
+      .select(
+        "id,reference,warehouse_type,client_company_id,location,status,checklist," +
+        "client:companies!warehouse_jobs_client_company_id_fkey(name)," +
+        "shipment:shipments!warehouse_jobs_shipment_id_fkey(reference)",
+      )
+      .order("created_at", { ascending: false });
+    fail("listWarehouseJobs", error);
+    type Row = {
+      id: string; reference: string; warehouse_type: string; client_company_id: string;
+      location: string; status: string; checklist: { step: string; done: boolean }[];
+      client: { name: string } | null; shipment: { reference: string } | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      reference: r.reference,
+      warehouseType: r.warehouse_type as WarehouseJob["warehouseType"],
+      clientId: r.client_company_id,
+      client: r.client?.name ?? "—",
+      location: r.location,
+      status: r.status as WarehouseJob["status"],
+      checklist: r.checklist ?? [],
+      shipmentRef: r.shipment?.reference,
+    }));
   },
-  listContainerJobs() {
-    return mockApi.listContainerJobs();
+
+  async listContainerJobs(): Promise<ContainerJob[]> {
+    const { data, error } = await supabase
+      .from("container_jobs")
+      .select(
+        "id,container_no,job_type,vessel,dwell_days,damage,status," +
+        "shipment:shipments!container_jobs_shipment_id_fkey(reference)",
+      )
+      .order("created_at", { ascending: false });
+    fail("listContainerJobs", error);
+    type Row = {
+      id: string; container_no: string; job_type: string; vessel: string | null;
+      dwell_days: number; damage: boolean; status: string;
+      shipment: { reference: string } | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      containerNo: r.container_no,
+      type: r.job_type as ContainerJob["type"],
+      vessel: r.vessel ?? undefined,
+      dwellDays: r.dwell_days,
+      damage: r.damage,
+      status: r.status as ContainerJob["status"],
+      shipmentRef: r.shipment?.reference,
+    }));
   },
-  listCargoHandling() {
-    return mockApi.listCargoHandling();
+
+  async listCargoHandling(): Promise<CargoHandling[]> {
+    const { data, error } = await supabase
+      .from("cargo_handling")
+      .select(
+        "id,reference,operation,weight_kg,condition,handled_at," +
+        "shipment:shipments!cargo_handling_shipment_id_fkey(reference)",
+      )
+      .order("handled_at", { ascending: false });
+    fail("listCargoHandling", error);
+    type Row = {
+      id: string; reference: string; operation: string; weight_kg: number;
+      condition: string; handled_at: string; shipment: { reference: string } | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      reference: r.reference,
+      operation: r.operation as CargoHandling["operation"],
+      weightKg: Number(r.weight_kg),
+      condition: r.condition as CargoHandling["condition"],
+      timestamp: r.handled_at,
+      shipmentRef: r.shipment?.reference,
+    }));
   },
-  listTrips() {
-    return mockApi.listTrips();
+
+  async listTrips(): Promise<Trip[]> {
+    const { data, error } = await supabase
+      .from("trips")
+      .select(
+        "id,reference,vehicle,driver,origin,destination,status,progress_pct,pod_uploaded,lat,lng,client_company_id,created_at," +
+        "shipment:shipments!trips_shipment_id_fkey(reference,cargo_description,required_date)," +
+        "clientco:companies!trips_client_company_id_fkey(name)",
+      )
+      .order("created_at", { ascending: false });
+    fail("listTrips", error);
+    type Row = {
+      id: string; reference: string; vehicle: string; driver: string; origin: string;
+      destination: string; status: string; progress_pct: number; pod_uploaded: boolean;
+      lat: number | null; lng: number | null; client_company_id: string | null; created_at: string;
+      shipment: { reference: string; cargo_description: string | null; required_date: string | null } | null;
+      clientco: { name: string } | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      reference: r.reference,
+      vehicle: r.vehicle,
+      driver: r.driver,
+      origin: r.origin,
+      destination: r.destination,
+      status: r.status as Trip["status"],
+      progressPct: r.progress_pct,
+      podUploaded: r.pod_uploaded,
+      lat: r.lat ?? 0,
+      lng: r.lng ?? 0,
+      shipmentRef: r.shipment?.reference,
+      cargo: r.shipment?.cargo_description ?? undefined,
+      clientCompanyId: r.client_company_id ?? undefined,
+      client: r.clientco?.name,
+      createdAt: r.created_at,
+      etaAt: r.shipment?.required_date ?? undefined,
+    }));
   },
-  listInvoices() {
-    return mockApi.listInvoices();
+
+  async listTripWaypoints(tripId): Promise<TripWaypoint[]> {
+    const { data, error } = await supabase
+      .from("trip_waypoints")
+      .select("seq,lat,lng,label,recorded_at")
+      .eq("trip_id", tripId)
+      .order("seq");
+    fail("listTripWaypoints", error);
+    type Row = { seq: number; lat: number; lng: number; label: string | null; recorded_at: string };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      seq: r.seq,
+      lat: r.lat,
+      lng: r.lng,
+      label: r.label ?? undefined,
+      recordedAt: r.recorded_at,
+    }));
   },
-  listPayments() {
-    return mockApi.listPayments();
+
+  async getCompanyProfile(companyId): Promise<CompanyProfile | null> {
+    const { data: c, error } = await supabase
+      .from("companies")
+      .select(
+        "id,name,type,registration_number,vat_number,city,country,contact_person,contact_email,contact_phone,risk_rating,approval_status,created_at",
+      )
+      .eq("id", companyId)
+      .maybeSingle();
+    fail("getCompanyProfile", error);
+    if (!c) return null;
+    type Row = {
+      id: string; name: string; type: string; registration_number: string | null;
+      vat_number: string | null; city: string | null; country: string | null;
+      contact_person: string | null; contact_email: string | null; contact_phone: string | null;
+      risk_rating: string | null; approval_status: string; created_at: string;
+    };
+    const row = c as unknown as Row;
+
+    // Activity stats (all RLS-scoped; counts come back 0 for what you can't see).
+    const [ship, inv, docs] = await Promise.all([
+      supabase
+        .from("shipments")
+        .select("id", { count: "exact", head: true })
+        .or(`demand_company_id.eq.${companyId},source_company_id.eq.${companyId}`),
+      supabase
+        .from("invoices")
+        .select("amount_cents,status")
+        .or(`client_company_id.eq.${companyId},provider_company_id.eq.${companyId}`),
+      supabase
+        .from("compliance_documents")
+        .select("verification_status")
+        .eq("company_id", companyId),
+    ]);
+    const invoices = (inv.data ?? []) as { amount_cents: number; status: string }[];
+    const cdocs = (docs.data ?? []) as { verification_status: string | null }[];
+    return {
+      id: row.id,
+      name: row.name,
+      type: row.type === "source" ? "Source" : "Demand",
+      registrationNumber: row.registration_number ?? undefined,
+      vatNumber: row.vat_number ?? undefined,
+      city: row.city ?? undefined,
+      country: row.country ?? undefined,
+      contactPerson: row.contact_person ?? undefined,
+      contactEmail: row.contact_email ?? undefined,
+      contactPhone: row.contact_phone ?? undefined,
+      riskRating: row.risk_rating ?? undefined,
+      approvalStatus: row.approval_status,
+      memberSince: row.created_at,
+      stats: {
+        shipments: ship.count ?? 0,
+        invoicesTotalZAR: Math.round(invoices.reduce((s, i) => s + i.amount_cents, 0) / 100),
+        invoicesOutstandingZAR: Math.round(
+          invoices.filter((i) => i.status !== "Paid").reduce((s, i) => s + i.amount_cents, 0) / 100,
+        ),
+        complianceDocs: cdocs.length,
+        complianceVerified: cdocs.filter((d) => d.verification_status === "verified").length,
+      },
+    };
   },
-  listComplianceFlags() {
-    return mockApi.listComplianceFlags();
+
+  async listInvoices(): Promise<Invoice[]> {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select(
+        "id,number,transaction_ref,client_company_id,provider_company_id,amount_cents,issued_at,due_at,status," +
+        "client:companies!invoices_client_company_id_fkey(name),provider:companies!invoices_provider_company_id_fkey(name)",
+      )
+      .order("issued_at", { ascending: false });
+    fail("listInvoices", error);
+    type Row = {
+      id: string; number: string; transaction_ref: string | null; client_company_id: string;
+      provider_company_id: string | null; amount_cents: number; issued_at: string;
+      due_at: string | null; status: string;
+      client: { name: string } | null; provider: { name: string } | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      number: r.number,
+      transactionRef: r.transaction_ref ?? "—",
+      clientId: r.client_company_id,
+      client: r.client?.name ?? "—",
+      providerId: r.provider_company_id ?? "",
+      provider: r.provider?.name ?? "—",
+      amountZAR: Math.round(r.amount_cents / 100),
+      issuedAt: r.issued_at,
+      dueAt: r.due_at ?? r.issued_at,
+      status: r.status as Invoice["status"],
+    }));
+  },
+
+  async listPayments(): Promise<Payment[]> {
+    const { data, error } = await supabase
+      .from("payments")
+      .select("id,invoice_number,amount_cents,method,gateway_status,settled_at")
+      .order("created_at", { ascending: false });
+    fail("listPayments", error);
+    type Row = {
+      id: string; invoice_number: string | null; amount_cents: number; method: string;
+      gateway_status: string; settled_at: string | null;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      invoiceNumber: r.invoice_number ?? "—",
+      amountZAR: Math.round(r.amount_cents / 100),
+      method: r.method as Payment["method"],
+      gatewayStatus: r.gateway_status as Payment["gatewayStatus"],
+      settledAt: r.settled_at ?? undefined,
+    }));
+  },
+
+  async listComplianceFlags(): Promise<ComplianceFlag[]> {
+    const { data, error } = await supabase
+      .from("compliance_flags")
+      .select("id,entity_company_id,entity_label,area,severity,status,noted_at")
+      .order("noted_at", { ascending: false });
+    fail("listComplianceFlags", error);
+    type Row = {
+      id: string; entity_company_id: string | null; entity_label: string; area: string;
+      severity: string; status: string; noted_at: string;
+    };
+    return ((data ?? []) as unknown as Row[]).map((r) => ({
+      id: r.id,
+      entityId: r.entity_company_id ?? "",
+      entity: r.entity_label,
+      area: r.area as ComplianceFlag["area"],
+      severity: r.severity as ComplianceFlag["severity"],
+      status: r.status as ComplianceFlag["status"],
+      notedAt: r.noted_at,
+    }));
   },
 };

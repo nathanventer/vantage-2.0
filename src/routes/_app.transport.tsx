@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
@@ -14,16 +14,22 @@ export const Route = createFileRoute("/_app/transport")({
 
 function TransportPage() {
   const { data, isLoading } = useQuery({ queryKey: ["tp"], queryFn: api.listTrips });
+  const navigate = useNavigate();
   if (isLoading) return <Skeleton className="h-96" />;
   return (
     <div>
       <PageHeader
         title="Transport management"
-        description="Trips, fleet assignment, simulated GPS tracking and proof of delivery."
+        description="Trips, fleet assignment, GPS tracking and proof of delivery. Click a trip to open live tracking."
       />
       <div className="grid gap-4 lg:grid-cols-2">
         {(data ?? []).map((t) => (
-          <div key={t.id} className="rounded-xl border bg-card p-5">
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => navigate({ to: "/tracking/$tripId", params: { tripId: t.id } })}
+            className="rounded-xl border bg-card p-5 text-left transition hover:border-brand/50 hover:bg-surface-2/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="rounded-lg bg-accent/10 p-2 text-accent">
@@ -54,7 +60,7 @@ function TransportPage() {
               </span>
               <span>POD: {t.podUploaded ? "Uploaded" : "Pending"}</span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
     </div>
