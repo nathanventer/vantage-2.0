@@ -54,6 +54,13 @@ function Landing() {
   const [consent, setConsent] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
+  // One-click demo logins only exist on local/dev hosts — on any public
+  // deployment visitors must type credentials shared with them privately.
+  const [demoLogins, setDemoLogins] = useState(false);
+  useEffect(() => {
+    const h = window.location.hostname;
+    setDemoLogins(h === "localhost" || h.startsWith("127.") || h.startsWith("192.168."));
+  }, []);
 
   // Already signed in → approved users go to the app, others resume onboarding.
   useEffect(() => {
@@ -204,27 +211,31 @@ function Landing() {
                 </Button>
               </form>
 
-              <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                <div className="h-px flex-1 bg-border" /> Demo — password{" "}
-                <span className="font-mono normal-case tracking-normal text-foreground">
-                  Demo@123
-                </span>{" "}
-                <div className="h-px flex-1 bg-border" />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {ROLE_CARDS.map(({ role, icon: I, title }) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => enterAs(role)}
-                    disabled={busy}
-                    className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <I className="h-4 w-4 text-brand" />
-                    <span className="text-xs font-semibold">{title}</span>
-                  </button>
-                ))}
-              </div>
+              {demoLogins && (
+                <>
+                  <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    <div className="h-px flex-1 bg-border" /> Demo — password{" "}
+                    <span className="font-mono normal-case tracking-normal text-foreground">
+                      Demo@123
+                    </span>{" "}
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ROLE_CARDS.map(({ role, icon: I, title }) => (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => enterAs(role)}
+                        disabled={busy}
+                        className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <I className="h-4 w-4 text-brand" />
+                        <span className="text-xs font-semibold">{title}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <>
