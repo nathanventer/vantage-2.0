@@ -55,7 +55,7 @@ function Landing() {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   // One-click demo logins exist on local hosts and on the password-protected
-  // tunnel share link (already gated by Basic Auth). On any real production
+  // tunnel share links (already gated by Basic Auth). On any real production
   // deployment visitors must type credentials shared with them privately.
   const [demoLogins, setDemoLogins] = useState(false);
   useEffect(() => {
@@ -64,7 +64,9 @@ function Landing() {
       h === "localhost" ||
         h.startsWith("127.") ||
         h.startsWith("192.168.") ||
-        h.endsWith(".trycloudflare.com"),
+        h.endsWith(".trycloudflare.com") ||
+        h.endsWith(".lhr.life") ||
+        h.endsWith(".serveo.net"),
     );
   }, []);
 

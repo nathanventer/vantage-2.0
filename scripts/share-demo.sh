@@ -12,5 +12,7 @@ until curl -s -o /dev/null --max-time 2 http://localhost:8080/; do sleep 1; done
 echo "[share-demo] starting password gateway (:8090)…"
 SHARE_TARGET=http://localhost:8080 "$BUN" scripts/secure-share.ts &
 
-echo "[share-demo] opening Cloudflare tunnel…"
-exec "$BUN" x cloudflared tunnel --url http://localhost:8090
+echo "[share-demo] opening share tunnel (localhost.run)…"
+echo "[share-demo] your link appears below as https://….lhr.life — send it with the access code."
+exec ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 \
+  -o ExitOnForwardFailure=yes -R 80:localhost:8090 nokey@localhost.run
