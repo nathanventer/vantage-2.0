@@ -54,12 +54,18 @@ function Landing() {
   const [consent, setConsent] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
-  // One-click demo logins only exist on local/dev hosts — on any public
+  // One-click demo logins exist on local hosts and on the password-protected
+  // tunnel share link (already gated by Basic Auth). On any real production
   // deployment visitors must type credentials shared with them privately.
   const [demoLogins, setDemoLogins] = useState(false);
   useEffect(() => {
     const h = window.location.hostname;
-    setDemoLogins(h === "localhost" || h.startsWith("127.") || h.startsWith("192.168."));
+    setDemoLogins(
+      h === "localhost" ||
+        h.startsWith("127.") ||
+        h.startsWith("192.168.") ||
+        h.endsWith(".trycloudflare.com"),
+    );
   }, []);
 
   // Already signed in → approved users go to the app, others resume onboarding.
