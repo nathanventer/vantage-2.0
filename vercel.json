@@ -1,5 +1,5 @@
 {
-  "buildCommand": "bun run build",
+  "buildCommand": "VITE_DATA_BACKEND=supabase VITE_EDGE_LIVE=on VITE_SUPABASE_URL=https://qzckmlhaoehsngxjlgfk.supabase.co VITE_SUPABASE_ANON_KEY=sb_publishable_jZIBwaS5WQ600ObVJS-efQ_CSa2yxf_ bun run build",
   "installCommand": "bun install",
   "framework": null,
   "env": {
