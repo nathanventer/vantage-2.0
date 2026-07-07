@@ -32,7 +32,11 @@ import {
   FileText,
   Check,
   Radar,
+  Radio,
+  Anchor,
+  ExternalLink,
 } from "lucide-react";
+import { hasVesselData, vesselFinderUrl } from "@/lib/vessel";
 import { toast } from "sonner";
 import type { StatusLabel } from "@/types";
 
@@ -88,6 +92,22 @@ function TxDetail() {
     () => (tripsQ.data ?? []).find((t) => t.shipmentRef === data?.reference),
     [tripsQ.data, data?.reference],
   );
+
+  const vesselData = data
+    ? hasVesselData({
+        name: data.vessel,
+        imo: data.vesselImo,
+        mmsi: data.vesselMmsi,
+        vesselfinderUrl: data.vesselfinderUrl,
+      })
+    : false;
+  const vfUrl = data
+    ? vesselFinderUrl({
+        imo: data.vesselImo,
+        mmsi: data.vesselMmsi,
+        vesselfinderUrl: data.vesselfinderUrl,
+      })
+    : null;
 
   const fmt = (n: number) =>
     new Intl.NumberFormat("en-ZA", {
@@ -456,6 +476,38 @@ function TxDetail() {
                 </div>
               </div>
             </dl>
+          </div>
+
+          {/* Vessel tracking (FIX 8) */}
+          <div className="rounded-xl border bg-card p-5">
+            <h3 className="mb-3 flex items-center gap-2 font-display font-semibold">
+              <Ship className="h-4 w-4 text-brand" /> Vessel tracking
+            </h3>
+            {vesselData ? (
+              <dl className="space-y-3 text-sm">
+                <Row icon={Ship} label="Vessel" value={data.vessel ?? "—"} />
+                {data.vesselImo && <Row icon={Anchor} label="IMO" value={data.vesselImo} />}
+                {data.vesselMmsi && <Row icon={Radio} label="MMSI" value={data.vesselMmsi} />}
+                {vfUrl ? (
+                  <a
+                    href={vfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-brand/40 bg-brand/5 px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand/10"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" /> Track on VesselFinder
+                  </a>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Live tracking link becomes available once an IMO or MMSI is recorded.
+                  </p>
+                )}
+              </dl>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No vessel data yet. Vessel details appear here once the sea-freight leg is assigned.
+              </p>
+            )}
           </div>
         </aside>
       </div>

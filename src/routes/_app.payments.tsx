@@ -9,6 +9,7 @@ import {
   type SettlementState,
 } from "@/adapters/paymentGateway";
 import { formatZAR } from "@/lib/format";
+import { computeInvoice, round2, DEFAULT_TAX_RATE } from "@/lib/invoice";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -51,19 +52,21 @@ const SETTLEMENT_STATES: SettlementState[] = [
   "Settled",
 ];
 
-/** Deterministic line-item breakdown derived from the invoice total. */
+/**
+ * Deterministic NET line-item breakdown (tax-exclusive). The invoice amount is
+ * VAT-inclusive, so we split out the net then apportion it; VAT is added by the
+ * shared computeInvoice() helper, never mixed into the line items.
+ */
 function lineItems(inv: Invoice): { label: string; amountZAR: number }[] {
-  const net = Math.round(inv.amountZAR / 1.15);
-  const vat = inv.amountZAR - net;
+  const net = round2(inv.amountZAR / (1 + DEFAULT_TAX_RATE));
+  const freight = round2(net * 0.62);
+  const handling = round2(net * 0.18);
+  const customs = round2(net * 0.14);
   return [
-    { label: `Freight — ${inv.transactionRef}`, amountZAR: Math.round(net * 0.62) },
-    { label: "Handling & destuffing", amountZAR: Math.round(net * 0.18) },
-    { label: "Customs clearing & duties", amountZAR: Math.round(net * 0.14) },
-    {
-      label: "Cargo insurance",
-      amountZAR: net - Math.round(net * 0.62) - Math.round(net * 0.18) - Math.round(net * 0.14),
-    },
-    { label: "VAT (15%)", amountZAR: vat },
+    { label: `Freight — ${inv.transactionRef}`, amountZAR: freight },
+    { label: "Handling & destuffing", amountZAR: handling },
+    { label: "Customs clearing & duties", amountZAR: customs },
+    { label: "Cargo insurance", amountZAR: round2(net - freight - handling - customs) },
   ];
 }
 
@@ -285,6 +288,9 @@ function PaymentsPage() {
 
 function InvoiceSummary({ invoice }: { invoice: Invoice }) {
   const items = lineItems(invoice);
+  const totals = computeInvoice(
+    items.map((li) => ({ label: li.label, quantity: 1, unitPriceZAR: li.amountZAR })),
+  );
   const [docOpen, setDocOpen] = useState(false);
   const doc: PaperDocumentProps = {
     kind: "INVOICE",
@@ -351,11 +357,21 @@ function InvoiceSummary({ invoice }: { invoice: Invoice }) {
         ))}
       </ul>
 
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-sm font-medium">Total due</span>
-        <span className="font-display text-xl font-semibold tabular-nums">
-          {formatZAR(invoice.amountZAR)}
-        </span>
+      <div className="mt-3 space-y-1 text-sm">
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>Subtotal</span>
+          <span className="tabular-nums">{formatZAR(totals.subtotalZAR)}</span>
+        </div>
+        <div className="flex items-center justify-between text-muted-foreground">
+          <span>VAT ({Math.round(totals.taxRate * 100)}%)</span>
+          <span className="tabular-nums">{formatZAR(totals.taxZAR)}</span>
+        </div>
+        <div className="flex items-center justify-between border-t pt-1.5 font-medium">
+          <span>Total due</span>
+          <span className="font-display text-xl font-semibold tabular-nums">
+            {formatZAR(totals.totalZAR)}
+          </span>
+        </div>
       </div>
       <div className="mt-1 text-xs text-muted-foreground">
         Issued {new Date(invoice.issuedAt).toLocaleDateString("en-ZA")} · Due{" "}

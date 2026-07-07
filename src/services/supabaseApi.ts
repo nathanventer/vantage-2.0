@@ -206,6 +206,10 @@ interface ShipmentRow {
   destination_port: string | null;
   final_delivery_location: string | null;
   container_type: string | null;
+  vessel_name: string | null;
+  vessel_imo: string | null;
+  vessel_mmsi: string | null;
+  vesselfinder_url: string | null;
   cargo_description: string | null;
   cargo_value: number | null;
   weight_kg: number | null;
@@ -253,6 +257,10 @@ function mapTransaction(s: ShipmentRow): Transaction {
     origin: s.origin_port ?? "",
     destination: s.destination_port ?? s.final_delivery_location ?? "",
     containerNo: s.container_type ?? undefined,
+    vessel: s.vessel_name ?? undefined,
+    vesselImo: s.vessel_imo ?? undefined,
+    vesselMmsi: s.vessel_mmsi ?? undefined,
+    vesselfinderUrl: s.vesselfinder_url ?? undefined,
     cargo: s.cargo_description ?? "",
     valueZAR: num(s.cargo_value),
     status: txStatus(s.status),
@@ -265,7 +273,8 @@ function mapTransaction(s: ShipmentRow): Transaction {
 
 const SHIPMENT_SELECT =
   "id,reference,demand_company_id,source_company_id,origin_port,destination_port," +
-  "final_delivery_location,container_type,cargo_description,cargo_value,weight_kg," +
+  "final_delivery_location,container_type,vessel_name,vessel_imo,vessel_mmsi,vesselfinder_url," +
+  "cargo_description,cargo_value,weight_kg," +
   "status,current_step,created_at," +
   "demand:companies!shipments_demand_company_id_fkey(id,name)," +
   "source:companies!shipments_source_company_id_fkey(id,name)," +

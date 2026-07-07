@@ -196,6 +196,10 @@ export interface Transaction {
   destination: string;
   vessel?: string;
   containerNo?: string;
+  /** Vessel tracking (FIX 8) — drives the VesselFinder link. */
+  vesselImo?: string;
+  vesselMmsi?: string;
+  vesselfinderUrl?: string;
   cargo: string;
   valueZAR: number;
   status: TransactionStatus;
