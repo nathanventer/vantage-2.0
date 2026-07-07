@@ -384,6 +384,8 @@ export type ShipmentEventType =
   | "step_advanced"
   | "transport_scheduled"
   | "pod_recorded"
+  | "message"
+  | "task_assigned"
   | "warehouse_receipt"
   | "container_update"
   | "gps_ping"
@@ -422,14 +424,24 @@ export interface ScheduleTransportInput {
 /** ── Notifications (Phase 2 §8) ─────────────────────────────────────────── */
 export type NotificationKind = "info" | "success" | "warning" | "error";
 
+export type NotificationType =
+  | "task_assigned"
+  | "message"
+  | "status_update"
+  | "approval_request";
+
 export interface NotificationItem {
   id: string;
   title: string;
   body?: string;
   kind: NotificationKind;
+  type: NotificationType;
   link?: string;
   readAt?: string;
   createdAt: string;
+  senderId?: string;
+  senderName?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export type NotificationEvent =

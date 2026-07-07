@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { useAuth } from "@/contexts/AuthContext";
 import { STEP_LABELS } from "@/data/mock";
-import { DOC_DB_TO_LABEL, STEP_REQUIRED_DOCS } from "@/lib/documents";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +18,8 @@ import {
   PackageCheck,
   MapPin,
   AlertTriangle,
+  MessageSquare,
+  ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ShipmentEvent, ShipmentEventType, Transaction } from "@/types";
@@ -28,6 +29,8 @@ const EVENT_ICON: Record<ShipmentEventType, typeof Activity> = {
   step_advanced: ArrowUpRight,
   transport_scheduled: Truck,
   pod_recorded: PackageCheck,
+  message: MessageSquare,
+  task_assigned: ClipboardList,
   warehouse_receipt: PackageCheck,
   container_update: Activity,
   gps_ping: MapPin,
@@ -51,26 +54,9 @@ export function OpsConsole({ transaction }: { transaction: Transaction }) {
   });
   const events = useMemo(() => eventsQ.data ?? [], [eventsQ.data]);
 
-  const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments });
-  const linkedDocTypes = useMemo(
-    () =>
-      new Set(
-        (docsQ.data ?? [])
-          .filter((d) => d.transactionRef === transaction.reference)
-          .map((d) => d.type),
-      ),
-    [docsQ.data, transaction.reference],
-  );
-
   const step = currentStep(transaction);
   const nextStep = Math.min(STEP_LABELS.length, step + 1);
   const atEnd = step >= STEP_LABELS.length;
-
-  // Required-doc gating (Phase 2 §4): cannot advance past a gated step without it.
-  const missingDocs = (STEP_REQUIRED_DOCS[step] ?? [])
-    .map((db) => DOC_DB_TO_LABEL[db])
-    .filter((label) => !linkedDocTypes.has(label));
-  const blockedByDocs = missingDocs.length > 0;
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["shipment-events", transaction.id] });
@@ -117,6 +103,28 @@ export function OpsConsole({ transaction }: { transaction: Transaction }) {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to record POD"),
   });
 
+  const [message, setMessage] = useState("");
+  const messageMut = useMutation({
+    mutationFn: () => api.sendShipmentMessage(transaction.id, message),
+    onSuccess: () => {
+      toast.success("Message sent to counterparty");
+      setMessage("");
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to send message"),
+  });
+
+  const [task, setTask] = useState("");
+  const taskMut = useMutation({
+    mutationFn: () => api.assignShipmentTask(transaction.id, task),
+    onSuccess: () => {
+      toast.success("Task assigned");
+      setTask("");
+      invalidate();
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to assign task"),
+  });
+
   return (
     <div className="space-y-4">
       {/* Action bar */}
@@ -132,27 +140,87 @@ export function OpsConsole({ transaction }: { transaction: Transaction }) {
         </div>
 
         {!canOperate ? (
-          <p className="rounded-lg border border-dashed bg-background/40 p-3 text-xs text-muted-foreground">
-            Operational actions are available to source/operations roles. You can view the live
-            timeline below.
+          <p className="mb-4 rounded-lg border border-dashed bg-background/40 p-3 text-xs text-muted-foreground">
+            Milestone and POD actions are for source/operations roles. Messages and tasks below
+            notify the counterparty in real time.
           </p>
-        ) : (
+        ) : null}
+
+        <div className="mb-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-lg border bg-background/40 p-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <MessageSquare className="h-4 w-4 text-accent" /> Send message
+            </div>
+            <p className="mb-3 min-h-8 text-xs text-muted-foreground">
+              Notifies the counterparty instantly (demo: second browser as the other account).
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="ops-message" className="sr-only">
+                Message
+              </Label>
+              <Input
+                id="ops-message"
+                placeholder="e.g. Vessel ETA updated — please confirm slot"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="h-8"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={message.trim().length < 2 || messageMut.isPending}
+                onClick={() => messageMut.mutate()}
+              >
+                {messageMut.isPending ? "Sending…" : "Send message"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-background/40 p-3">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <ClipboardList className="h-4 w-4 text-accent" /> Assign task
+            </div>
+            <p className="mb-3 min-h-8 text-xs text-muted-foreground">
+              Assigns an operational task to the counterparty account.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="ops-task" className="sr-only">
+                Task
+              </Label>
+              <Input
+                id="ops-task"
+                placeholder="e.g. Review customs docs before Friday"
+                value={task}
+                onChange={(e) => setTask(e.target.value)}
+                className="h-8"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={task.trim().length < 3 || taskMut.isPending}
+                onClick={() => taskMut.mutate()}
+              >
+                {taskMut.isPending ? "Assigning…" : "Assign task"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {canOperate ? (
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border bg-background/40 p-3">
               <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                 <ArrowUpRight className="h-4 w-4 text-accent" /> Advance milestone
               </div>
               <p className="mb-3 min-h-8 text-xs text-muted-foreground">
-                {atEnd
-                  ? "Lifecycle complete."
-                  : blockedByDocs
-                    ? `Requires: ${missingDocs.join(", ")}`
-                    : `Next: ${STEP_LABELS[nextStep - 1]}`}
+                {atEnd ? "Lifecycle complete." : `Next: ${STEP_LABELS[nextStep - 1]}`}
               </p>
               <Button
                 size="sm"
                 className="w-full"
-                disabled={atEnd || blockedByDocs || advanceMut.isPending}
+                disabled={atEnd || advanceMut.isPending}
                 onClick={() => advanceMut.mutate()}
               >
                 {advanceMut.isPending ? "Advancing…" : "Advance step"}
@@ -230,6 +298,10 @@ export function OpsConsole({ transaction }: { transaction: Transaction }) {
               </Button>
             </div>
           </div>
+        ) : (
+          <p className="rounded-lg border border-dashed bg-background/40 p-3 text-xs text-muted-foreground">
+            View the operational timeline below. Source roles can advance milestones and capture POD.
+          </p>
         )}
       </div>
 

@@ -71,7 +71,9 @@ import type {
   RateSubscription,
   PriceAlert,
   NotificationItem,
+  NotificationKind,
   NotificationPreferences,
+  NotificationType,
   WarehouseJob,
   ContainerJob,
   CargoHandling,
@@ -300,6 +302,122 @@ async function currentUserId(): Promise<string> {
   return data.user.id;
 }
 
+async function currentUserProfile(): Promise<{ id: string; fullName: string; companyId: string | null }> {
+  const userId = await currentUserId();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,full_name,company_id")
+    .eq("id", userId)
+    .single();
+  fail("currentUserProfile", error);
+  const row = data as { id: string; full_name: string | null; company_id: string | null };
+  return { id: row.id, fullName: row.full_name ?? "User", companyId: row.company_id };
+}
+
+async function primaryProfileForCompany(companyId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  fail("primaryProfileForCompany", error);
+  return (data as { id: string } | null)?.id ?? null;
+}
+
+async function shipmentCounterpartyUserId(
+  shipmentId: string,
+  actorCompanyId: string | null,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("shipments")
+    .select("demand_company_id,source_company_id,created_by")
+    .eq("id", shipmentId)
+    .maybeSingle();
+  fail("shipmentCounterpartyUserId", error);
+  if (!data) return null;
+  const row = data as {
+    demand_company_id: string;
+    source_company_id: string | null;
+    created_by: string | null;
+  };
+  if (actorCompanyId && actorCompanyId === row.demand_company_id) {
+    if (row.source_company_id) return primaryProfileForCompany(row.source_company_id);
+    return null;
+  }
+  if (actorCompanyId && actorCompanyId === row.source_company_id) {
+    return row.created_by;
+  }
+  return row.created_by;
+}
+
+async function notifyShipmentCounterparty(input: {
+  shipmentId: string;
+  reference: string;
+  title: string;
+  body?: string;
+  type: NotificationType;
+  kind?: NotificationKind;
+  dedupKey?: string;
+  actor: { id: string; fullName: string; companyId: string | null };
+  extraMetadata?: Record<string, unknown>;
+}) {
+  const recipientId = await shipmentCounterpartyUserId(input.shipmentId, input.actor.companyId);
+  if (!recipientId || recipientId === input.actor.id) return;
+  await notifier.notify({
+    userId: recipientId,
+    title: input.title,
+    body: input.body,
+    type: input.type,
+    kind: input.kind ?? "info",
+    link: `/transactions/${input.shipmentId}`,
+    metadata: {
+      shipmentId: input.shipmentId,
+      reference: input.reference,
+      ...input.extraMetadata,
+    },
+    dedupKey: input.dedupKey,
+    senderId: input.actor.id,
+    senderName: input.actor.fullName,
+  });
+}
+
+interface ShipmentEventRow {
+  id: string;
+  shipment_id: string;
+  event_type: string;
+  step: number | null;
+  note: string | null;
+  payload: Record<string, unknown> | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+function mapShipmentEvent(e: ShipmentEventRow, reference: string): ShipmentEvent {
+  return {
+    id: e.id,
+    shipmentId: e.shipment_id,
+    reference,
+    eventType: e.event_type as ShipmentEvent["eventType"],
+    step: e.step ?? undefined,
+    note: e.note ?? undefined,
+    payload: e.payload ?? undefined,
+    actor: e.created_by ?? "system",
+    createdAt: e.created_at,
+  };
+}
+
+async function shipmentReference(shipmentId: string): Promise<string> {
+  const { data, error } = await supabase
+    .from("shipments")
+    .select("reference")
+    .eq("id", shipmentId)
+    .maybeSingle();
+  fail("shipmentReference", error);
+  return data?.reference ?? "";
+}
+
 /** Demand-side company for shipment writes — RLS-aligned via my_company(). */
 async function resolveDemandCompanyId(): Promise<string> {
   const { data: own, error: mcErr } = await supabase.rpc("my_company");
@@ -516,6 +634,24 @@ export const supabaseApi: DataService = {
       })
       .eq("id", companyId);
     fail("approveCompany", error);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("company_id", companyId);
+    const actor = await currentUserProfile();
+    for (const p of (profiles ?? []) as { id: string }[]) {
+      await notifier.notify({
+        userId: p.id,
+        title: "Registration approved",
+        body: "Your company registration has been approved. You can now access TradeHub.",
+        type: "approval_request",
+        kind: "success",
+        link: "/transactions",
+        dedupKey: `registration-approved:${companyId}:${p.id}`,
+        senderId: actor.id,
+        senderName: actor.fullName,
+      });
+    }
   },
 
   async rejectCompany(companyId: string, reason: string): Promise<void> {
@@ -524,6 +660,24 @@ export const supabaseApi: DataService = {
       .update({ approval_status: "rejected", rejection_reason: reason })
       .eq("id", companyId);
     fail("rejectCompany", error);
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("company_id", companyId);
+    const actor = await currentUserProfile();
+    for (const p of (profiles ?? []) as { id: string }[]) {
+      await notifier.notify({
+        userId: p.id,
+        title: "Registration rejected",
+        body: reason,
+        type: "approval_request",
+        kind: "warning",
+        link: "/register",
+        dedupKey: `registration-rejected:${companyId}:${p.id}`,
+        senderId: actor.id,
+        senderName: actor.fullName,
+      });
+    }
   },
 
   async setCompanyPending(companyId: string): Promise<void> {
@@ -993,6 +1147,24 @@ export const supabaseApi: DataService = {
         .eq("id", tx.id);
       fail("selectQuote(shipment)", sErr);
     }
+    const actor = await currentUserProfile();
+    if (chosen) {
+      const recipientId = await primaryProfileForCompany(chosen.providerId);
+      if (recipientId && recipientId !== actor.id) {
+        await notifier.notify({
+          userId: recipientId,
+          title: "Quote accepted",
+          body: `${tx.demandCompany} accepted your quote on ${tx.reference}.`,
+          type: "status_update",
+          kind: "success",
+          link: `/transactions/${tx.id}`,
+          metadata: { shipmentId: tx.id, quoteId, reference: tx.reference },
+          dedupKey: `quote-accepted:${tx.id}:${quoteId}`,
+          senderId: actor.id,
+          senderName: actor.fullName,
+        });
+      }
+    }
   },
 
   async submitQuote(input): Promise<Quote> {
@@ -1040,7 +1212,32 @@ export const supabaseApi: DataService = {
       )
       .single();
     fail("submitQuote", error);
-    return mapQuote(data as unknown as QuoteRow);
+    const quote = mapQuote(data as unknown as QuoteRow);
+    const tx = await supabaseApi.getTransaction(input.shipmentId);
+    if (tx) {
+      const { data: shipment } = await supabase
+        .from("shipments")
+        .select("created_by")
+        .eq("id", input.shipmentId)
+        .maybeSingle();
+      const recipientId = (shipment as { created_by: string | null } | null)?.created_by;
+      const actor = await currentUserProfile();
+      if (recipientId && recipientId !== actor.id) {
+        await notifier.notify({
+          userId: recipientId,
+          title: "Quote received",
+          body: `${quote.providerName} quoted ${tx.reference} — R${quote.priceZAR.toLocaleString("en-ZA")} all-in.`,
+          type: "status_update",
+          kind: "info",
+          link: `/transactions/${tx.id}`,
+          metadata: { shipmentId: tx.id, quoteId: quote.id, reference: tx.reference },
+          dedupKey: `quote-submitted:${tx.id}:${quote.id}`,
+          senderId: actor.id,
+          senderName: actor.fullName,
+        });
+      }
+    }
+    return quote;
   },
 
   async rejectQuote(shipmentId, quoteId, reason): Promise<void> {
@@ -1063,47 +1260,50 @@ export const supabaseApi: DataService = {
       .maybeSingle();
     fail("rejectQuote", error);
     if (!data) throw new Error("[supabaseApi] rejectQuote: quote not found or not permitted");
+    const tx = await supabaseApi.getTransaction(shipmentId);
+    const quote = tx?.quotes.find((q) => q.id === quoteId);
+    if (tx && quote) {
+      const recipientId = await primaryProfileForCompany(quote.providerId);
+      const actor = await currentUserProfile();
+      if (recipientId && recipientId !== actor.id) {
+        await notifier.notify({
+          userId: recipientId,
+          title: "Quote rejected",
+          body: `${tx.demandCompany} rejected your quote on ${tx.reference}: ${clean}`,
+          type: "status_update",
+          kind: "warning",
+          link: `/transactions/${tx.id}`,
+          metadata: { shipmentId: tx.id, quoteId, reference: tx.reference },
+          dedupKey: `quote-rejected:${tx.id}:${quoteId}`,
+          senderId: actor.id,
+          senderName: actor.fullName,
+        });
+      }
+    }
   },
 
   // ── Logistics operations execution (Phase 2 §1) ─────────────────────────
   async listShipmentEvents(shipmentId): Promise<ShipmentEvent[]> {
-    const { data, error } = await supabase
-      .from("shipment_events")
-      .select(
-        "id,shipment_id,event_type,step,note,payload,created_by,created_at,shipment:shipments(reference)",
-      )
-      .eq("shipment_id", shipmentId)
-      // Newest first; id as a stable tiebreaker for same-timestamp events.
-      .order("created_at", { ascending: false, nullsFirst: false })
-      .order("id", { ascending: false })
-      .limit(LIST_LIMIT);
+    const [{ data, error }, reference] = await Promise.all([
+      supabase
+        .from("shipment_events")
+        .select("id,shipment_id,event_type,step,note,payload,created_by,created_at")
+        .eq("shipment_id", shipmentId)
+        // Newest first; id as a stable tiebreaker for same-timestamp events.
+        .order("created_at", { ascending: false, nullsFirst: false })
+        .order("id", { ascending: false })
+        .limit(LIST_LIMIT),
+      shipmentReference(shipmentId),
+    ]);
     fail("listShipmentEvents", error);
-    type Row = {
-      id: string;
-      shipment_id: string;
-      event_type: string;
-      step: number | null;
-      note: string | null;
-      payload: Record<string, unknown> | null;
-      created_by: string | null;
-      created_at: string;
-      shipment: { reference: string } | null;
-    };
-    return ((data ?? []) as unknown as Row[]).map((e) => ({
-      id: e.id,
-      shipmentId: e.shipment_id,
-      reference: e.shipment?.reference ?? "",
-      eventType: e.event_type as ShipmentEvent["eventType"],
-      step: e.step ?? undefined,
-      note: e.note ?? undefined,
-      payload: e.payload ?? undefined,
-      actor: e.created_by ?? "system",
-      createdAt: e.created_at,
-    }));
+    return ((data ?? []) as unknown as ShipmentEventRow[]).map((e) =>
+      mapShipmentEvent(e, reference),
+    );
   },
 
   async createOpEvent(input): Promise<ShipmentEvent> {
     const userId = await currentUserId();
+    const reference = await shipmentReference(input.shipmentId);
     const { data, error } = await supabase
       .from("shipment_events")
       .insert({
@@ -1114,9 +1314,7 @@ export const supabaseApi: DataService = {
         payload: asJson(input.payload ?? null),
         created_by: userId,
       })
-      .select(
-        "id,shipment_id,event_type,step,note,payload,created_by,created_at,shipment:shipments(reference)",
-      )
+      .select("id,shipment_id,event_type,step,note,payload,created_by,created_at")
       .single();
     fail("createOpEvent", error);
     if (typeof input.step === "number") {
@@ -1128,28 +1326,24 @@ export const supabaseApi: DataService = {
         })
         .eq("id", input.shipmentId);
     }
-    const e = data as unknown as {
-      id: string;
-      shipment_id: string;
-      event_type: string;
-      step: number | null;
-      note: string | null;
-      payload: Record<string, unknown> | null;
-      created_by: string | null;
-      created_at: string;
-      shipment: { reference: string } | null;
-    };
-    return {
-      id: e.id,
-      shipmentId: e.shipment_id,
-      reference: e.shipment?.reference ?? "",
-      eventType: e.event_type as ShipmentEvent["eventType"],
-      step: e.step ?? undefined,
-      note: e.note ?? undefined,
-      payload: e.payload ?? undefined,
-      actor: e.created_by ?? "system",
-      createdAt: e.created_at,
-    };
+    const actor = await currentUserProfile();
+    if (
+      input.eventType === "step_advanced" ||
+      input.eventType === "transport_scheduled" ||
+      input.eventType === "pod_recorded"
+    ) {
+      await notifyShipmentCounterparty({
+        shipmentId: input.shipmentId,
+        reference,
+        actor,
+        type: "status_update",
+        kind: "info",
+        title: "Shipment updated",
+        body: input.note ?? `${reference} status changed.`,
+        dedupKey: `status:${input.shipmentId}:${input.eventType}:${input.step ?? ""}:${(data as { id: string }).id}`,
+      });
+    }
+    return mapShipmentEvent(data as unknown as ShipmentEventRow, reference);
   },
 
   async advanceShipmentStep(shipmentId, toStep): Promise<Transaction> {
@@ -1210,6 +1404,54 @@ export const supabaseApi: DataService = {
     return mapDocument(data as unknown as DocRow);
   },
 
+  async sendShipmentMessage(shipmentId, message) {
+    const clean = message.trim();
+    if (clean.length < 2) throw new Error("Message must be at least 2 characters.");
+    const reference = await shipmentReference(shipmentId);
+    const actor = await currentUserProfile();
+    const evt = await supabaseApi.createOpEvent({
+      shipmentId,
+      eventType: "message",
+      note: clean,
+      payload: { message: clean },
+    });
+    await notifyShipmentCounterparty({
+      shipmentId,
+      reference,
+      actor,
+      type: "message",
+      kind: "info",
+      title: `Message from ${actor.fullName}`,
+      body: clean,
+      dedupKey: `message:${shipmentId}:${evt.id}`,
+    });
+    return evt;
+  },
+
+  async assignShipmentTask(shipmentId, task) {
+    const clean = task.trim();
+    if (clean.length < 3) throw new Error("Task description must be at least 3 characters.");
+    const reference = await shipmentReference(shipmentId);
+    const actor = await currentUserProfile();
+    const evt = await supabaseApi.createOpEvent({
+      shipmentId,
+      eventType: "task_assigned",
+      note: clean,
+      payload: { task: clean },
+    });
+    await notifyShipmentCounterparty({
+      shipmentId,
+      reference,
+      actor,
+      type: "task_assigned",
+      kind: "info",
+      title: `Task assigned by ${actor.fullName}`,
+      body: clean,
+      dedupKey: `task:${shipmentId}:${evt.id}`,
+    });
+    return evt;
+  },
+
   // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
   async updateUserRole(userId, role): Promise<void> {
     const { error } = await supabase
@@ -1247,7 +1489,9 @@ export const supabaseApi: DataService = {
     const userId = await currentUserId();
     const { data, error } = await supabase
       .from("notifications")
-      .select("id,title,body,kind,link,read_at,created_at")
+      .select(
+        "id,title,body,kind,type,link,read_at,created_at,sender_id,metadata,sender:profiles!notifications_sender_id_fkey(full_name)",
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(50);
@@ -1257,18 +1501,26 @@ export const supabaseApi: DataService = {
       title: string;
       body: string | null;
       kind: string;
+      type: string;
       link: string | null;
       read_at: string | null;
       created_at: string;
+      sender_id: string | null;
+      metadata: Record<string, unknown> | null;
+      sender: { full_name: string | null } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((n) => ({
       id: n.id,
       title: n.title,
       body: n.body ?? undefined,
       kind: (n.kind as NotificationItem["kind"]) ?? "info",
+      type: (n.type as NotificationItem["type"]) ?? "status_update",
       link: n.link ?? undefined,
       readAt: n.read_at ?? undefined,
       createdAt: n.created_at,
+      senderId: n.sender_id ?? undefined,
+      senderName: n.sender?.full_name ?? undefined,
+      metadata: n.metadata ?? undefined,
     }));
   },
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { optimizer, OPTIMIZER_WEIGHTS, type QuoteScoreInput } from "./optimizer";
+import {
+  optimizer,
+  OPTIMIZER_WEIGHTS,
+  adjustOptimizerWeight,
+  riskFlagFromScore,
+  riskFlagChipStatus,
+  type QuoteScoreInput,
+} from "./optimizer";
 
 const quotes: QuoteScoreInput[] = [
   { id: "q1", providerId: "p-alpha", providerName: "Alpha", priceZAR: 100_000, etaDays: 10 },
@@ -41,5 +48,26 @@ describe("optimizer.score", () => {
     const r = optimizer.score(quotes);
     const cheapest = r.ranked.find((q) => q.providerId === "p-charlie")!;
     expect(cheapest.costScore).toBeCloseTo(OPTIMIZER_WEIGHTS.cost, 5);
+  });
+
+  it("re-scores with custom weights", () => {
+    const custom = { cost: 40, service: 20, compliance: 15, capacity: 15, risk: 10 };
+    const r = optimizer.score(quotes, custom);
+    expect(r.weights).toEqual(custom);
+    expect(r.ranked[0].totalScore).toBeGreaterThan(0);
+  });
+
+  it("adjustOptimizerWeight keeps total at 100", () => {
+    const next = adjustOptimizerWeight(OPTIMIZER_WEIGHTS, "cost", 40);
+    const total = Object.values(next).reduce((s, w) => s + w, 0);
+    expect(total).toBe(100);
+    expect(next.cost).toBe(40);
+  });
+
+  it("maps risk sub-scores to Low / Elevated / High flags", () => {
+    expect(riskFlagFromScore(90)).toBe("Low");
+    expect(riskFlagFromScore(75)).toBe("Elevated");
+    expect(riskFlagFromScore(65)).toBe("High");
+    expect(riskFlagChipStatus("High")).toBe("rejected");
   });
 });

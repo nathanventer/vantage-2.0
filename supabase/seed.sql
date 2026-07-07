@@ -13,6 +13,13 @@ declare
   v_sc uuid;
   v_uid uuid;
   v_buyer uuid;
+  v_provider uuid;
+  v_admin uuid;
+  v_auditor uuid;
+  v_finance uuid;
+  v_warehouse uuid;
+  v_transport uuid;
+  v_customs uuid;
   r record;
 begin
   --------------------------------------------------------------------------
@@ -122,6 +129,13 @@ begin
   end loop;
 
   select id into v_buyer from profiles where email = 'buyer@ubuntuimports.com';
+  select id into v_provider from profiles where email = 'provider@sclogistics.com';
+  select id into v_admin from profiles where email = 'admin@tradehub.com';
+  select id into v_auditor from profiles where email = 'auditor@pulse.com';
+  select id into v_finance from profiles where email = 'finance@ubuntuimports.com';
+  select id into v_warehouse from profiles where email = 'warehouse@sclogistics.com';
+  select id into v_transport from profiles where email = 'transport@sclogistics.com';
+  select id into v_customs from profiles where email = 'customs@sclogistics.com';
 
   --------------------------------------------------------------------------
   -- 3. Shipments (TXN-1001..1005) — workbook transaction data. Upsert by ref.
@@ -519,12 +533,50 @@ begin
 
   if to_regclass('public.notifications') is not null and v_buyer is not null then
     if not exists (select 1 from public.notifications where user_id = v_buyer and title = 'Demo dataset loaded') then
-      insert into public.notifications (user_id, title, body, link) values
-        (v_buyer, 'Demo dataset loaded', '125 TradeHub shipments are available in your workspace.', '/transactions'),
-        (v_buyer, 'Quote received', 'Southern Cross quoted TXN-1002 — R128,800 all-in.', '/transactions'),
-        (v_buyer, 'Customs inspection hold', 'SARS hold on TXN-1004 — documentation review required.', '/transactions'),
-        (v_buyer, 'Payment verified', 'INV-5001 (R203,000) settled for TXN-1001.', '/payments'),
-        (v_buyer, 'Shipment delivered', 'TXN-1003 completed — POD uploaded.', '/transactions');
+      -- Buyer (demand) — mix of read/unread; cross-account from provider
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_buyer, null, 'status_update', 'info', 'Demo dataset loaded', '125 TradeHub shipments are available in your workspace.', '/transactions', null, '{}'::jsonb),
+        (v_buyer, v_provider, 'status_update', 'info', 'Quote received', 'Southern Cross quoted TXN-1002 — R128,800 all-in.', '/transactions', null, '{"reference":"TXN-1002"}'::jsonb),
+        (v_buyer, v_provider, 'message', 'info', 'Message from Sarah Naidoo', 'Vessel ETA updated for TXN-1001 — please confirm warehouse slot.', '/transactions', null, '{"reference":"TXN-1001"}'::jsonb),
+        (v_buyer, v_provider, 'status_update', 'warning', 'Customs inspection hold', 'SARS hold on TXN-1004 — documentation review required.', '/transactions', now() - interval '2 days', '{"reference":"TXN-1004"}'::jsonb),
+        (v_buyer, v_provider, 'approval_request', 'info', 'POD approval requested', 'Southern Cross uploaded POD for TXN-1003.', '/transactions', null, '{"reference":"TXN-1003"}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_provider, v_buyer, 'task_assigned', 'info', 'Task assigned by Michael Dlamini', 'Review customs docs for TXN-1004 before Friday.', '/transactions', null, '{"reference":"TXN-1004"}'::jsonb),
+        (v_provider, v_buyer, 'message', 'info', 'Message from Michael Dlamini', 'Can you confirm container availability for TXN-1002?', '/transactions', null, '{"reference":"TXN-1002"}'::jsonb),
+        (v_provider, v_buyer, 'status_update', 'success', 'Quote accepted', 'Ubuntu accepted your quote on TXN-1001.', '/transactions', null, '{"reference":"TXN-1001"}'::jsonb),
+        (v_provider, null, 'status_update', 'info', 'Transport scheduled', 'TXN-1002 moved to transport — vehicle CA 123-456.', '/transactions', now() - interval '3 days', '{"reference":"TXN-1002"}'::jsonb),
+        (v_provider, v_buyer, 'approval_request', 'info', 'Document signature requested', 'Please sign the service agreement for TXN-1001.', '/transactions', null, '{"reference":"TXN-1001"}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_admin, null, 'approval_request', 'warning', 'Registration pending review', 'New demand company awaiting approval.', '/admin/registrations', null, '{}'::jsonb),
+        (v_admin, v_buyer, 'message', 'info', 'Message from Michael Dlamini', 'Please expedite TXN-1004 customs clearance.', '/transactions', null, '{"reference":"TXN-1004"}'::jsonb),
+        (v_admin, null, 'status_update', 'info', 'Demo dataset loaded', '125 TradeHub shipments are available.', '/transactions', now() - interval '7 days', '{}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_auditor, v_admin, 'status_update', 'info', 'Audit export ready', 'Weekly compliance audit bundle is available.', '/admin/audit', null, '{}'::jsonb),
+        (v_auditor, v_provider, 'status_update', 'warning', 'Exception flagged', 'Delay reported on TXN-1004 customs step.', '/transactions', null, '{"reference":"TXN-1004"}'::jsonb),
+        (v_auditor, null, 'status_update', 'info', 'Pulse demo active', 'Rate intelligence dashboards are unlocked.', '/pulse', now() - interval '1 day', '{}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_finance, v_provider, 'status_update', 'success', 'Invoice generated', 'INV-5001 issued for TXN-1001.', '/payments', null, '{"reference":"TXN-1001"}'::jsonb),
+        (v_finance, v_buyer, 'message', 'info', 'Message from Michael Dlamini', 'Please approve payment for TXN-1001 this week.', '/payments', null, '{}'::jsonb),
+        (v_finance, null, 'status_update', 'info', 'Payment verified', 'INV-5001 (R203,000) settled.', '/payments', now() - interval '4 days', '{}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_warehouse, v_buyer, 'task_assigned', 'info', 'Task assigned by Michael Dlamini', 'Prepare inbound slot for TXN-1002 textiles.', '/warehouse', null, '{"reference":"TXN-1002"}'::jsonb),
+        (v_warehouse, v_provider, 'status_update', 'info', 'Goods received', 'TXN-1001 cargo checked into JHB DC.', '/warehouse', null, '{"reference":"TXN-1001"}'::jsonb),
+        (v_warehouse, null, 'status_update', 'info', 'Warehouse capacity alert', 'DC at 82% — plan overflow for peak week.', '/warehouse', now() - interval '6 hours', '{}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_transport, v_buyer, 'message', 'info', 'Message from Michael Dlamini', 'Confirm delivery window for TXN-1003.', '/transport', null, '{"reference":"TXN-1003"}'::jsonb),
+        (v_transport, v_provider, 'task_assigned', 'info', 'Task assigned by Sarah Naidoo', 'Schedule last-mile for TXN-1002.', '/transport', null, '{"reference":"TXN-1002"}'::jsonb),
+        (v_transport, null, 'status_update', 'info', 'Trip dispatched', 'CA 123-456 departed Durban port.', '/transport', null, '{}'::jsonb);
+
+      insert into public.notifications (user_id, sender_id, type, kind, title, body, link, read_at, metadata) values
+        (v_customs, v_buyer, 'approval_request', 'warning', 'Clearance approval needed', 'TXN-1004 SARS hold — upload amended docs.', '/transactions', null, '{"reference":"TXN-1004"}'::jsonb),
+        (v_customs, v_provider, 'message', 'info', 'Message from Sarah Naidoo', 'SARS query on TXN-1004 — need HS code confirmation.', '/transactions', null, '{"reference":"TXN-1004"}'::jsonb),
+        (v_customs, null, 'status_update', 'success', 'Clearance released', 'TXN-1003 customs cleared.', '/transactions', now() - interval '12 hours', '{"reference":"TXN-1003"}'::jsonb);
     end if;
   end if;
 

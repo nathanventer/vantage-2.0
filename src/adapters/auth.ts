@@ -102,26 +102,69 @@ const supabaseAuth: AuthAdapter = {
 };
 
 /* ── Mock auth: keeps the offline demo usable without a real session ──────── */
-const DEMO_PROFILE: Record<Role, AuthUser> = {
-  demand: {
-    id: "demo-demand",
+const UBUNTU = "Ubuntu Retail Imports (Pty) Ltd";
+const SC = "Southern Cross Logistics Solutions";
+
+/** Stable mock ids per demo email so notifications are scoped per account. */
+export const DEMO_EMAIL_PROFILES: Record<
+  string,
+  Omit<AuthUser, "email"> & { email: string }
+> = {
+  "buyer@ubuntuimports.com": {
+    id: "demo-buyer",
     email: "buyer@ubuntuimports.com",
     fullName: "Michael Dlamini",
     role: "demand",
-    companyName: "Ubuntu Retail Imports (Pty) Ltd",
+    companyName: UBUNTU,
     companyApproved: true,
     onboardingStep: 8,
   },
-  source: {
-    id: "demo-source",
+  "finance@ubuntuimports.com": {
+    id: "demo-finance",
+    email: "finance@ubuntuimports.com",
+    fullName: "Ubuntu Finance",
+    role: "demand",
+    companyName: UBUNTU,
+    companyApproved: true,
+    onboardingStep: 8,
+  },
+  "provider@sclogistics.com": {
+    id: "demo-provider",
     email: "provider@sclogistics.com",
     fullName: "Sarah Naidoo",
     role: "source",
-    companyName: "Southern Cross Logistics Solutions",
+    companyName: SC,
     companyApproved: true,
     onboardingStep: 8,
   },
-  admin: {
+  "warehouse@sclogistics.com": {
+    id: "demo-warehouse",
+    email: "warehouse@sclogistics.com",
+    fullName: "SC Warehouse Manager",
+    role: "source",
+    companyName: SC,
+    companyApproved: true,
+    onboardingStep: 8,
+  },
+  "transport@sclogistics.com": {
+    id: "demo-transport",
+    email: "transport@sclogistics.com",
+    fullName: "SC Transport Coordinator",
+    role: "source",
+    companyName: SC,
+    companyApproved: true,
+    onboardingStep: 8,
+  },
+  "customs@sclogistics.com": {
+    id: "demo-customs",
+    email: "customs@sclogistics.com",
+    fullName: "SC Customs Agent",
+    role: "source",
+    companyName: SC,
+    companyApproved: true,
+    onboardingStep: 8,
+  },
+  "admin@tradehub.com": {
     id: "demo-admin",
     email: "admin@tradehub.com",
     fullName: "Platform Admin",
@@ -129,20 +172,35 @@ const DEMO_PROFILE: Record<Role, AuthUser> = {
     companyApproved: true,
     onboardingStep: 8,
   },
+  "auditor@pulse.com": {
+    id: "demo-auditor",
+    email: "auditor@pulse.com",
+    fullName: "Pulse Auditor",
+    role: "admin",
+    companyApproved: true,
+    onboardingStep: 8,
+  },
+};
+
+const DEMO_PROFILE: Record<Role, AuthUser> = {
+  demand: DEMO_EMAIL_PROFILES["buyer@ubuntuimports.com"]!,
+  source: DEMO_EMAIL_PROFILES["provider@sclogistics.com"]!,
+  admin: DEMO_EMAIL_PROFILES["admin@tradehub.com"]!,
 };
 function roleFromEmail(email: string): Role {
   if (/provider|warehouse|transport|customs|source|sclogistics/i.test(email)) return "source";
   if (/admin|auditor|pulse|tradehub/i.test(email)) return "admin";
   return "demand";
 }
-let mockUser: AuthUser | null = DEMO_PROFILE.demand; // auto session for the demo
+let mockUser: AuthUser | null = DEMO_PROFILE.demand;
 const mockListeners = new Set<() => void>();
 const mockAuth: AuthAdapter = {
   async getCurrentUser() {
     return mockUser;
   },
   async signIn(email) {
-    mockUser = { ...DEMO_PROFILE[roleFromEmail(email)], email };
+    const known = DEMO_EMAIL_PROFILES[email.toLowerCase()];
+    mockUser = known ?? { ...DEMO_PROFILE[roleFromEmail(email)], email };
     mockListeners.forEach((f) => f());
     return mockUser;
   },

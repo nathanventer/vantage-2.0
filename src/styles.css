@@ -394,3 +394,78 @@
 .map-tip.leaflet-tooltip-top:before {
   border-top-color: #1e2942;
 }
+
+/* Sign-in welcome overlay */
+@keyframes welcome-confetti {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--burst-x)), calc(-50% + var(--burst-y))) scale(0.2);
+  }
+}
+@keyframes welcome-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes welcome-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes welcome-card-in {
+  0% { opacity: 0; transform: scale(0.88) translateY(16px); }
+  60% { opacity: 1; transform: scale(1.02) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes welcome-card-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to { opacity: 0; transform: scale(0.96) translateY(-8px); }
+}
+@keyframes welcome-pop {
+  0% { transform: scale(0.65); opacity: 0; }
+  65% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes welcome-ring {
+  0% { transform: scale(0.85); opacity: 0.55; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+@keyframes welcome-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.welcome-overlay-enter {
+  animation: welcome-overlay-in 0.35s ease-out forwards;
+}
+.welcome-overlay-exit {
+  animation: welcome-overlay-out 0.45s ease-in forwards;
+}
+.welcome-card-enter {
+  animation: welcome-card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.welcome-card-exit {
+  animation: welcome-card-out 0.45s ease-in forwards;
+}
+.welcome-overlay-backdrop {
+  backdrop-filter: blur(10px);
+}
+.welcome-logo {
+  animation: welcome-fade-up 0.5s ease-out 0.1s both;
+}
+.welcome-avatar {
+  animation: welcome-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+.welcome-ring {
+  animation: welcome-ring 1.4s ease-out infinite;
+}
+.welcome-title {
+  animation: welcome-fade-up 0.5s ease-out 0.25s both;
+}
+.welcome-desc {
+  animation: welcome-fade-up 0.5s ease-out 0.35s both;
+}
+.welcome-meta {
+  animation: welcome-fade-up 0.5s ease-out 0.45s both;
+}
+.welcome-cta {
+  animation: welcome-fade-up 0.5s ease-out 0.55s both;
+}

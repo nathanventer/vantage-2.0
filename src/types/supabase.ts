@@ -672,34 +672,57 @@ export type Database = {
         Row: {
           body: string | null;
           created_at: string;
+          dedup_key: string | null;
           id: string;
+          kind: string;
           link: string | null;
+          metadata: Json;
           read: boolean;
           read_at: string | null;
+          sender_id: string | null;
           title: string;
+          type: string;
           user_id: string;
         };
         Insert: {
           body?: string | null;
           created_at?: string;
+          dedup_key?: string | null;
           id?: string;
+          kind?: string;
           link?: string | null;
+          metadata?: Json;
           read?: boolean;
           read_at?: string | null;
+          sender_id?: string | null;
           title: string;
+          type?: string;
           user_id: string;
         };
         Update: {
           body?: string | null;
           created_at?: string;
+          dedup_key?: string | null;
           id?: string;
+          kind?: string;
           link?: string | null;
+          metadata?: Json;
           read?: boolean;
           read_at?: string | null;
+          sender_id?: string | null;
           title?: string;
+          type?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "notifications_sender_id_fkey";
+            columns: ["sender_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       payments: {
         Row: {
@@ -1636,6 +1659,19 @@ export type Database = {
       activate_pulse_demo: { Args: { p_plan?: string }; Returns: undefined };
       can_see_shipment: { Args: { p_shipment: string }; Returns: boolean };
       current_company: { Args: never; Returns: string };
+      deliver_notification: {
+        Args: {
+          p_body?: string | null;
+          p_dedup_key?: string | null;
+          p_kind?: string;
+          p_link?: string | null;
+          p_metadata?: Json;
+          p_recipient_id: string;
+          p_title: string;
+          p_type?: string;
+        };
+        Returns: string;
+      };
       has_active_pulse: { Args: never; Returns: boolean };
       has_role: { Args: { p_role: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };

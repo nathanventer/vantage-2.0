@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabaseClient";
 import { EDGE_LIVE, invokeEdge } from "@/lib/edge";
 import { IS_SUPABASE } from "./auth";
+import { pushMockNotification } from "@/lib/notificationStore";
+import type { Json } from "@/types/supabase";
+import type { NotificationType } from "@/types";
 
 /**
  * Notifier seam. Under supabase it writes a row into `notifications` (in-app bell)
@@ -21,8 +24,16 @@ export interface NotifyInput {
   title: string;
   body?: string;
   kind?: "info" | "success" | "warning" | "error";
+  type?: NotificationType;
   /** Optional deep link for the in-app notification. */
   link?: string;
+  /** Deep-link context (shipmentId, quoteId, etc.). */
+  metadata?: Record<string, unknown>;
+  /** Idempotency key — duplicate deliveries are ignored. */
+  dedupKey?: string;
+  /** Mock-only: sender display name for the in-app row. */
+  senderName?: string;
+  senderId?: string;
   /** When set (+ recipient email), also dispatch a templated email via edge. */
   email?: { to: string; template: EmailTemplate; data?: Record<string, string> };
 }
@@ -42,17 +53,16 @@ const consoleNotifier: Notifier = {
 const supabaseNotifier: Notifier = {
   async notify(input) {
     try {
-      // notifications.user_id is NOT NULL — without a target user there is
-      // nobody to notify in-app, so skip the row rather than fail the insert.
-      // NOTE: the live notifications table has no `kind` column — including it
-      // made PostgREST reject the whole insert (swallowed by this try/catch),
-      // so in-app notifications were silently dropped.
       if (input.userId) {
-        await supabase.from("notifications").insert({
-          user_id: input.userId,
-          title: input.title,
-          body: input.body ?? null,
-          link: input.link ?? null,
+        await supabase.rpc("deliver_notification", {
+          p_recipient_id: input.userId,
+          p_title: input.title,
+          p_body: input.body ?? null,
+          p_type: input.type ?? "status_update",
+          p_kind: input.kind ?? "info",
+          p_link: input.link ?? null,
+          p_metadata: (input.metadata ?? {}) as Json,
+          p_dedup_key: input.dedupKey ?? null,
         });
       }
     } catch {
@@ -69,4 +79,23 @@ const supabaseNotifier: Notifier = {
   },
 };
 
-export const notifier: Notifier = IS_SUPABASE ? supabaseNotifier : consoleNotifier;
+const mockNotifier: Notifier = {
+  async notify(input) {
+    if (input.userId) {
+      pushMockNotification(input.userId, {
+        title: input.title,
+        body: input.body,
+        kind: input.kind ?? "info",
+        type: input.type ?? "status_update",
+        link: input.link,
+        senderId: input.senderId,
+        senderName: input.senderName,
+        metadata: input.metadata,
+        id: input.dedupKey,
+      });
+    }
+    await consoleNotifier.notify(input);
+  },
+};
+
+export const notifier: Notifier = IS_SUPABASE ? supabaseNotifier : mockNotifier;

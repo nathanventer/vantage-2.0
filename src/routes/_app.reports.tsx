@@ -2,7 +2,16 @@ import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services";
-import { optimizer, OPTIMIZER_WEIGHTS, type ScoredQuote } from "@/adapters/optimizer";
+import {
+  optimizer,
+  OPTIMIZER_WEIGHTS,
+  adjustOptimizerWeight,
+  riskFlagFromScore,
+  riskFlagChipStatus,
+  type OptimizerWeights,
+  type QuoteScoreInput,
+  type ScoredQuote,
+} from "@/adapters/optimizer";
 import { reportingService, type ReportExport } from "@/services/reporting";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildRouteCostRows } from "@/lib/dashboardSeries";
@@ -20,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   DropdownMenu,
@@ -275,7 +285,7 @@ function ReportsPage() {
   const totalSavings = routeRows.reduce((s, r) => s + r.savingsZAR, 0);
 
   // ── Source-selection scorecard (real, via Optimizer) ─────────────────────
-  const sourceResult = useMemo(() => {
+  const sourceInputs = useMemo(() => {
     const agg = new Map<string, { name: string; price: number[]; eta: number[] }>();
     for (const t of txs) {
       for (const q of t.quotes) {
@@ -285,15 +295,15 @@ function ReportsPage() {
         agg.set(q.providerId, e);
       }
     }
-    const inputs = [...agg.entries()].map(([providerId, v]) => ({
+    return [...agg.entries()].map(([providerId, v]) => ({
       id: providerId,
       providerId,
       providerName: v.name,
       priceZAR: Math.round(v.price.reduce((a, b) => a + b, 0) / v.price.length),
       etaDays: Math.round(v.eta.reduce((a, b) => a + b, 0) / v.eta.length),
     }));
-    return optimizer.score(inputs);
   }, [txs]);
+  const sourceResult = useMemo(() => optimizer.score(sourceInputs), [sourceInputs]);
 
   const monthly = useMemo(() => {
     const m = new Map<string, { month: string; spendZAR: number; shipments: number }>();
@@ -728,7 +738,7 @@ function ReportsPage() {
         {/* Source selection */}
         <TabsContent value="src" className="mt-4">
           <ReportShell title="Source-selection report" period={periodLabel} exportBuild={srcExport}>
-            <SourceSelection result={sourceResult} isAdmin={role === "admin"} />
+            <SourceSelection inputs={sourceInputs} isAdmin={role === "admin"} />
           </ReportShell>
         </TabsContent>
       </Tabs>
@@ -737,15 +747,20 @@ function ReportsPage() {
 }
 
 function SourceSelection({
-  result,
+  inputs,
   isAdmin,
 }: {
-  result: ReturnType<typeof optimizer.score>;
+  inputs: QuoteScoreInput[];
   isAdmin: boolean;
 }) {
-  const recommended = result.ranked[0];
+  const [weights, setWeights] = useState<OptimizerWeights>({ ...OPTIMIZER_WEIGHTS });
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [overrideId, setOverrideId] = useState<string>("");
   const [reason, setReason] = useState("");
+
+  const result = useMemo(() => optimizer.score(inputs, weights), [inputs, weights]);
+  const recommended = result.ranked[0];
+  const focused = result.ranked.find((r) => r.id === selectedId) ?? recommended;
 
   function applyOverride() {
     if (!overrideId || !reason.trim()) {
@@ -755,6 +770,10 @@ function SourceSelection({
     const chosen = result.ranked.find((r) => r.id === overrideId);
     // TODO Phase 2: persist source_override_reason against the shipment.
     toast.success(`Override recorded: ${chosen?.providerName} — “${reason.trim()}”`);
+  }
+
+  function resetWeights() {
+    setWeights({ ...OPTIMIZER_WEIGHTS });
   }
 
   if (result.ranked.length === 0) {
@@ -770,15 +789,32 @@ function SourceSelection({
       {/* Weights + recommendation */}
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="rounded-xl border bg-card p-5">
-          <h4 className="mb-3 font-display font-semibold">Scoring weights</h4>
-          <div className="flex flex-wrap gap-2 text-xs">
-            {Object.entries(OPTIMIZER_WEIGHTS).map(([k, v]) => (
-              <span
-                key={k}
-                className="rounded-full border bg-inset px-3 py-1 font-medium capitalize tabular-nums"
-              >
-                {k} {v}
-              </span>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h4 className="font-display font-semibold">Scoring weights</h4>
+            <button
+              type="button"
+              onClick={resetWeights}
+              className="text-xs font-medium text-muted-foreground transition hover:text-foreground"
+            >
+              Reset defaults
+            </button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(Object.keys(weights) as (keyof OptimizerWeights)[]).map((key) => (
+              <div key={key} className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium capitalize text-foreground">{key}</span>
+                  <span className="tabular-nums text-muted-foreground">{weights[key]}</span>
+                </div>
+                <Slider
+                  value={[weights[key]]}
+                  min={5}
+                  max={50}
+                  step={1}
+                  aria-label={`${key} weight`}
+                  onValueChange={([v]) => setWeights((w) => adjustOptimizerWeight(w, key, v))}
+                />
+              </div>
             ))}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
@@ -801,12 +837,36 @@ function SourceSelection({
 
         <div className="rounded-xl border border-brand/40 bg-brand/5 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-brand">
-            <ShieldCheck className="h-4 w-4" /> Recommendation
+            <ShieldCheck className="h-4 w-4" />{" "}
+            {focused.id === recommended.id ? "Recommendation" : "Selected provider"}
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            {recommended.providerName} ranks #1 on the weighted model with a total of{" "}
-            <span className="tabular-nums text-foreground">{recommended.totalScore}</span>/100.
+            {focused.providerName}{" "}
+            {focused.rank === 1 ? "ranks #1" : `ranks #${focused.rank}`} on the weighted model with a
+            total of <span className="tabular-nums text-foreground">{focused.totalScore}</span>/100.
+            {focused.id !== recommended.id && (
+              <>
+                {" "}
+                Current leader after weight adjustment:{" "}
+                <span className="font-medium text-foreground">{recommended.providerName}</span>.
+              </>
+            )}
           </p>
+          {focused && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(["Low", "Elevated", "High"] as const).map((flag) => (
+                <StatusChip
+                  key={flag}
+                  status={riskFlagChipStatus(flag)}
+                  label={flag}
+                  className={cn(
+                    "opacity-40",
+                    riskFlagFromScore(focused.riskScore ?? 0) === flag && "opacity-100 ring-1 ring-ring",
+                  )}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -827,31 +887,47 @@ function SourceSelection({
             </tr>
           </thead>
           <tbody>
-            {result.ranked.map((s: ScoredQuote) => (
-              <tr key={s.id} className="border-b last:border-0">
-                <td className="px-4 py-2 tabular-nums text-muted-foreground">{s.rank}</td>
-                <td className="max-w-[180px] truncate px-4 py-2 font-medium" title={s.providerName}>
-                  {s.providerName}
-                  {s.rank === 1 && (
-                    <span className="ml-2 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
-                      REC
-                    </span>
+            {result.ranked.map((s: ScoredQuote) => {
+              const flag = riskFlagFromScore(s.riskScore ?? 0);
+              const isSelected = selectedId === s.id;
+              const isRec = s.rank === 1;
+              return (
+                <tr
+                  key={s.id}
+                  tabIndex={0}
+                  onClick={() => setSelectedId(s.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedId(s.id);
+                    }
+                  }}
+                  className={cn(
+                    "cursor-pointer border-b transition last:border-0",
+                    isSelected ? "bg-brand/10" : "hover:bg-surface-2",
                   )}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums">{s.costScore}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{s.serviceScore}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{s.complianceScoreWeighted}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{s.capacityScoreWeighted}</td>
-                <td className="px-4 py-2 text-right tabular-nums">{s.riskScoreWeighted}</td>
-                <td className="px-4 py-2 text-right font-semibold tabular-nums">{s.totalScore}</td>
-                <td className="px-4 py-2">
-                  <StatusChip
-                    status={(s.riskScore ?? 0) >= 80 ? "Verified" : "Pending"}
-                    label={(s.riskScore ?? 0) >= 80 ? "Low" : "Elevated"}
-                  />
-                </td>
-              </tr>
-            ))}
+                >
+                  <td className="px-4 py-2 tabular-nums text-muted-foreground">{s.rank}</td>
+                  <td className="max-w-[180px] truncate px-4 py-2 font-medium" title={s.providerName}>
+                    {s.providerName}
+                    {isRec && (
+                      <span className="ml-2 rounded-full bg-brand/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
+                        REC
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right tabular-nums">{s.costScore}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{s.serviceScore}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{s.complianceScoreWeighted}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{s.capacityScoreWeighted}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{s.riskScoreWeighted}</td>
+                  <td className="px-4 py-2 text-right font-semibold tabular-nums">{s.totalScore}</td>
+                  <td className="px-4 py-2">
+                    <StatusChip status={riskFlagChipStatus(flag)} label={flag} />
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

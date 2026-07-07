@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatReference, isValidReference, parseReference } from "./references";
+import { formatReference, isValidReference, parseReference, txnRefNumber } from "./references";
 
 describe("references", () => {
   it("parses valid VTG references", () => {
@@ -16,5 +16,11 @@ describe("references", () => {
 
   it("formats references consistently", () => {
     expect(formatReference("PO", 1005)).toBe("VTG-PO-1005");
+  });
+
+  it("parses TXN numbers for sorting", () => {
+    expect(txnRefNumber("TXN-1060")).toBe(1060);
+    expect(txnRefNumber("VTG-TXN-1003")).toBe(1003);
+    expect(txnRefNumber("INV-42")).toBeNull();
   });
 });

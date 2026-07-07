@@ -121,6 +121,10 @@ export interface DataService {
   scheduleTransport(input: ScheduleTransportInput): Promise<ShipmentEvent>;
   /** Capture POD: upload file to transaction-docs, create a POD doc, advance. */
   recordPOD(shipmentId: string, file: File): Promise<DocumentRecord>;
+  /** Send a cross-account message on a shipment (notifies counterparty). */
+  sendShipmentMessage(shipmentId: string, message: string): Promise<ShipmentEvent>;
+  /** Assign an operational task to the counterparty (notifies them). */
+  assignShipmentTask(shipmentId: string, task: string): Promise<ShipmentEvent>;
 
   // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
   updateUserRole(userId: string, role: User["role"]): Promise<void>;

@@ -1,14 +1,19 @@
-import { useMemo } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
-import { useAuth } from "@/contexts/AuthContext";
 import { LifecycleStepper } from "@/components/LifecycleStepper";
-import { DOC_DB_TO_LABEL, STEP_REQUIRED_DOCS } from "@/lib/documents";
-import { formatZAR } from "@/lib/format";
 import { optimizer } from "@/adapters/optimizer";
 import { Button } from "@/components/ui/button";
 import { StatusChip } from "@/components/StatusChip";
-import { Check, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Check, ChevronRight, Loader2, PartyPopper, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { LifecycleStep, Transaction } from "@/types";
 
@@ -20,47 +25,53 @@ function nextStepOf(steps: LifecycleStep[], current: number): LifecycleStep | un
   return steps.find((s) => s.index === current + 1);
 }
 
-/** Demand-led steps; source handles execution milestones. Admins can do all. */
-function canApproveStep(role: string, stepIndex: number): boolean {
-  if (role === "admin") return true;
-  if (role === "demand") return [1, 2, 3, 4, 5, 6, 7, 15, 16].includes(stepIndex);
-  if (role === "source") return [3, 8, 9, 10, 11, 12, 13, 14].includes(stepIndex);
-  return false;
+function allStepsComplete(steps: LifecycleStep[]): boolean {
+  return steps.length > 0 && steps.every((s) => s.status === "Completed");
 }
 
 type LifecycleWorkflowProps = {
   transaction: Transaction;
-  onQuoteAccepted?: () => void;
+  onStepAdvanced?: () => void;
 };
 
-export function LifecycleWorkflow({ transaction, onQuoteAccepted }: LifecycleWorkflowProps) {
+function CelebrationBurst() {
+  const dots = Array.from({ length: 24 }, (_, i) => i);
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {dots.map((i) => (
+        <span
+          key={i}
+          className="absolute left-1/2 top-1/2 h-2 w-2 rounded-full bg-brand opacity-80"
+          style={{
+            animation: `lifecycle-confetti ${0.9 + (i % 5) * 0.1}s ease-out forwards`,
+            animationDelay: `${(i % 8) * 40}ms`,
+            transform: `rotate(${i * 15}deg) translateY(0)`,
+            ["--burst-x" as string]: `${Math.cos((i / 24) * Math.PI * 2) * (60 + (i % 4) * 28)}px`,
+            ["--burst-y" as string]: `${Math.sin((i / 24) * Math.PI * 2) * (60 + (i % 3) * 32)}px`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Demo-first lifecycle walkthrough: one-click approval per step, no document or
+ * provider-selection gates — optimised for client showcases.
+ */
+export function LifecycleWorkflow({ transaction, onStepAdvanced }: LifecycleWorkflowProps) {
   const qc = useQueryClient();
-  const { role } = useAuth();
-  const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments });
+  const [showCelebration, setShowCelebration] = useState(false);
+  const celebratedRef = useRef(false);
 
   const active = activeStepOf(transaction.steps);
   const stepIndex = active?.index ?? transaction.steps.filter((s) => s.status === "Completed").length;
   const next = nextStepOf(transaction.steps, stepIndex);
-  const atEnd = stepIndex >= transaction.steps.length;
+  const complete = allStepsComplete(transaction.steps);
 
-  const linkedDocTypes = useMemo(
-    () =>
-      new Set(
-        (docsQ.data ?? [])
-          .filter((d) => d.transactionRef === transaction.reference)
-          .map((d) => d.type),
-      ),
-    [docsQ.data, transaction.reference],
-  );
-
-  const missingDocs = (STEP_REQUIRED_DOCS[stepIndex] ?? [])
-    .map((db) => DOC_DB_TO_LABEL[db])
-    .filter((label) => !linkedDocTypes.has(label));
-  const blockedByDocs = missingDocs.length > 0;
-
-  const rankedQuotes = useMemo(() => {
+  const topQuoteId = useMemo(() => {
     const open = transaction.quotes.filter((q) => q.status !== "Rejected");
-    if (open.length === 0) return [];
+    if (open.length === 0) return null;
     return optimizer.score(
       open.map((q) => ({
         id: q.id,
@@ -69,11 +80,17 @@ export function LifecycleWorkflow({ transaction, onQuoteAccepted }: LifecycleWor
         priceZAR: q.priceZAR,
         etaDays: q.etaDays,
       })),
-    ).ranked;
+    ).ranked[0]?.id;
   }, [transaction.quotes]);
 
   const anyAccepted = transaction.quotes.some((q) => q.status === "Accepted");
-  const canApprove = active ? canApproveStep(role, active.index) : false;
+
+  useEffect(() => {
+    if (complete && !celebratedRef.current) {
+      celebratedRef.current = true;
+      setShowCelebration(true);
+    }
+  }, [complete]);
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ["tx", transaction.id] });
@@ -83,133 +100,138 @@ export function LifecycleWorkflow({ transaction, onQuoteAccepted }: LifecycleWor
   };
 
   const advanceMut = useMutation({
-    mutationFn: () => api.advanceShipmentStep(transaction.id, stepIndex + 1),
+    mutationFn: async () => {
+      if (active?.index === 4 && !anyAccepted && topQuoteId) {
+        await api.selectQuote(transaction.id, topQuoteId);
+      }
+      await api.advanceShipmentStep(transaction.id, stepIndex + 1);
+    },
     onSuccess: () => {
-      toast.success(
-        next ? `Approved — now at step ${next.index}: ${next.label}` : "Lifecycle advanced",
-      );
+      const finishing = active?.index === 16;
+      if (finishing) {
+        celebratedRef.current = true;
+        setShowCelebration(true);
+      } else {
+        const label = next ? `Step ${next.index}: ${next.label}` : "Lifecycle advanced";
+        toast.success(`Approved — ${label}`);
+      }
       invalidate();
+      onStepAdvanced?.();
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Could not advance step"),
   });
 
-  const acceptMut = useMutation({
-    mutationFn: (quoteId: string) => api.selectQuote(transaction.id, quoteId),
-    onSuccess: () => {
-      toast.success("Provider confirmed — advance to the next step when ready.");
-      invalidate();
-      onQuoteAccepted?.();
-    },
-    onError: (e) =>
-      toast.error(e instanceof Error ? e.message : "Unable to confirm provider"),
-  });
-
-  const showQuotePicker = active?.index === 4 && !anyAccepted && rankedQuotes.length > 0;
-
   return (
-    <div className="space-y-6">
-      <LifecycleStepper steps={transaction.steps} />
+    <>
+      <style>{`
+        @keyframes lifecycle-confetti {
+          0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+          100% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--burst-x)), calc(-50% + var(--burst-y))) scale(0.2);
+          }
+        }
+        @keyframes lifecycle-pop {
+          0% { transform: scale(0.6); opacity: 0; }
+          60% { transform: scale(1.08); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes lifecycle-ring {
+          0% { transform: scale(0.8); opacity: 0.6; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+      `}</style>
 
-      {active && (
-        <div className="rounded-lg border border-brand/30 bg-brand-soft/30 p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand">Current step</p>
-              <p className="font-medium">
-                {active.index}. {active.label}
-              </p>
-            </div>
-            <StatusChip status={transaction.status} />
-          </div>
+      <div className="space-y-6">
+        <LifecycleStepper steps={transaction.steps} />
 
-          {showQuotePicker && (
-            <div className="mb-4 space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Confirm your provider to complete this step. The Optimizer recommendation is pinned
-                first.
-              </p>
-              {rankedQuotes.map((q, i) => (
-                <div
-                  key={q.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-3"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{q.providerName}</span>
-                      {i === 0 && (
-                        <span className="rounded-full border border-ok-bd bg-ok-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
-                          Recommended
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Score {q.totalScore}/100 · ETA {q.etaDays} days · Rank #{q.rank}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-display font-semibold tabular-nums">
-                      {formatZAR(q.priceZAR)}
-                    </span>
-                    <Button
-                      size="sm"
-                      disabled={acceptMut.isPending}
-                      onClick={() => acceptMut.mutate(q.id)}
-                    >
-                      {acceptMut.isPending ? (
-                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Check className="mr-1 h-3.5 w-3.5" />
-                      )}
-                      Confirm
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!atEnd && canApprove && !showQuotePicker && (
-            <div className="space-y-2">
-              {blockedByDocs ? (
-                <p className="text-sm text-warning">
-                  Upload required documents before advancing: {missingDocs.join(", ")}
+        {active && !complete && (
+          <div className="rounded-lg border border-brand/30 bg-brand-soft/30 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand">Showcase step</p>
+                <p className="font-medium">
+                  {active.index}. {active.label}
                 </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {next
-                    ? `Approve to move to step ${next.index}: ${next.label}`
-                    : "Approve to continue the workflow."}
-                </p>
-              )}
-              <Button
-                className="w-full sm:w-auto"
-                disabled={blockedByDocs || advanceMut.isPending}
-                onClick={() => advanceMut.mutate()}
-              >
-                {advanceMut.isPending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <ChevronRight className="mr-2 h-4 w-4" />
-                )}
-                Approve &amp; advance
-              </Button>
+              </div>
+              <StatusChip status={transaction.status} />
             </div>
-          )}
 
-          {!canApprove && !showQuotePicker && (
-            <p className="text-sm text-muted-foreground">
-              This step is handled by your{" "}
-              {active.index >= 8 && active.index <= 14 ? "logistics provider" : "operations team"}.
-              Switch to the Operations tab or use a provider account to advance execution
-              milestones.
+            <p className="mb-4 text-sm text-muted-foreground">
+              {next
+                ? `Click approve to walk the client through step ${next.index}: ${next.label}. No uploads or extra actions required.`
+                : "Approve to finish the lifecycle."}
             </p>
-          )}
 
-          {atEnd && (
-            <p className="text-sm text-ok">Lifecycle complete — transaction closed.</p>
-          )}
-        </div>
-      )}
-    </div>
+            <Button
+              className="w-full sm:w-auto"
+              size="lg"
+              disabled={advanceMut.isPending}
+              onClick={() => advanceMut.mutate()}
+            >
+              {advanceMut.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ChevronRight className="mr-2 h-4 w-4" />
+              )}
+              Approve &amp; advance to step {stepIndex + 1}
+            </Button>
+          </div>
+        )}
+
+        {complete && (
+          <p className="rounded-lg border border-ok-bd bg-ok-bg/40 p-4 text-sm text-ok">
+            All 16 steps complete — transaction closed.
+          </p>
+        )}
+      </div>
+
+      <Dialog open={showCelebration} onOpenChange={setShowCelebration}>
+        <DialogContent className="max-w-md overflow-hidden border-ok-bd bg-card text-center sm:max-w-lg">
+          <CelebrationBurst />
+          <div className="relative z-10 flex w-full flex-col items-center py-2 text-center">
+            <div className="relative mb-5">
+              <span
+                className="absolute inset-0 rounded-full bg-ok/30"
+                style={{ animation: "lifecycle-ring 1.2s ease-out infinite" }}
+              />
+              <div
+                className="relative flex h-20 w-20 items-center justify-center rounded-full bg-ok text-success-foreground shadow-lg"
+                style={{ animation: "lifecycle-pop 0.55s ease-out forwards" }}
+              >
+                <Check className="h-10 w-10 stroke-[3]" aria-hidden />
+              </div>
+            </div>
+
+            <DialogHeader className="w-full items-center space-y-3 text-center sm:text-center">
+              <DialogTitle className="w-full text-center font-display text-2xl font-bold tracking-tight">
+                All 16 steps completed
+              </DialogTitle>
+              <DialogDescription className="mx-auto max-w-sm text-center text-base text-muted-foreground">
+                <span className="mb-2 inline-flex items-center justify-center gap-1.5 font-medium text-foreground">
+                  <PartyPopper className="h-4 w-4 shrink-0 text-brand" />
+                  {transaction.reference}
+                </span>
+                <span className="block text-center">
+                  The full Vessel → Delivery lifecycle is complete. Your client has seen every
+                  milestone from request through payment and close.
+                </span>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mx-auto mt-4 inline-flex items-center justify-center gap-2 rounded-full border border-brand/30 bg-brand-soft/50 px-4 py-2 text-center text-sm font-medium text-brand">
+              <Sparkles className="h-4 w-4 shrink-0" />
+              Demo showcase ready
+            </div>
+
+            <DialogFooter className="mt-6 flex w-full flex-col items-center justify-center sm:justify-center">
+              <Button className="w-full sm:w-auto" onClick={() => setShowCelebration(false)}>
+                Continue
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

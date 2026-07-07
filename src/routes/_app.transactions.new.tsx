@@ -88,7 +88,7 @@ function NewTx() {
                 className={cn(
                   "flex h-6 w-6 items-center justify-center rounded-full font-semibold",
                   step > n
-                    ? "bg-ok text-ok-bg"
+                    ? "bg-ok text-success-foreground"
                     : step === n
                       ? "bg-brand text-brand-fg"
                       : "bg-inset text-muted-foreground",
@@ -263,7 +263,7 @@ function NewTx() {
 
         {step === 3 && created && (
           <div className="text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok text-ok-bg">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-ok text-success-foreground">
               <Check className="h-7 w-7" />
             </div>
             <h3 className="mt-3 font-display text-xl font-semibold">Shipment created</h3>

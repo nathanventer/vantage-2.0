@@ -9,13 +9,17 @@ import type {
   DocumentRecord,
   MacroStage,
   NotificationItem,
+  NotificationKind,
   NotificationPreferences,
+  NotificationType,
   PriceAlert,
   Quote,
   RateSubscription,
   Transaction,
 } from "@/types";
 import { formatReference } from "@/lib/references";
+import { mockNotificationsFor } from "@/lib/notificationStore";
+import { authAdapter } from "@/adapters/auth";
 import { COMPLIANCE_BUCKET, complianceDocPath, TRANSACTION_BUCKET } from "@/lib/storagePaths";
 import type { DataService } from "./DataService";
 
@@ -47,50 +51,49 @@ let pulseSub: RateSubscription = {
 };
 const priceAlerts: PriceAlert[] = [];
 
-/** Notifications (mutable demo state). */
-const notifications: NotificationItem[] = [
-  {
-    id: "ntf-1",
-    title: "Quote received",
-    body: "Southern Cross quoted TXN-1002 — R128,800 all-in.",
-    kind: "info",
-    link: "/transactions",
-    createdAt: new Date(Date.now() - 36e5).toISOString(),
+/** Notifications (mutable demo state, scoped per signed-in user). */
+const MOCK_BUYER = "demo-buyer";
+const MOCK_PROVIDER = "demo-provider";
+
+async function mockActor() {
+  const u = await authAdapter.getCurrentUser();
+  if (!u) throw new Error("[mockApi] not authenticated");
+  return u;
+}
+
+function mockCounterpartyId(actor: { id: string; role: string }): string {
+  if (actor.role === "source") return MOCK_BUYER;
+  if (actor.role === "admin") return MOCK_BUYER;
+  return MOCK_PROVIDER;
+}
+
+async function mockNotifyCounterparty(
+  tx: Transaction,
+  input: {
+    title: string;
+    body?: string;
+    type: NotificationType;
+    kind?: NotificationKind;
+    dedupKey?: string;
+    actorId: string;
+    actorName: string;
+    actorRole: string;
   },
-  {
-    id: "ntf-2",
-    title: "Registration approved",
-    body: "Ubuntu Retail Imports (Pty) Ltd is now active.",
-    kind: "success",
-    link: "/admin/registrations",
-    createdAt: new Date(Date.now() - 9e6).toISOString(),
-  },
-  {
-    id: "ntf-3",
-    title: "Customs inspection hold",
-    body: "SARS hold on TXN-1004 — documentation review required.",
-    kind: "warning",
-    link: "/transactions",
-    readAt: new Date(Date.now() - 8e6).toISOString(),
-    createdAt: new Date(Date.now() - 9e6).toISOString(),
-  },
-  {
-    id: "ntf-4",
-    title: "Payment verified",
-    body: "INV-5001 (R203,000) settled for TXN-1001.",
-    kind: "success",
-    link: "/payments",
-    createdAt: new Date(Date.now() - 2e6).toISOString(),
-  },
-  {
-    id: "ntf-5",
-    title: "Shipment delivered",
-    body: "TXN-1003 completed — POD uploaded.",
-    kind: "info",
-    link: "/transactions",
-    createdAt: new Date(Date.now() - 5e6).toISOString(),
-  },
-];
+) {
+  const recipientId = mockCounterpartyId({ id: input.actorId, role: input.actorRole });
+  await notifier.notify({
+    userId: recipientId,
+    title: input.title,
+    body: input.body,
+    type: input.type,
+    kind: input.kind ?? "info",
+    link: `/transactions/${tx.id}`,
+    metadata: { shipmentId: tx.id, reference: tx.reference },
+    dedupKey: input.dedupKey,
+    senderId: input.actorId,
+    senderName: input.actorName,
+  });
+}
 
 const DEFAULT_PREFS: NotificationPreferences = {
   registration: { inApp: true, email: true },
@@ -397,6 +400,17 @@ export const mockApi: DataService = {
       entity: tx.reference,
       timestamp: new Date().toISOString(),
     });
+    const actor = await mockActor();
+    await mockNotifyCounterparty(tx, {
+      actorId: actor.id,
+      actorName: actor.fullName,
+      actorRole: actor.role,
+      type: "status_update",
+      kind: "success",
+      title: "Quote accepted",
+      body: `${tx.demandCompany} accepted your quote on ${tx.reference}.`,
+      dedupKey: `quote-accepted:${tx.id}:${quoteId}`,
+    });
   },
 
   async submitQuote(input) {
@@ -421,6 +435,17 @@ export const mockApi: DataService = {
       status: "Quoted" as const,
     };
     tx.quotes.push(quote);
+    const actor = await mockActor();
+    await mockNotifyCounterparty(tx, {
+      actorId: actor.id,
+      actorName: actor.fullName,
+      actorRole: actor.role,
+      type: "status_update",
+      kind: "info",
+      title: "Quote received",
+      body: `${provider.name} quoted ${tx.reference} — R${quote.priceZAR.toLocaleString("en-ZA")} all-in.`,
+      dedupKey: `quote-submitted:${tx.id}:${quote.id}`,
+    });
     return quote;
   },
 
@@ -437,6 +462,17 @@ export const mockApi: DataService = {
     quote.status = "Rejected";
     quote.rejectionReason = clean;
     quote.rejectedAt = new Date().toISOString();
+    const actor = await mockActor();
+    await mockNotifyCounterparty(tx, {
+      actorId: actor.id,
+      actorName: actor.fullName,
+      actorRole: actor.role,
+      type: "status_update",
+      kind: "warning",
+      title: "Quote rejected",
+      body: `${tx.demandCompany} rejected your quote on ${tx.reference}: ${clean}`,
+      dedupKey: `quote-rejected:${tx.id}:${quoteId}`,
+    });
   },
 
   // ── Document write-path (Section C) ──────────────────────────────────────
@@ -522,6 +558,19 @@ export const mockApi: DataService = {
       timestamp: evt.createdAt,
     });
     if (typeof input.step === "number") applyStep(tx, input.step);
+    const actor = await mockActor();
+    if (input.eventType === "step_advanced" || input.eventType === "transport_scheduled") {
+      await mockNotifyCounterparty(tx, {
+        actorId: actor.id,
+        actorName: actor.fullName,
+        actorRole: actor.role,
+        type: "status_update",
+        kind: "info",
+        title: "Shipment updated",
+        body: input.note ?? `${tx.reference} status changed.`,
+        dedupKey: `status:${tx.id}:${input.eventType}:${input.step ?? ""}:${evt.id}`,
+      });
+    }
     return evt;
   },
 
@@ -547,6 +596,17 @@ export const mockApi: DataService = {
       action: "ops.step_advanced",
       entity: tx.reference,
       timestamp: new Date().toISOString(),
+    });
+    const actor = await mockActor();
+    await mockNotifyCounterparty(tx, {
+      actorId: actor.id,
+      actorName: actor.fullName,
+      actorRole: actor.role,
+      type: "status_update",
+      kind: "info",
+      title: "Lifecycle advanced",
+      body: `${tx.reference} advanced to step ${toStep}: ${label}`,
+      dedupKey: `step:${tx.id}:${toStep}`,
     });
     return tx;
   },
@@ -591,6 +651,58 @@ export const mockApi: DataService = {
       payload: { fileName: file.name },
     });
     return doc;
+  },
+
+  async sendShipmentMessage(shipmentId, message) {
+    const clean = message.trim();
+    if (clean.length < 2) throw new Error("Message must be at least 2 characters.");
+    const actor = await mockActor();
+    const evt = await this.createOpEvent({
+      shipmentId,
+      eventType: "message",
+      note: clean,
+      payload: { message: clean },
+    });
+    const tx = M.transactions.find((t) => t.id === shipmentId || t.reference === shipmentId);
+    if (tx) {
+      await mockNotifyCounterparty(tx, {
+        actorId: actor.id,
+        actorName: actor.fullName,
+        actorRole: actor.role,
+        type: "message",
+        kind: "info",
+        title: `Message from ${actor.fullName}`,
+        body: clean,
+        dedupKey: `message:${tx.id}:${evt.id}`,
+      });
+    }
+    return evt;
+  },
+
+  async assignShipmentTask(shipmentId, task) {
+    const clean = task.trim();
+    if (clean.length < 3) throw new Error("Task description must be at least 3 characters.");
+    const actor = await mockActor();
+    const evt = await this.createOpEvent({
+      shipmentId,
+      eventType: "task_assigned",
+      note: clean,
+      payload: { task: clean },
+    });
+    const tx = M.transactions.find((t) => t.id === shipmentId || t.reference === shipmentId);
+    if (tx) {
+      await mockNotifyCounterparty(tx, {
+        actorId: actor.id,
+        actorName: actor.fullName,
+        actorRole: actor.role,
+        type: "task_assigned",
+        kind: "info",
+        title: `Task assigned by ${actor.fullName}`,
+        body: clean,
+        dedupKey: `task:${tx.id}:${evt.id}`,
+      });
+    }
+    return evt;
   },
 
   // ── RBAC & admin user management (Phase 2 §7) ───────────────────────────
@@ -640,17 +752,20 @@ export const mockApi: DataService = {
   // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
   async listNotifications() {
     await delay();
-    return notifications;
+    const actor = await mockActor();
+    return mockNotificationsFor(actor.id);
   },
   async markNotificationRead(id) {
     await delay();
-    const n = notifications.find((x) => x.id === id);
+    const actor = await mockActor();
+    const n = mockNotificationsFor(actor.id).find((x) => x.id === id);
     if (n) n.readAt = new Date().toISOString();
   },
   async markAllNotificationsRead() {
     await delay();
+    const actor = await mockActor();
     const now = new Date().toISOString();
-    notifications.forEach((n) => {
+    mockNotificationsFor(actor.id).forEach((n) => {
       if (!n.readAt) n.readAt = now;
     });
   },

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
+import { WelcomeOverlay } from "@/components/WelcomeOverlay";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Route = createFileRoute("/_app")({
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/_app")({
 });
 
 function AppLayout() {
-  const { user, loading, isSupabase } = useAuth();
+  const { user, loading, isSupabase, welcomeUser, dismissWelcome } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,8 +28,11 @@ function AppLayout() {
   if (isSupabase && (!user || !user.companyApproved)) return null;
 
   return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
+    <>
+      <AppShell>
+        <Outlet />
+      </AppShell>
+      {welcomeUser && <WelcomeOverlay user={welcomeUser} onDismiss={dismissWelcome} />}
+    </>
   );
 }

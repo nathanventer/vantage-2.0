@@ -6,13 +6,41 @@
  * A real implementation (Phase 2) would pull live SLA / capacity / risk metrics.
  */
 
-export const OPTIMIZER_WEIGHTS = {
+export type OptimizerWeights = {
+  cost: number;
+  service: number;
+  compliance: number;
+  capacity: number;
+  risk: number;
+};
+
+export const OPTIMIZER_WEIGHTS: OptimizerWeights = {
   cost: 25,
   service: 25,
   compliance: 20,
   capacity: 15,
   risk: 15,
-} as const;
+};
+
+export type RiskFlag = "Low" | "Elevated" | "High";
+
+/** Map a 0–100 risk sub-score to a display flag (higher score = lower risk). */
+export function riskFlagFromScore(riskScore: number): RiskFlag {
+  if (riskScore >= 85) return "Low";
+  if (riskScore >= 70) return "Elevated";
+  return "High";
+}
+
+export function riskFlagChipStatus(flag: RiskFlag): string {
+  switch (flag) {
+    case "Low":
+      return "verified";
+    case "Elevated":
+      return "pending";
+    case "High":
+      return "rejected";
+  }
+}
 
 export interface QuoteScoreInput {
   id: string;
@@ -41,11 +69,31 @@ export interface OptimizerResult {
   recommendedQuoteId: string | null;
   /** Benchmark (mean of competing prices) minus the recommended price. */
   savingsZAR: number;
-  weights: typeof OPTIMIZER_WEIGHTS;
+  weights: OptimizerWeights;
 }
 
 export interface Optimizer {
-  score(quotes: QuoteScoreInput[]): OptimizerResult;
+  score(quotes: QuoteScoreInput[], weights?: OptimizerWeights): OptimizerResult;
+}
+
+/** Adjust one weight and scale the others so the total stays 100. */
+export function adjustOptimizerWeight(
+  weights: OptimizerWeights,
+  key: keyof OptimizerWeights,
+  newValue: number,
+): OptimizerWeights {
+  const clamped = Math.max(5, Math.min(50, Math.round(newValue)));
+  const others = (Object.keys(weights) as (keyof OptimizerWeights)[]).filter((k) => k !== key);
+  const otherSum = others.reduce((s, k) => s + weights[k], 0);
+  const remaining = 100 - clamped;
+  const next = { ...weights, [key]: clamped };
+  if (otherSum <= 0) return next;
+  for (const k of others) {
+    next[k] = Math.max(5, Math.round((weights[k] / otherSum) * remaining));
+  }
+  const drift = 100 - (Object.values(next) as number[]).reduce((s, v) => s + v, 0);
+  if (drift !== 0) next[others[0]] = Math.max(5, next[others[0]] + drift);
+  return next;
 }
 
 /** Stable 0–1 hash from a string id (deterministic, no crypto needed). */
@@ -70,9 +118,9 @@ function derived(seed: string, lo: number, hi: number): number {
 }
 
 export const optimizer: Optimizer = {
-  score(quotes) {
+  score(quotes, weights = OPTIMIZER_WEIGHTS) {
     if (quotes.length === 0) {
-      return { ranked: [], recommendedQuoteId: null, savingsZAR: 0, weights: OPTIMIZER_WEIGHTS };
+      return { ranked: [], recommendedQuoteId: null, savingsZAR: 0, weights };
     }
     const prices = quotes.map((q) => q.priceZAR);
     const etas = quotes.map((q) => q.etaDays);
@@ -85,13 +133,13 @@ export const optimizer: Optimizer = {
     const scored = quotes.map((q) => {
       const compliance = q.complianceScore ?? derived(`${q.providerId}:comp`, 70, 99);
       const capacity = q.capacityScore ?? derived(`${q.providerId}:cap`, 60, 98);
-      const risk = q.riskScore ?? derived(`${q.providerId}:risk`, 65, 97);
+      const risk = q.riskScore ?? derived(`${q.providerId}:risk`, 60, 97);
 
-      const costScore = inverseNorm(q.priceZAR, minP, maxP) * OPTIMIZER_WEIGHTS.cost;
-      const serviceScore = inverseNorm(q.etaDays, minE, maxE) * OPTIMIZER_WEIGHTS.service;
-      const complianceScoreWeighted = (compliance / 100) * OPTIMIZER_WEIGHTS.compliance;
-      const capacityScoreWeighted = (capacity / 100) * OPTIMIZER_WEIGHTS.capacity;
-      const riskScoreWeighted = (risk / 100) * OPTIMIZER_WEIGHTS.risk;
+      const costScore = inverseNorm(q.priceZAR, minP, maxP) * weights.cost;
+      const serviceScore = inverseNorm(q.etaDays, minE, maxE) * weights.service;
+      const complianceScoreWeighted = (compliance / 100) * weights.compliance;
+      const capacityScoreWeighted = (capacity / 100) * weights.capacity;
+      const riskScoreWeighted = (risk / 100) * weights.risk;
       const totalScore =
         costScore +
         serviceScore +
@@ -122,7 +170,7 @@ export const optimizer: Optimizer = {
       ranked: scored,
       recommendedQuoteId: recommended?.id ?? null,
       savingsZAR: recommended ? Math.max(0, Math.round(meanP - recommended.priceZAR)) : 0,
-      weights: OPTIMIZER_WEIGHTS,
+      weights,
     };
   },
 };

@@ -6,8 +6,21 @@
 export { authAdapter, AUTH_BACKEND, IS_SUPABASE, DEMO_LOGINS } from "./auth";
 export type { AuthAdapter } from "./auth";
 
-export { optimizer, OPTIMIZER_WEIGHTS } from "./optimizer";
-export type { Optimizer, OptimizerResult, ScoredQuote, QuoteScoreInput } from "./optimizer";
+export {
+  optimizer,
+  OPTIMIZER_WEIGHTS,
+  adjustOptimizerWeight,
+  riskFlagFromScore,
+  riskFlagChipStatus,
+} from "./optimizer";
+export type {
+  Optimizer,
+  OptimizerResult,
+  ScoredQuote,
+  QuoteScoreInput,
+  OptimizerWeights,
+  RiskFlag,
+} from "./optimizer";
 
 export { paymentGateway } from "./paymentGateway";
 export type {

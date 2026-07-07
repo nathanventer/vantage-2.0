@@ -23,7 +23,7 @@ export function LifecycleStepper({ steps }: { steps: LifecycleStep[] }) {
               className={cn(
                 "z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-background",
                 done && "bg-success text-success-foreground",
-                active && "bg-warning text-warning-foreground animate-pulse",
+                active && "bg-warning text-warning-foreground",
                 !done && !active && "bg-muted text-muted-foreground",
               )}
             >

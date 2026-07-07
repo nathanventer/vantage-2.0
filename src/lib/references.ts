@@ -19,3 +19,11 @@ export function isValidReference(ref: string): boolean {
 export function formatReference(prefix: RefPrefix, n: number): string {
   return `VTG-${prefix}-${n}`;
 }
+
+/** Parse shorthand TXN-1234 or VTG-TXN-1234 for numeric sorting / lookup. */
+export function txnRefNumber(ref: string): number | null {
+  const vtg = parseReference(ref);
+  if (vtg?.prefix === "TXN") return vtg.number;
+  const m = /^TXN-(\d+)$/i.exec(ref.trim());
+  return m ? Number(m[1]) : null;
+}

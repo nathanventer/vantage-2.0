@@ -179,10 +179,9 @@ function TxDetail() {
               <div className="rounded-xl border bg-card p-6">
                 <h3 className="mb-4 font-display font-semibold">16-step lifecycle</h3>
                 <p className="mb-4 text-sm text-muted-foreground">
-                  Approve each milestone to guide the shipment through the workflow. Provider
-                  confirmation and step advances are recorded to the audit trail.
+                  Walk your client through each milestone — one approve click per step.
                 </p>
-                <LifecycleWorkflow transaction={data} onQuoteAccepted={refreshTx} />
+                <LifecycleWorkflow transaction={data} onStepAdvanced={refreshTx} />
               </div>
             </TabsContent>
 

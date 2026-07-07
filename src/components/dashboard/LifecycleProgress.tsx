@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ShipmentPicker } from "@/components/dashboard/ShipmentPicker";
+import { txnRefNumber } from "@/lib/references";
 import type { LifecycleStep, MacroStage, Transaction } from "@/types";
 
 /** Canonical 16 steps grouped into the 6 macro phases (mirrors stageFor: /3). */
@@ -54,7 +56,13 @@ function Segment({ step, current }: { step: LifecycleStep; current: number }) {
 export function LifecycleProgress({ transactions }: { transactions: Transaction[] }) {
   const ordered = useMemo(() => {
     const active = transactions.filter((t) => t.status !== "Closed");
-    return active.length ? active : transactions;
+    const pool = active.length ? active : transactions;
+    return [...pool].sort((a, b) => {
+      const na = txnRefNumber(a.reference);
+      const nb = txnRefNumber(b.reference);
+      if (na != null && nb != null && na !== nb) return na - nb;
+      return a.reference.localeCompare(b.reference);
+    });
   }, [transactions]);
 
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
@@ -89,18 +97,11 @@ export function LifecycleProgress({ transactions }: { transactions: Transaction[
             Step {current || 0} of {steps.length} · {currentLabel}
           </p>
         </div>
-        <select
-          aria-label="Select shipment"
+        <ShipmentPicker
+          transactions={ordered}
           value={selected.id}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="h-8 max-w-[180px] shrink-0 truncate rounded-md border border-input bg-inset px-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {ordered.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.reference}
-            </option>
-          ))}
-        </select>
+          onChange={setSelectedId}
+        />
       </div>
 
       {/* Horizontal phased progress (md+) */}
