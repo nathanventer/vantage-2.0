@@ -49,7 +49,24 @@ let pulseSub: RateSubscription = {
   plan: "standard",
   currentPeriodEnd: new Date(Date.now() + 30 * 864e5).toISOString(),
 };
-const priceAlerts: PriceAlert[] = [];
+const priceAlerts: PriceAlert[] = [
+  {
+    id: "alert-demo-1",
+    lane: "Durban Port → Johannesburg",
+    mode: "Sea",
+    thresholdZAR: 175_000,
+    direction: "below",
+    createdAt: new Date(Date.now() - 864e5).toISOString(),
+  },
+  {
+    id: "alert-demo-2",
+    lane: "Cape Town Port → Johannesburg",
+    mode: "Sea",
+    thresholdZAR: 210_000,
+    direction: "above",
+    createdAt: new Date(Date.now() - 2 * 864e5).toISOString(),
+  },
+];
 
 /** Notifications (mutable demo state, scoped per signed-in user). */
 const MOCK_BUYER = "demo-buyer";
