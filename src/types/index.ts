@@ -72,7 +72,7 @@ export type StatusLabel =
 /* ── Per-domain status types ───────────────────────────────────────────── */
 export type TransactionStatus = "Open" | "In Progress" | "Closed";
 export type RequestStatus = "Open" | "Quoted" | "Accepted" | "Confirmed";
-export type QuoteStatus = "Quoted" | "Accepted";
+export type QuoteStatus = "Quoted" | "Accepted" | "Rejected";
 export type LifecycleStatus = "Completed" | "In Progress" | "Pending";
 export type WarehouseStatus = "Open" | "In Progress" | "Completed";
 export type ContainerStatus = "Open" | "In Progress" | "Completed";
@@ -159,6 +159,21 @@ export interface Quote {
   priceZAR: number;
   etaDays: number;
   status: QuoteStatus;
+  /** Present when status is Rejected (mandatory reason, FIX 5). */
+  rejectionReason?: string;
+  rejectedAt?: string;
+}
+
+/** Source-side quote submission (FIX 1/3 — Demand↔Source handoff). */
+export interface NewQuoteInput {
+  shipmentId: string;
+  freightCostZAR: number;
+  customsCostZAR: number;
+  warehouseCostZAR: number;
+  transportCostZAR: number;
+  otherCostZAR: number;
+  transitDays: number;
+  validityDate?: string;
 }
 
 export interface LifecycleStep {

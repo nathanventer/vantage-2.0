@@ -42,13 +42,19 @@ const consoleNotifier: Notifier = {
 const supabaseNotifier: Notifier = {
   async notify(input) {
     try {
-      await supabase.from("notifications").insert({
-        user_id: input.userId ?? null,
-        title: input.title,
-        body: input.body ?? null,
-        kind: input.kind ?? "info",
-        link: input.link ?? null,
-      });
+      // notifications.user_id is NOT NULL — without a target user there is
+      // nobody to notify in-app, so skip the row rather than fail the insert.
+      // NOTE: the live notifications table has no `kind` column — including it
+      // made PostgREST reject the whole insert (swallowed by this try/catch),
+      // so in-app notifications were silently dropped.
+      if (input.userId) {
+        await supabase.from("notifications").insert({
+          user_id: input.userId,
+          title: input.title,
+          body: input.body ?? null,
+          link: input.link ?? null,
+        });
+      }
     } catch {
       // Non-fatal: notifications must never block a business write.
     }

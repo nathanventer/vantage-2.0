@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -13,6 +13,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaperDocumentDialog, type PaperDocumentProps } from "@/components/PaperDocument";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Ship,
@@ -43,8 +52,37 @@ function TxDetail() {
   const docsQ = useQuery({ queryKey: ["doc"], queryFn: api.listDocuments });
   const auditQ = useQuery({ queryKey: ["ae"], queryFn: api.listAuditEvents });
   const tripsQ = useQuery({ queryKey: ["tp"], queryFn: api.listTrips });
-  const [acceptedId, setAcceptedId] = useState<string | null>(null);
+  const qc = useQueryClient();
   const [quoteDoc, setQuoteDoc] = useState<PaperDocumentProps | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<{ id: string; provider: string } | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const refreshTx = () => {
+    void qc.invalidateQueries({ queryKey: ["tx", id] });
+    void qc.invalidateQueries({ queryKey: ["tx"] });
+  };
+
+  const acceptMut = useMutation({
+    // Route param may be a reference (TXN-…) — mutations always use the row id.
+    mutationFn: (quoteId: string) => api.selectQuote(data?.id ?? id, quoteId),
+    onSuccess: () => {
+      refreshTx();
+      toast.success("Quote accepted — provider awarded.");
+    },
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Unable to accept the quote. Please try again."),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: () => api.rejectQuote(data?.id ?? id, rejectTarget!.id, rejectReason),
+    onSuccess: () => {
+      refreshTx();
+      setRejectTarget(null);
+      toast.success("Quote rejected — the reason has been recorded.");
+    },
+    onError: (e) =>
+      toast.error(e instanceof Error ? e.message : "Unable to reject the quote. Please try again."),
+  });
 
   const linkedTrip = useMemo(
     () => (tripsQ.data ?? []).find((t) => t.shipmentRef === data?.reference),
@@ -133,12 +171,8 @@ function TxDetail() {
                 <h3 className="mb-3 font-display font-semibold">Provider quotes</h3>
                 <ul className="space-y-2">
                   {data.quotes.map((q) => {
-                    const isAccepted = acceptedId === q.id || q.status === "Accepted";
-                    const status: StatusLabel = acceptedId
-                      ? isAccepted
-                        ? "Accepted"
-                        : "Rejected"
-                      : q.status;
+                    const status: StatusLabel = q.status;
+                    const anyAccepted = data.quotes.some((x) => x.status === "Accepted");
                     return (
                       <li
                         key={q.id}
@@ -150,6 +184,15 @@ function TxDetail() {
                             ETA {q.etaDays} days ·{" "}
                             <span className="tabular-nums">{fmt(q.priceZAR)}</span>
                           </div>
+                          {q.status === "Rejected" && q.rejectionReason && (
+                            <div className="mt-1 text-xs text-warning">
+                              Rejected
+                              {q.rejectedAt
+                                ? ` ${new Date(q.rejectedAt).toLocaleDateString("en-ZA")}`
+                                : ""}{" "}
+                              — {q.rejectionReason}
+                            </div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <StatusBadge status={status} />
@@ -205,19 +248,29 @@ function TxDetail() {
                           >
                             View quote
                           </Button>
-                          {!acceptedId && q.status !== "Accepted" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setAcceptedId(q.id);
-                                toast.success(
-                                  `Accepted quote from ${q.providerName}. Service agreement generated.`,
-                                );
-                              }}
-                            >
-                              <Check className="mr-1 h-3.5 w-3.5" /> Accept
-                            </Button>
+                          {!anyAccepted && q.status === "Quoted" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={acceptMut.isPending}
+                                onClick={() => acceptMut.mutate(q.id)}
+                              >
+                                <Check className="mr-1 h-3.5 w-3.5" />
+                                {acceptMut.isPending ? "Accepting…" : "Accept"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-warning hover:text-warning"
+                                onClick={() => {
+                                  setRejectTarget({ id: q.id, provider: q.providerName });
+                                  setRejectReason("");
+                                }}
+                              >
+                                Reject
+                              </Button>
+                            </>
                           )}
                         </div>
                       </li>
@@ -229,13 +282,52 @@ function TxDetail() {
                   onOpenChange={(o) => !o && setQuoteDoc(null)}
                   doc={quoteDoc}
                 />
-                {(acceptedId || data.quotes.some((q) => q.status === "Accepted")) && (
+                {data.quotes.some((q) => q.status === "Accepted") && (
                   <div className="mt-4 rounded-lg border border-success/30 bg-success/5 p-3 text-sm">
                     Quote accepted — service agreement available in the <strong>Agreement</strong>{" "}
                     tab.
                   </div>
                 )}
               </div>
+
+              {/* Mandatory rejection reason (FIX 5) */}
+              <Dialog open={!!rejectTarget} onOpenChange={(o) => !o && setRejectTarget(null)}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="font-display">Reject quote</DialogTitle>
+                    <DialogDescription>
+                      {rejectTarget ? `${rejectTarget.provider} · ${data.reference}` : ""}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="reject-reason">Reason for rejection (required)</Label>
+                    <textarea
+                      id="reject-reason"
+                      rows={3}
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="e.g. Quoted rate exceeds the approved budget for this lane"
+                      className="w-full rounded-md border border-input bg-inset px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      autoFocus
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The reason is recorded on the quote and shared with the provider.
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setRejectTarget(null)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      disabled={rejectReason.trim().length < 3 || rejectMut.isPending}
+                      onClick={() => rejectMut.mutate()}
+                    >
+                      {rejectMut.isPending ? "Rejecting…" : "Reject quote"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             <TabsContent value="documents">
@@ -297,8 +389,8 @@ function TxDetail() {
                     This agreement is entered into between <strong>{data.demandCompany}</strong>{" "}
                     ("Demand") and <strong>{data.sourceProvider}</strong> ("Source") for the
                     logistics movement of <strong>{data.cargo}</strong> from{" "}
-                    <strong>{data.origin}</strong> to <strong>{data.destination}</strong>, container{" "}
-                    <strong>{data.containerNo ?? "—"}</strong>
+                    <strong>{data.origin}</strong> to <strong>{data.destination}</strong>, cargo
+                    configuration <strong>{data.containerNo ?? "—"}</strong>
                     {data.vessel ? `, vessel ${data.vessel}` : ""}.
                   </p>
                   <p>
@@ -356,7 +448,7 @@ function TxDetail() {
               <Row icon={MapPin} label="Origin" value={data.origin} />
               <Row icon={MapPin} label="Destination" value={data.destination} />
               <Row icon={Ship} label="Vessel" value={data.vessel ?? "—"} />
-              <Row icon={Package} label="Container" value={data.containerNo ?? "—"} />
+              <Row icon={Package} label="Cargo Configuration" value={data.containerNo ?? "—"} />
               <div className="border-t pt-3">
                 <div className="text-xs text-muted-foreground">Cargo value</div>
                 <div className="font-display text-xl font-semibold tabular-nums">

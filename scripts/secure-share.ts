@@ -66,4 +66,6 @@ Bun.serve({
 });
 
 console.log(`[secure-share] gateway listening on http://localhost:${PORT} → ${TARGET}`);
-console.log("[secure-share] every request requires Basic Auth (any username + the shared password)");
+console.log(
+  "[secure-share] every request requires Basic Auth (any username + the shared password)",
+);

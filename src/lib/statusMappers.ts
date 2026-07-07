@@ -24,7 +24,9 @@ export function reqStatus(s: string): RequestStatus {
 }
 
 export function quoteStatus(s: string): QuoteStatus {
-  return s === "selected" ? "Accepted" : "Quoted";
+  if (s === "selected") return "Accepted";
+  if (s === "rejected") return "Rejected";
+  return "Quoted";
 }
 
 export function regStatus(s: string): RegistrationStatus {

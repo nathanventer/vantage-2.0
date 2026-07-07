@@ -26,7 +26,30 @@ import { dbFromLabel, labelFromDb } from "@/lib/documents";
 import { signatureProvider } from "@/adapters/signatureProvider";
 import { notifier } from "@/adapters/notifier";
 import type { DataService } from "./DataService";
-import type { Json } from "@/types/supabase";
+import type { Database, Json } from "@/types/supabase";
+
+type ComplianceDocType = Database["public"]["Enums"]["compliance_doc_type"];
+type DbUserRole = Database["public"]["Enums"]["user_role"];
+
+const COMPLIANCE_DOC_TYPES: readonly ComplianceDocType[] = [
+  "company_registration",
+  "tax_clearance",
+  "vat_certificate",
+  "bank_confirmation",
+  "director_id",
+  "sars_registration",
+  "insurance",
+  "operating_license",
+  "bbbee_certificate",
+  "other",
+] as const;
+
+/** Coerce an arbitrary doc-type string onto the DB enum (unknown → "other"). */
+function complianceDocType(docType: string): ComplianceDocType {
+  return (COMPLIANCE_DOC_TYPES as readonly string[]).includes(docType)
+    ? (docType as ComplianceDocType)
+    : "other";
+}
 import type {
   Company,
   Provider,
@@ -170,6 +193,8 @@ interface QuoteRow {
   vat_amount: number | null;
   estimated_transit_days: number | null;
   status: string;
+  rejection_reason: string | null;
+  rejected_at: string | null;
   src: NamedRef | null;
 }
 interface ShipmentRow {
@@ -213,6 +238,8 @@ function mapQuote(q: QuoteRow): Quote {
     priceZAR: quoteTotal(q),
     etaDays: num(q.estimated_transit_days),
     status: quoteStatus(q.status),
+    rejectionReason: q.rejection_reason ?? undefined,
+    rejectedAt: q.rejected_at ?? undefined,
   };
 }
 function mapTransaction(s: ShipmentRow): Transaction {
@@ -242,7 +269,7 @@ const SHIPMENT_SELECT =
   "status,current_step,created_at," +
   "demand:companies!shipments_demand_company_id_fkey(id,name)," +
   "source:companies!shipments_source_company_id_fkey(id,name)," +
-  "quotes(id,source_company_id,total,freight_cost,customs_cost,warehouse_cost,transport_cost,other_cost,vat_amount,estimated_transit_days,status," +
+  "quotes(id,source_company_id,total,freight_cost,customs_cost,warehouse_cost,transport_cost,other_cost,vat_amount,estimated_transit_days,status,rejection_reason,rejected_at," +
   "src:companies!quotes_source_company_id_fkey(id,name))";
 
 function fail(ctx: string, error: { message: string } | null) {
@@ -551,10 +578,10 @@ export const supabaseApi: DataService = {
       .from("compliance_documents")
       .delete()
       .eq("company_id", companyId)
-      .eq("doc_type", docType);
+      .eq("doc_type", complianceDocType(docType));
     const { error } = await supabase.from("compliance_documents").insert({
       company_id: companyId,
-      doc_type: docType,
+      doc_type: complianceDocType(docType),
       verification_status: "pending",
       file_path: path,
     });
@@ -674,6 +701,11 @@ export const supabaseApi: DataService = {
         .eq("reference", input.transactionRef)
         .maybeSingle();
       shipmentId = (s as { id: string } | null)?.id ?? null;
+    }
+    if (!shipmentId) {
+      throw new Error(
+        `[supabaseApi] createDocument: no shipment found for reference ${input.transactionRef}`,
+      );
     }
     const { data, error } = await supabase
       .from("shipment_documents")
@@ -797,7 +829,9 @@ export const supabaseApi: DataService = {
     const { data, error } = await supabase
       .from("audit_logs")
       .select("id,actor_id,action,entity,entity_id,created_at")
-      .order("created_at", { ascending: false })
+      // Newest first; id as a stable tiebreaker for same-timestamp entries.
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: false })
       .limit(50);
     fail("listAuditEvents", error);
     type Row = {
@@ -913,7 +947,7 @@ export const supabaseApi: DataService = {
     const { error: selErr } = await supabase.rpc("select_shipment_quote", {
       p_shipment_id: tx.id,
       p_quote_id: quoteId,
-      p_override_reason: reason?.trim() || null,
+      p_override_reason: reason?.trim() || undefined,
     });
     if (selErr) {
       const { error: qErr } = await supabase
@@ -935,6 +969,76 @@ export const supabaseApi: DataService = {
     }
   },
 
+  async submitQuote(input): Promise<Quote> {
+    const userId = await currentUserId();
+    const { data: prof, error: pErr } = await supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", userId)
+      .single();
+    fail("submitQuote(profile)", pErr);
+    const companyId = (prof as { company_id: string | null }).company_id;
+    if (!companyId) throw new Error("[supabaseApi] submitQuote: user has no company");
+
+    const { data: ref, error: refErr } = await supabase.rpc("next_ref", { p_prefix: "QTE" });
+    fail("submitQuote(next_ref)", refErr);
+
+    const subtotal =
+      num(input.freightCostZAR) +
+      num(input.customsCostZAR) +
+      num(input.warehouseCostZAR) +
+      num(input.transportCostZAR) +
+      num(input.otherCostZAR);
+    const vat = Math.round(subtotal * 0.15 * 100) / 100;
+
+    const { data, error } = await supabase
+      .from("quotes")
+      .insert({
+        reference: ref as unknown as string,
+        shipment_id: input.shipmentId,
+        source_company_id: companyId,
+        freight_cost: num(input.freightCostZAR),
+        customs_cost: num(input.customsCostZAR),
+        warehouse_cost: num(input.warehouseCostZAR),
+        transport_cost: num(input.transportCostZAR),
+        other_cost: num(input.otherCostZAR),
+        vat_amount: vat,
+        // `total` is a generated column (sum of the cost fields) — never insert it.
+        estimated_transit_days: num(input.transitDays),
+        validity_date: input.validityDate ?? null,
+        status: "submitted",
+      })
+      .select(
+        "id,source_company_id,total,freight_cost,customs_cost,warehouse_cost,transport_cost,other_cost,vat_amount,estimated_transit_days,status,rejection_reason,rejected_at," +
+          "src:companies!quotes_source_company_id_fkey(id,name)",
+      )
+      .single();
+    fail("submitQuote", error);
+    return mapQuote(data as unknown as QuoteRow);
+  },
+
+  async rejectQuote(shipmentId, quoteId, reason): Promise<void> {
+    const clean = reason.trim();
+    if (clean.length < 3) {
+      throw new Error("A rejection reason of at least 3 characters is required.");
+    }
+    const userId = await currentUserId();
+    const { data, error } = await supabase
+      .from("quotes")
+      .update({
+        status: "rejected",
+        rejection_reason: clean,
+        rejected_at: new Date().toISOString(),
+        rejected_by: userId,
+      })
+      .eq("id", quoteId)
+      .eq("shipment_id", shipmentId)
+      .select("id")
+      .maybeSingle();
+    fail("rejectQuote", error);
+    if (!data) throw new Error("[supabaseApi] rejectQuote: quote not found or not permitted");
+  },
+
   // ── Logistics operations execution (Phase 2 §1) ─────────────────────────
   async listShipmentEvents(shipmentId): Promise<ShipmentEvent[]> {
     const { data, error } = await supabase
@@ -943,7 +1047,9 @@ export const supabaseApi: DataService = {
         "id,shipment_id,event_type,step,note,payload,created_by,created_at,shipment:shipments(reference)",
       )
       .eq("shipment_id", shipmentId)
-      .order("created_at", { ascending: false })
+      // Newest first; id as a stable tiebreaker for same-timestamp events.
+      .order("created_at", { ascending: false, nullsFirst: false })
+      .order("id", { ascending: false })
       .limit(LIST_LIMIT);
     fail("listShipmentEvents", error);
     type Row = {
@@ -990,7 +1096,10 @@ export const supabaseApi: DataService = {
     if (typeof input.step === "number") {
       await supabase
         .from("shipments")
-        .update({ current_step: input.step, status: input.step >= 16 ? "closed" : "in_progress" })
+        .update({
+          current_step: input.step,
+          status: input.step >= 16 ? "completed" : "in_progress",
+        })
         .eq("id", input.shipmentId);
     }
     const e = data as unknown as {
@@ -1079,7 +1188,7 @@ export const supabaseApi: DataService = {
   async updateUserRole(userId, role): Promise<void> {
     const { error } = await supabase
       .from("profiles")
-      .update({ role: dbRole(role) })
+      .update({ role: dbRole(role) as DbUserRole })
       .eq("id", userId);
     fail("updateUserRole", error);
   },

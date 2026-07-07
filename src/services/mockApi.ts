@@ -399,6 +399,46 @@ export const mockApi: DataService = {
     });
   },
 
+  async submitQuote(input) {
+    await delay();
+    const tx = M.transactions.find(
+      (t) => t.id === input.shipmentId || t.reference === input.shipmentId,
+    );
+    if (!tx) throw new Error(`[mockApi] shipment not found: ${input.shipmentId}`);
+    const provider = M.providers[0];
+    const subtotal =
+      Number(input.freightCostZAR || 0) +
+      Number(input.customsCostZAR || 0) +
+      Number(input.warehouseCostZAR || 0) +
+      Number(input.transportCostZAR || 0) +
+      Number(input.otherCostZAR || 0);
+    const quote = {
+      id: `q-new-${tx.quotes.length + 1}-${tx.id}`,
+      providerId: provider.id,
+      providerName: provider.name,
+      priceZAR: Math.round(subtotal * 1.15),
+      etaDays: Number(input.transitDays || 0),
+      status: "Quoted" as const,
+    };
+    tx.quotes.push(quote);
+    return quote;
+  },
+
+  async rejectQuote(shipmentId, quoteId, reason) {
+    await delay();
+    const clean = reason.trim();
+    if (clean.length < 3) {
+      throw new Error("A rejection reason of at least 3 characters is required.");
+    }
+    const tx = M.transactions.find((t) => t.id === shipmentId || t.reference === shipmentId);
+    if (!tx) throw new Error(`[mockApi] shipment not found: ${shipmentId}`);
+    const quote = tx.quotes.find((q) => q.id === quoteId);
+    if (!quote) throw new Error(`[mockApi] quote not found: ${quoteId}`);
+    quote.status = "Rejected";
+    quote.rejectionReason = clean;
+    quote.rejectedAt = new Date().toISOString();
+  },
+
   // ── Document write-path (Section C) ──────────────────────────────────────
   async createDocument(input) {
     await delay();

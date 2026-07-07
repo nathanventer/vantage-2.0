@@ -17,6 +17,8 @@ import type {
   DashboardSeries,
   CompanyInput,
   NewShipmentInput,
+  NewQuoteInput,
+  Quote,
   NewDocumentInput,
   DocumentPayload,
   DataSubjectExport,
@@ -94,6 +96,10 @@ export interface DataService {
    * source_override_reason (enforced here AND in the UI).
    */
   selectQuote(shipmentId: string, quoteId: string, reason?: string): Promise<void>;
+  /** Source submits a quote on an open shipment request (Demand↔Source handoff). */
+  submitQuote(input: NewQuoteInput): Promise<Quote>;
+  /** Demand rejects a quote — a reason of ≥3 characters is mandatory. */
+  rejectQuote(shipmentId: string, quoteId: string, reason: string): Promise<void>;
 
   // ── Document write-path (Section C → shipment_documents) ────────────────
   createDocument(input: NewDocumentInput): Promise<DocumentRecord>;

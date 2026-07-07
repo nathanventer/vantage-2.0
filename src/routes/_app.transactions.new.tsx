@@ -19,7 +19,15 @@ export const Route = createFileRoute("/_app/transactions/new")({
   component: NewTx,
 });
 
-const CONTAINERS = ["40ft Standard", "20ft Standard", "40ft Reefer", "40ft High Cube"];
+const CONTAINERS = [
+  "40ft Standard",
+  "20ft Standard",
+  "40ft Reefer",
+  "40ft High Cube",
+  "Bulk",
+  "Break Bulk",
+  "Tanker",
+];
 
 function NewTx() {
   const navigate = useNavigate();
@@ -127,7 +135,7 @@ function NewTx() {
                 onChange={(e) => setForm({ ...form, weightTons: Number(e.target.value) })}
               />
             </Fld>
-            <Fld label="Container type">
+            <Fld label="Cargo Configuration">
               <select
                 value={form.containerType}
                 onChange={(e) => setForm({ ...form, containerType: e.target.value })}
