@@ -38,3 +38,6 @@ blob-report/
 
 # Supabase CLI temp
 supabase/.temp/
+
+# Vercel CLI link metadata (local only)
+.vercel
