@@ -102,20 +102,9 @@ function CompPage() {
                         <StatusBadge status={f.status} />
                       </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {flags.map((f) => (
-                      <TableRow key={f.id} className="h-14">
-                        <TableCell className="font-medium">{f.entity}</TableCell>
-                        <TableCell>{f.area}</TableCell>
-                        <TableCell><StatusBadge status={f.severity === "High" ? "Failed" : f.severity === "Medium" ? "Pending" : "Verified"} /></TableCell>
-                        <TableCell className="text-muted-foreground tabular-nums">{new Date(f.notedAt).toLocaleDateString("en-ZA")}</TableCell>
-                        <TableCell><StatusBadge status={f.status} /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </TabsContent>

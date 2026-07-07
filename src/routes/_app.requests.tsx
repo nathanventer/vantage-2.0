@@ -134,29 +134,9 @@ function RequestsPage() {
                     </Button>
                   </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(data ?? []).map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.id.toUpperCase()}</TableCell>
-                    <TableCell>{r.demandCompany}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.origin} → {r.destination}</TableCell>
-                    <TableCell>{r.cargo}</TableCell>
-                    <TableCell>{r.weightTons} t</TableCell>
-                    <TableCell><StatusBadge status={r.status} /></TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => toast.success("Quote submitted")} className="mr-2">
-                        <Check className="mr-1 h-3.5 w-3.5" /> Quote
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => toast.info("Request declined")}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
 
