@@ -9,10 +9,10 @@ describe("dataBackend", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults to supabase in prod when env unset", () => {
+  it("defaults to mock in prod when env unset (full demo parity)", () => {
     vi.stubEnv("VITE_DATA_BACKEND", "");
     vi.stubEnv("PROD", "1");
-    expect(resolveDataBackend()).toBe("supabase");
+    expect(resolveDataBackend()).toBe("mock");
     vi.unstubAllEnvs();
   });
 

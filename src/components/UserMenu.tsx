@@ -2,6 +2,7 @@ import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSignOut } from "@/hooks/useSignOut";
+import { isDemoLoginsEnabled } from "@/lib/dataBackend";
 import type { Role } from "@/types";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -145,7 +146,7 @@ export function UserMenu({ className }: { className?: string }) {
           </div>
         </div>
 
-        {!isSupabase && (
+        {(isDemoLoginsEnabled() || !isSupabase) && (
           <>
             <div className="py-2">
               <DemoRolePicker role={role} onChange={setRole} />

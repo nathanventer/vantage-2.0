@@ -7,9 +7,8 @@ import { resolveDataBackend } from "@/lib/dataBackend";
  * Backend switch. The whole UI imports { api } from "@/services" and never
  * touches mockApi/supabaseApi (or the supabase SDK) directly.
  *
- * VITE_DATA_BACKEND = 'mock' | 'supabase'. When unset, production builds
- * (e.g. Vercel) default to 'supabase' so the live site serves the full seeded
- * dataset; tests/dev default to 'mock' to run offline.
+ * VITE_DATA_BACKEND = 'mock' | 'supabase'. When unset, defaults to 'mock' so
+ * the public demo (localhost + Vercel) matches the full offline dataset.
  */
 const backend = resolveDataBackend();
 
