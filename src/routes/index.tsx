@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { VantageLogo } from "@/components/VantageLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { DEMO_LOGINS } from "@/adapters/auth";
+import { DEMO_ACCOUNTS, DEMO_LOGINS, type DemoAccountGroup } from "@/adapters/auth";
+import { isDemoLoginsEnabled } from "@/lib/dataBackend";
 import { api } from "@/services";
 import { toast } from "sonner";
 import type { Role } from "@/types";
@@ -44,6 +45,8 @@ const ROLE_CARDS: { role: Role; icon: typeof Briefcase; title: string }[] = [
 
 const POLICY_VERSION = "v1.0";
 
+const DEMO_GROUPS: DemoAccountGroup[] = ["Demand", "Source", "Admin"];
+
 function Landing() {
   const navigate = useNavigate();
   const { signIn, signUp, user } = useAuth();
@@ -54,10 +57,7 @@ function Landing() {
   const [consent, setConsent] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
-  // One-click demo logins. This is a demonstration platform, so the quick
-  // account switcher is ON by default (works on the live Vercel deployment).
-  // Set VITE_DEMO_LOGINS="off" to hide it for a real production tenant.
-  const demoLogins = import.meta.env.VITE_DEMO_LOGINS !== "off";
+  const demoLogins = isDemoLoginsEnabled();
 
   // Already signed in → approved users go to the app, others resume onboarding.
   useEffect(() => {
@@ -94,6 +94,11 @@ function Landing() {
       setBusy(false);
     }
   }
+
+  const enterDemo = (email: string) => {
+    setEmail(email);
+    void doSignIn(email, "Demo@123");
+  };
 
   const enterAs = (r: Role) => {
     const creds = DEMO_LOGINS[r];
@@ -273,17 +278,16 @@ function Landing() {
             </>
           )}
 
-          {/* Demo account switcher — one click to enter each role. Available on
-              both the sign-in and sign-up tabs (live demo product). */}
           {demoLogins && (
             <>
               <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                <div className="h-px flex-1 bg-border" /> Explore a demo account · password{" "}
+                <div className="h-px flex-1 bg-border" /> Explore demo accounts · password{" "}
                 <span className="font-mono normal-case tracking-normal text-foreground">
                   Demo@123
                 </span>{" "}
                 <div className="h-px flex-1 bg-border" />
               </div>
+
               <div className="grid grid-cols-3 gap-2">
                 {ROLE_CARDS.map(({ role, icon: I, title }) => (
                   <button
@@ -292,15 +296,51 @@ function Landing() {
                     onClick={() => enterAs(role)}
                     disabled={busy}
                     className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    title={`Sign in as the ${title} demo account`}
+                    title={`Sign in as ${title} demo`}
                   >
                     <I className="h-4 w-4 text-brand" />
                     <span className="text-xs font-semibold">{title}</span>
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-center text-[11px] text-muted-foreground">
-                One click switches you straight into that account.
+
+              <div className="mt-5 space-y-4">
+                {DEMO_GROUPS.map((group) => {
+                  const accounts = DEMO_ACCOUNTS.filter((a) => a.group === group);
+                  return (
+                    <div key={group}>
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        {group}
+                      </p>
+                      <ul className="space-y-1.5">
+                        {accounts.map((account) => (
+                          <li key={account.email}>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => enterDemo(account.email)}
+                              className="flex w-full items-center justify-between gap-3 rounded-xl border border-border/60 bg-inset/30 px-3 py-2.5 text-left transition hover:border-brand/40 hover:bg-inset/60 disabled:opacity-50"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium">{account.label}</p>
+                                <p className="truncate text-[11px] text-muted-foreground">
+                                  {account.subtitle}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-[10px] font-medium text-brand">
+                                Enter →
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <p className="mt-3 text-center text-[11px] text-muted-foreground">
+                All accounts use live integrated data on the demo platform.
               </p>
             </>
           )}

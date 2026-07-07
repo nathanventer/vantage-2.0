@@ -3,8 +3,8 @@
  * mock/real implementations are switched internally (mirroring the data `api`
  * and `authAdapter` seams). No external SDK is ever imported by a component.
  */
-export { authAdapter, AUTH_BACKEND, IS_SUPABASE, DEMO_LOGINS } from "./auth";
-export type { AuthAdapter } from "./auth";
+export { authAdapter, AUTH_BACKEND, IS_SUPABASE, DEMO_LOGINS, DEMO_ACCOUNTS } from "./auth";
+export type { AuthAdapter, DemoAccount, DemoAccountGroup } from "./auth";
 
 export {
   optimizer,

@@ -1,32 +1,32 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
+import { resolveDataBackend } from "@/lib/dataBackend";
 
 /**
  * Browser Supabase client. Only the public URL + anon/publishable key are used
  * here — the service-role key must NEVER appear in client code or the bundle.
- *
- * These env vars are only required when VITE_DATA_BACKEND=supabase; under the
- * default 'mock' backend the app runs without them.
  */
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const DEMO_URL = "https://qzckmlhaoehsngxjlgfk.supabase.co";
+/** Publishable (client-safe) key for the Vantage demo project — Vercel fallback. */
+const DEMO_ANON_KEY = "sb_publishable_jZIBwaS5WQ600ObVJS-efQ_CSa2yxf_";
 
-if ((!url || !anonKey) && import.meta.env.VITE_DATA_BACKEND === "supabase") {
-  console.warn(
-    "[supabase] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set — the supabase backend cannot connect.",
+const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined) || DEMO_URL;
+const anonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || DEMO_ANON_KEY;
+
+if (
+  resolveDataBackend() === "supabase" &&
+  (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY)
+) {
+  console.info(
+    "[supabase] Using built-in demo project credentials — set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY to override.",
   );
 }
 
-// Fallbacks keep createClient from throwing at import time when env is absent
-// (e.g. under the mock backend). Real values come from .env.local.
-export const supabase = createClient<Database>(
-  url || "http://localhost:54321",
-  anonKey || "anon-placeholder",
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
+export const supabase = createClient<Database>(url, anonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
-);
+});

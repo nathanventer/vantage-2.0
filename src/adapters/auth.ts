@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabaseClient";
+import { resolveDataBackend } from "@/lib/dataBackend";
 import type { AuthUser, Role } from "@/types";
 
 /**
@@ -227,13 +228,94 @@ const mockAuth: AuthAdapter = {
   },
 };
 
-export const AUTH_BACKEND = (import.meta.env.VITE_DATA_BACKEND as string | undefined) ?? "mock";
+export const AUTH_BACKEND = resolveDataBackend();
 export const IS_SUPABASE = AUTH_BACKEND === "supabase";
 export const authAdapter: AuthAdapter = IS_SUPABASE ? supabaseAuth : mockAuth;
 
-/** Quick-login credentials for the demo role buttons on the sign-in page. */
+export type DemoAccountGroup = "Demand" | "Source" | "Admin";
+
+export type DemoAccount = {
+  email: string;
+  password: string;
+  label: string;
+  subtitle: string;
+  role: Role;
+  group: DemoAccountGroup;
+};
+
+const DEMO_PASSWORD = "Demo@123";
+
+/** All seeded demo accounts — one-click on sign-in / sign-up (live + local). */
+export const DEMO_ACCOUNTS: DemoAccount[] = [
+  {
+    email: "buyer@ubuntuimports.com",
+    password: DEMO_PASSWORD,
+    label: "Michael Dlamini",
+    subtitle: "Buyer · Ubuntu Imports",
+    role: "demand",
+    group: "Demand",
+  },
+  {
+    email: "finance@ubuntuimports.com",
+    password: DEMO_PASSWORD,
+    label: "Ubuntu Finance",
+    subtitle: "Finance · Ubuntu Imports",
+    role: "demand",
+    group: "Demand",
+  },
+  {
+    email: "provider@sclogistics.com",
+    password: DEMO_PASSWORD,
+    label: "Sarah Naidoo",
+    subtitle: "Provider · Southern Cross",
+    role: "source",
+    group: "Source",
+  },
+  {
+    email: "warehouse@sclogistics.com",
+    password: DEMO_PASSWORD,
+    label: "Warehouse Manager",
+    subtitle: "Warehouse · Southern Cross",
+    role: "source",
+    group: "Source",
+  },
+  {
+    email: "transport@sclogistics.com",
+    password: DEMO_PASSWORD,
+    label: "Transport Coordinator",
+    subtitle: "Transport · Southern Cross",
+    role: "source",
+    group: "Source",
+  },
+  {
+    email: "customs@sclogistics.com",
+    password: DEMO_PASSWORD,
+    label: "Customs Agent",
+    subtitle: "Customs · Southern Cross",
+    role: "source",
+    group: "Source",
+  },
+  {
+    email: "admin@tradehub.com",
+    password: DEMO_PASSWORD,
+    label: "Platform Admin",
+    subtitle: "TradeHub operations",
+    role: "admin",
+    group: "Admin",
+  },
+  {
+    email: "auditor@pulse.com",
+    password: DEMO_PASSWORD,
+    label: "Pulse Auditor",
+    subtitle: "Rate intelligence",
+    role: "admin",
+    group: "Admin",
+  },
+];
+
+/** Quick-login credentials for the primary role shortcuts on the sign-in page. */
 export const DEMO_LOGINS: Record<Role, { email: string; password: string }> = {
-  demand: { email: "buyer@ubuntuimports.com", password: "Demo@123" },
-  source: { email: "provider@sclogistics.com", password: "Demo@123" },
-  admin: { email: "admin@tradehub.com", password: "Demo@123" },
+  demand: { email: DEMO_ACCOUNTS[0]!.email, password: DEMO_PASSWORD },
+  source: { email: DEMO_ACCOUNTS[2]!.email, password: DEMO_PASSWORD },
+  admin: { email: DEMO_ACCOUNTS[6]!.email, password: DEMO_PASSWORD },
 };
