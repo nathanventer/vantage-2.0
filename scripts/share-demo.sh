@@ -14,5 +14,7 @@ SHARE_TARGET=http://localhost:8080 "$BUN" scripts/secure-share.ts &
 
 echo "[share-demo] opening share tunnel (localhost.run)…"
 echo "[share-demo] your link appears below as https://….lhr.life — send it with the access code."
-exec ssh -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 \
-  -o ExitOnForwardFailure=yes -R 80:localhost:8090 nokey@localhost.run
+# Connect WITH the SSH key (not nokey@) so the URL is STABLE across reconnects.
+exec ssh -i "$HOME/.ssh/id_ed25519" -o StrictHostKeyChecking=accept-new \
+  -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes \
+  -R 80:localhost:8090 localhost.run
