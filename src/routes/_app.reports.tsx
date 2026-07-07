@@ -154,10 +154,78 @@ function ReportsPage() {
   const contQ = useQuery({ queryKey: ["rep-cont"], queryFn: api.listContainerJobs });
   const cargoQ = useQuery({ queryKey: ["rep-cargo"], queryFn: api.listCargoHandling });
   const flagQ = useQuery({ queryKey: ["rep-flags"], queryFn: api.listComplianceFlags });
+  const invQ = useQuery({ queryKey: ["inv"], queryFn: api.listInvoices });
+  const ratesQ = useQuery({ queryKey: ["lane-rates"], queryFn: api.listLaneRates });
   const [period, setPeriod] = useState<Period>("90");
   const periodLabel = PERIODS.find((p) => p.key === period)!.label;
 
   const txs = useMemo(() => (txQ.data ?? []).filter((t) => within(t, period)), [txQ.data, period]);
+
+  // ── Management Overview (FIX 11): executive summary from live data ─────────
+  const mgmt = useMemo(() => {
+    const all = txQ.data ?? [];
+    const quotes = all.flatMap((t) => t.quotes);
+    const accepted = quotes.filter((q) => q.status === "Accepted");
+    const rejected = quotes.filter((q) => q.status === "Rejected");
+    const pending = quotes.filter((q) => q.status === "Quoted");
+    const avgQuote = quotes.length
+      ? Math.round(quotes.reduce((s, q) => s + q.priceZAR, 0) / quotes.length)
+      : 0;
+    const invoices = invQ.data ?? [];
+    const invoiceTotal = invoices.reduce((s, i) => s + i.amountZAR, 0);
+    const outstanding = invoices
+      .filter((i) => i.status !== "Paid")
+      .reduce((s, i) => s + i.amountZAR, 0);
+
+    const laneCount = new Map<string, { count: number; value: number }>();
+    for (const t of all) {
+      const lane = `${t.origin} → ${t.destination}`;
+      const e = laneCount.get(lane) ?? { count: 0, value: 0 };
+      e.count += 1;
+      e.value += t.valueZAR;
+      laneCount.set(lane, e);
+    }
+    const topLanes = [...laneCount.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5)
+      .map(([lane, v]) => ({ lane, count: v.count, value: v.value }));
+
+    const providerCount = new Map<string, number>();
+    for (const q of accepted)
+      providerCount.set(q.providerName || "—", (providerCount.get(q.providerName || "—") ?? 0) + 1);
+    const topProviders = [...providerCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+
+    const stageBreakdown = (
+      ["Vessel", "Port", "Clearing", "Transport", "Warehouse", "Delivery"] as const
+    ).map((stage) => ({ stage, count: all.filter((t) => t.currentStage === stage).length }));
+    const withVessel = all.filter((t) => t.vessel || t.vesselImo || t.vesselMmsi).length;
+    const rates = ratesQ.data ?? [];
+    const avgLaneRate = rates.length
+      ? Math.round(rates.reduce((s, r) => s + r.priceZAR, 0) / rates.length)
+      : 0;
+
+    return {
+      total: all.length,
+      active: all.filter((t) => t.status === "In Progress").length,
+      completed: all.filter((t) => t.status === "Closed").length,
+      pending: pending.length,
+      accepted: accepted.length,
+      rejected: rejected.length,
+      rejectedList: rejected.filter((q) => q.rejectionReason).slice(0, 5),
+      avgQuote,
+      invoiceTotal,
+      outstanding,
+      topLanes,
+      topProviders,
+      stageBreakdown,
+      withVessel,
+      lanesTracked: rates.length,
+      avgLaneRate,
+    };
+  }, [txQ.data, invQ.data, ratesQ.data]);
 
   // ── Operational KPIs (computed from live ops data) ────────────────────────
   const ops = useMemo(() => {
@@ -358,14 +426,116 @@ function ReportsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="tx">
+      <Tabs defaultValue="mgmt">
         <TabsList className="flex-wrap">
+          <TabsTrigger value="mgmt">Management Overview</TabsTrigger>
           <TabsTrigger value="tx">Transactions</TabsTrigger>
           <TabsTrigger value="cost">Cost</TabsTrigger>
           <TabsTrigger value="ops">Operational</TabsTrigger>
           <TabsTrigger value="comp">Compliance</TabsTrigger>
           <TabsTrigger value="src">Source selection</TabsTrigger>
         </TabsList>
+
+        {/* Management Overview (FIX 11) */}
+        <TabsContent value="mgmt" className="mt-4">
+          <ReportShell
+            title="Management Overview Report"
+            period={periodLabel}
+            exportBuild={() => ({
+              name: `vantage-management-overview-${period}`,
+              title: "Management Overview Report",
+              columns: ["Metric", "Value"],
+              rows: [
+                ["Total shipments", mgmt.total],
+                ["Active shipments", mgmt.active],
+                ["Completed shipments", mgmt.completed],
+                ["Quotes pending", mgmt.pending],
+                ["Quotes accepted", mgmt.accepted],
+                ["Quotes rejected", mgmt.rejected],
+                ["Average quote value", formatZAR(mgmt.avgQuote)],
+                ["Pro-forma invoice total", formatZAR(mgmt.invoiceTotal)],
+                ["Outstanding invoices", formatZAR(mgmt.outstanding)],
+                ["Shipments with vessel tracking", mgmt.withVessel],
+                ["Lanes benchmarked", mgmt.lanesTracked],
+                ["Average lane rate", formatZAR(mgmt.avgLaneRate)],
+              ],
+              meta: [{ label: "Period", value: periodLabel }],
+            })}
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <StatCard label="Total shipments" value={mgmt.total} />
+              <StatCard label="Active" value={mgmt.active} tone="info" />
+              <StatCard label="Completed" value={mgmt.completed} tone="success" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-4">
+              <StatCard label="Quotes pending" value={mgmt.pending} />
+              <StatCard label="Accepted" value={mgmt.accepted} tone="success" />
+              <StatCard label="Rejected" value={mgmt.rejected} tone="warning" />
+              <StatCard label="Avg quote value" value={formatZAR(mgmt.avgQuote)} tone="info" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <StatCard label="Pro-forma invoice total" value={formatZAR(mgmt.invoiceTotal)} />
+              <StatCard label="Outstanding" value={formatZAR(mgmt.outstanding)} tone="warning" />
+              <StatCard label="With vessel tracking" value={mgmt.withVessel} tone="info" />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border bg-card p-5">
+                <h4 className="mb-3 font-display font-semibold">Top lanes</h4>
+                <DataTable
+                  columns={["Lane", "Shipments", "Value"]}
+                  rows={mgmt.topLanes.map((l) => [
+                    l.lane,
+                    String(l.count),
+                    <span key={l.lane} className="tabular-nums">
+                      {formatZAR(l.value)}
+                    </span>,
+                  ])}
+                  rightAlignLast
+                />
+              </div>
+              <div className="rounded-xl border bg-card p-5">
+                <h4 className="mb-3 font-display font-semibold">Top providers (awarded)</h4>
+                <DataTable
+                  columns={["Provider", "Awards"]}
+                  rows={
+                    mgmt.topProviders.length
+                      ? mgmt.topProviders.map((p) => [p.name, String(p.count)])
+                      : [["No awards in this period", "—"]]
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border bg-card p-5">
+              <h4 className="mb-3 font-display font-semibold">Lifecycle stage breakdown</h4>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={mgmt.stageBreakdown}>
+                  <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="stage" fontSize={12} stroke={AXIS} />
+                  <YAxis fontSize={12} stroke={AXIS} allowDecimals={false} />
+                  <Tooltip cursor={{ fill: "var(--color-surface-2)" }} content={<ChartTooltip />} />
+                  <Bar dataKey="count" fill="var(--color-brand)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="rounded-xl border bg-card p-5">
+              <h4 className="mb-3 font-display font-semibold">Rejected quotes &amp; reasons</h4>
+              {mgmt.rejectedList.length ? (
+                <DataTable
+                  columns={["Provider", "Reason"]}
+                  rows={mgmt.rejectedList.map((q) => [
+                    q.providerName || "—",
+                    q.rejectionReason ?? "—",
+                  ])}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">No rejected quotes in this period.</p>
+              )}
+            </div>
+          </ReportShell>
+        </TabsContent>
 
         {/* Transactions */}
         <TabsContent value="tx" className="mt-4">
