@@ -5,6 +5,7 @@ import { api } from "@/services";
 import { subscribeTable } from "@/lib/realtime";
 import { useRole } from "@/contexts/RoleContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { useNotifications } from "@/hooks/useNotifications";
 import { buildRoleKpis } from "@/lib/demoKpis";
 import { PageHeader } from "@/components/PageHeader";
@@ -37,13 +38,22 @@ const AXIS = "var(--color-muted-foreground)";
 function Dashboard() {
   const { role } = useRole();
   const { user } = useAuth();
+  const authReady = useAuthReady();
   const navigate = useNavigate({ from: Route.fullPath });
   const { tab: tabParam } = Route.useSearch();
   const tab = tabParam ?? "overview";
   const { unreadCount } = useNotifications();
   const qc = useQueryClient();
-  const txQ = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
-  const metricsQ = useQuery({ queryKey: ["dashboard-metrics"], queryFn: api.getDashboardMetrics });
+  const txQ = useQuery({
+    queryKey: ["tx"],
+    queryFn: api.listTransactions,
+    enabled: authReady,
+  });
+  const metricsQ = useQuery({
+    queryKey: ["dashboard-metrics"],
+    queryFn: api.getDashboardMetrics,
+    enabled: authReady,
+  });
 
   useEffect(() => {
     const refresh = () => {

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { AuthUser, Role } from "@/types";
 import { authAdapter, IS_SUPABASE } from "@/adapters/auth";
 
@@ -22,6 +23,7 @@ type Ctx = {
 const AuthContext = createContext<Ctx | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const qc = useQueryClient();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [welcomeUser, setWelcomeUser] = useState<AuthUser | null>(null);
   const [override, setOverride] = useState<Role | null>(null);
@@ -45,7 +47,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOverride(null);
     setUser(u);
     if (u.companyApproved) setWelcomeUser(u);
-  }, []);
+    // Fresh pull after session change — avoids SSR/hydrate empty caches on live deploy.
+    await qc.invalidateQueries();
+  }, [qc]);
 
   const dismissWelcome = useCallback(() => setWelcomeUser(null), []);
 

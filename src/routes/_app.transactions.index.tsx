@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/services";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,12 @@ export const Route = createFileRoute("/_app/transactions/")({
 });
 
 function TxList() {
-  const { data, isLoading } = useQuery({ queryKey: ["tx"], queryFn: api.listTransactions });
+  const authReady = useAuthReady();
+  const { data, isLoading } = useQuery({
+    queryKey: ["tx"],
+    queryFn: api.listTransactions,
+    enabled: authReady,
+  });
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
 
