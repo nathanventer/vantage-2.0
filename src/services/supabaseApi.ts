@@ -335,10 +335,17 @@ async function mintRef(prefix: "TXN" | "QTE"): Promise<string> {
 
 /** Match providers via RPC, or client-side insert when RPC is unavailable. */
 async function matchProviders(shipmentId: string): Promise<void> {
-  const { error: rpcErr } = await supabase.rpc("match_providers_for_shipment", {
+  const { data: rpcCount, error: rpcErr } = await supabase.rpc("match_providers_for_shipment", {
     p_shipment_id: shipmentId,
   });
-  if (!rpcErr) return;
+
+  const { count, error: countErr } = await supabase
+    .from("quotes")
+    .select("id", { count: "exact", head: true })
+    .eq("shipment_id", shipmentId);
+  fail("matchProviders(count)", countErr);
+
+  if (!rpcErr && (count ?? 0) >= 3) return;
 
   const { data: providerRows, error: provErr } = await supabase
     .from("companies")
@@ -350,9 +357,17 @@ async function matchProviders(shipmentId: string): Promise<void> {
   const providers = (providerRows ?? []) as { id: string; name: string }[];
   if (providers.length === 0) fail("matchProviders(rpc)", rpcErr);
 
-  for (let i = 0; i < Math.min(providers.length, 4); i++) {
+  for (let i = 0; i < providers.length; i++) {
     const p = providers[i];
-    const freight = 120_000 + i * 18_500;
+    const { data: existing } = await supabase
+      .from("quotes")
+      .select("id")
+      .eq("shipment_id", shipmentId)
+      .eq("source_company_id", p.id)
+      .maybeSingle();
+    if (existing) continue;
+
+    const freight = 120_000 + i * 18_500 + (Date.now() % 7) * 2_100;
     const customs = Math.round(freight * 0.12 * 100) / 100;
     const warehouse = Math.round(freight * 0.15 * 100) / 100;
     const transport = Math.round(freight * 0.18 * 100) / 100;
@@ -379,6 +394,8 @@ async function matchProviders(shipmentId: string): Promise<void> {
     .update({ current_step: 2 })
     .eq("id", shipmentId);
   fail("matchProviders(step)", stepErr);
+
+  void rpcCount;
 }
 
 /**
@@ -1348,16 +1365,22 @@ export const supabaseApi: DataService = {
   },
 
   async startPulseCheckout(plan): Promise<{ url: string | null }> {
-    if (!EDGE_LIVE) {
-      throw new Error(
-        "Pulse checkout requires the create-checkout-session edge function (set VITE_EDGE_LIVE=on + deploy + Stripe secrets).",
-      );
+    const activateDemo = async (): Promise<{ url: string | null }> => {
+      const { error } = await supabase.rpc("activate_pulse_demo", { p_plan: plan });
+      fail("startPulseCheckout(demo)", error);
+      return { url: null };
+    };
+
+    try {
+      const { data: auth } = await supabase.auth.getUser();
+      return await invokeEdge<{ url: string | null }>("create-checkout-session", {
+        plan,
+        email: auth.user?.email,
+      });
+    } catch {
+      // Edge unavailable or Stripe not configured — local demo entitlement.
+      return activateDemo();
     }
-    const { data: auth } = await supabase.auth.getUser();
-    return invokeEdge<{ url: string | null }>("create-checkout-session", {
-      plan,
-      email: auth.user?.email,
-    });
   },
 
   async listPriceAlerts(): Promise<PriceAlert[]> {
@@ -1458,7 +1481,7 @@ export const supabaseApi: DataService = {
     const { data, error } = await supabase
       .from("warehouse_jobs")
       .select(
-        "id,reference,warehouse_type,client_company_id,location,status,checklist," +
+        "id,reference,warehouse_type,client_company_id,location,status,checklist,created_at," +
           "client:companies!warehouse_jobs_client_company_id_fkey(name)," +
           "shipment:shipments!warehouse_jobs_shipment_id_fkey(reference)",
       )
@@ -1472,6 +1495,7 @@ export const supabaseApi: DataService = {
       location: string;
       status: string;
       checklist: { step: string; done: boolean }[];
+      created_at: string;
       client: { name: string } | null;
       shipment: { reference: string } | null;
     };
@@ -1485,6 +1509,7 @@ export const supabaseApi: DataService = {
       status: r.status as WarehouseJob["status"],
       checklist: r.checklist ?? [],
       shipmentRef: r.shipment?.reference,
+      createdAt: r.created_at,
     }));
   },
 
@@ -1492,7 +1517,7 @@ export const supabaseApi: DataService = {
     const { data, error } = await supabase
       .from("container_jobs")
       .select(
-        "id,container_no,job_type,vessel,dwell_days,damage,status," +
+        "id,container_no,job_type,vessel,dwell_days,damage,status,created_at," +
           "shipment:shipments!container_jobs_shipment_id_fkey(reference)",
       )
       .order("created_at", { ascending: false });
@@ -1505,6 +1530,7 @@ export const supabaseApi: DataService = {
       dwell_days: number;
       damage: boolean;
       status: string;
+      created_at: string;
       shipment: { reference: string } | null;
     };
     return ((data ?? []) as unknown as Row[]).map((r) => ({
@@ -1516,6 +1542,7 @@ export const supabaseApi: DataService = {
       damage: r.damage,
       status: r.status as ContainerJob["status"],
       shipmentRef: r.shipment?.reference,
+      createdAt: r.created_at,
     }));
   },
 

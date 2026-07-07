@@ -236,6 +236,7 @@ export interface WarehouseJob {
   checklist: { step: string; done: boolean }[];
   /** Linked shipment reference (live backend). */
   shipmentRef?: string;
+  createdAt?: string;
 }
 
 export interface ContainerJob {
@@ -248,6 +249,7 @@ export interface ContainerJob {
   status: ContainerStatus;
   /** Linked shipment reference (live backend). */
   shipmentRef?: string;
+  createdAt?: string;
 }
 
 export interface CargoHandling {

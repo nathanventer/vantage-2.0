@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { PageHeader } from "@/components/PageHeader";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { LifecycleStepper } from "@/components/LifecycleStepper";
+import { LifecycleWorkflow } from "@/components/ops/LifecycleWorkflow";
 import { MacroJourney } from "@/components/MacroJourney";
 import { OpsConsole } from "@/components/ops/OpsConsole";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -178,7 +178,11 @@ function TxDetail() {
             <TabsContent value="lifecycle">
               <div className="rounded-xl border bg-card p-6">
                 <h3 className="mb-4 font-display font-semibold">16-step lifecycle</h3>
-                <LifecycleStepper steps={data.steps} />
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Approve each milestone to guide the shipment through the workflow. Provider
+                  confirmation and step advances are recorded to the audit trail.
+                </p>
+                <LifecycleWorkflow transaction={data} onQuoteAccepted={refreshTx} />
               </div>
             </TabsContent>
 

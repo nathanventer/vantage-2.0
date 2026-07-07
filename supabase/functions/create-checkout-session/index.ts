@@ -4,7 +4,7 @@
 // Deploy:  supabase functions deploy create-checkout-session
 // Secrets: STRIPE_SECRET_KEY, PULSE_PRICE_STANDARD, PULSE_PRICE_PRO, APP_URL
 import Stripe from "npm:stripe@^16";
-import { callerFromAuthHeader } from "../_shared/supabaseAdmin.ts";
+import { adminClient, callerFromAuthHeader } from "../_shared/supabaseAdmin.ts";
 import { json, preflight } from "../_shared/cors.ts";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
@@ -25,8 +25,27 @@ Deno.serve(async (req) => {
     if (!userId) return json({ error: "unauthorized" }, 401);
 
     const { plan = "standard", email } = await req.json();
+    if (plan !== "standard" && plan !== "pro") {
+      return json({ error: `unknown plan: ${plan}` }, 400);
+    }
+
     const price = PRICES[plan];
-    if (!price) return json({ error: `unknown plan: ${plan}` }, 400);
+    // Demo / sandbox: grant entitlement locally when Stripe price IDs are not configured.
+    if (!price || !Deno.env.get("STRIPE_SECRET_KEY")) {
+      const db = adminClient();
+      const periodEnd = new Date(Date.now() + 30 * 864e5).toISOString();
+      const { error } = await db.from("rate_subscriptions").upsert(
+        {
+          user_id: userId,
+          plan,
+          status: "active",
+          current_period_end: periodEnd,
+        },
+        { onConflict: "user_id" },
+      );
+      if (error) return json({ error: error.message }, 500);
+      return json({ url: null });
+    }
 
     const appUrl = Deno.env.get("APP_URL") ?? "http://localhost:8092";
     const session = await stripe.checkout.sessions.create({

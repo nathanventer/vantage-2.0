@@ -1633,6 +1633,7 @@ export type Database = {
       };
     };
     Functions: {
+      activate_pulse_demo: { Args: { p_plan?: string }; Returns: undefined };
       can_see_shipment: { Args: { p_shipment: string }; Returns: boolean };
       current_company: { Args: never; Returns: string };
       has_active_pulse: { Args: never; Returns: boolean };

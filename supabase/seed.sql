@@ -46,6 +46,25 @@ begin
     approval_status = 'approved', approved_at = now(), updated_at = now()
   where id = v_sc;
 
+  for r in
+    select * from (values
+      ('Maersk SA Forwarding', 'Cape Town', '2015/882341/07', '4123456789', array['Freight Forwarding', 'Ocean Transport']),
+      ('Bidvest Panalpina', 'Johannesburg', '2012/441209/07', '4988123456', array['Freight Forwarding', 'Customs Clearing']),
+      ('Imperial Logistics', 'Durban', '2010/339871/07', '4877654321', array['Transport', 'Warehousing', 'Distribution']),
+      ('Grindrod Freight', 'Durban', '2008/229104/07', '4765432109', array['Freight Forwarding', 'Port Logistics'])
+    ) as t(pname, pcity, preg, pvat, pservices)
+  loop
+    if not exists (select 1 from companies where name = r.pname) then
+      insert into companies (name, type, registration_number, vat_number, country, city, service_categories, approval_status, approved_at)
+      values (r.pname, 'source', r.preg, r.pvat, 'South Africa', r.pcity, r.pservices, 'approved', now());
+    else
+      update companies set
+        type = 'source', registration_number = r.preg, vat_number = r.pvat, city = r.pcity,
+        service_categories = r.pservices, approval_status = 'approved', approved_at = coalesce(approved_at, now()), updated_at = now()
+      where name = r.pname;
+    end if;
+  end loop;
+
   --------------------------------------------------------------------------
   -- 2. Demo users (auth.users + identities + profiles). Password Demo@123.
   --    Token columns set to '' so GoTrue can authenticate SQL-seeded users.

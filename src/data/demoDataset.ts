@@ -492,17 +492,13 @@ export function buildDemoDataset() {
   });
 
   const WH_CHECK = [
-    "Cargo received",
-    "Container inspection",
-    "Destuffing",
-    "Palletising",
-    "Inventory allocated",
-    "Storage location assigned",
-    "Dispatch scheduled",
-    "Transport handover",
+    "Receive & tally",
+    "Quality inspection",
+    "Put-away / stage",
+    "Release for delivery",
   ];
   const warehouseJobs: WarehouseJob[] = Array.from({ length: 100 }, (_, i) => {
-    const done = i % 8;
+    const done = i % 5;
     const client = rand(COMPANIES_DEMAND, i);
     return {
       id: `wh-${pad(i + 1)}`,
@@ -511,8 +507,9 @@ export function buildDemoDataset() {
       clientId: companyFk(client),
       client,
       location: rand(["Durban", "Cape Town", "Johannesburg", "Gqeberha"], i),
-      status: done === 7 ? "Completed" : done < 2 ? "Open" : "In Progress",
+      status: done === 4 ? "Completed" : done < 1 ? "Open" : "In Progress",
       checklist: WH_CHECK.map((step, idx) => ({ step, done: idx < done })),
+      createdAt: daysAgo(i % 90),
     };
   });
 
@@ -522,20 +519,32 @@ export function buildDemoDataset() {
     type: (["Receiving", "Dispatch", "Inspection", "Stuffing", "Destuffing"] as const)[i % 5],
     vessel: rand(VESSELS, i),
     dwellDays: (i * 2) % 14,
-    damage: i % 7 === 0,
+    damage: i % 11 === 0,
     status: (["Open", "In Progress", "Completed"] as ContainerStatus[])[i % 3],
+    createdAt: daysAgo(i % 90),
   }));
 
-  const cargoHandling: CargoHandling[] = Array.from({ length: 90 }, (_, i) => ({
-    id: `cg-${pad(i + 1)}`,
-    reference: `CG-${pad(3000 + i)}`,
-    operation: (["Bulk Handling", "Palletising", "Weighbridge", "Loading", "Offloading"] as const)[
+  const CARGO_CONDITION: Record<CargoHandling["operation"], CargoHandling["condition"][]> = {
+    "Bulk Handling": ["Good", "Good", "Good", "Pending Inspection"],
+    Offloading: ["Good", "Good", "Damaged", "Pending Inspection"],
+    Palletising: ["Good", "Good", "Good", "Good"],
+    Loading: ["Good", "Good", "Good", "Pending Inspection"],
+    Weighbridge: ["Good", "Good", "Good", "Damaged"],
+  };
+  const cargoHandling: CargoHandling[] = Array.from({ length: 90 }, (_, i) => {
+    const operation = (["Bulk Handling", "Palletising", "Weighbridge", "Loading", "Offloading"] as const)[
       i % 5
-    ],
-    weightKg: 500 + ((i * 1234) % 20_000),
-    condition: (["Good", "Good", "Pending Inspection", "Damaged"] as const)[i % 4],
-    timestamp: daysAgo(i),
-  }));
+    ];
+    const conditions = CARGO_CONDITION[operation];
+    return {
+      id: `cg-${pad(i + 1)}`,
+      reference: `CG-${pad(3000 + i)}`,
+      operation,
+      weightKg: 500 + ((i * 1234) % 20_000),
+      condition: conditions[i % conditions.length],
+      timestamp: daysAgo(i % 90),
+    };
+  });
 
   const trips: Trip[] = Array.from({ length: 85 }, (_, i) => {
     const [origin, destination] = rand(ROUTES, i);
@@ -554,6 +563,7 @@ export function buildDemoDataset() {
       podUploaded: i % 3 === 2,
       lat: -29.85 + ((i * 0.13) % 3),
       lng: 30.98 - ((i * 0.21) % 5),
+      createdAt: daysAgo(i % 90),
     };
   });
 

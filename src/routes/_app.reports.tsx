@@ -6,6 +6,11 @@ import { optimizer, OPTIMIZER_WEIGHTS, type ScoredQuote } from "@/adapters/optim
 import { reportingService, type ReportExport } from "@/services/reporting";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildRouteCostRows } from "@/lib/dashboardSeries";
+import {
+  computeOperationalKpis,
+  computeProductivityIndex,
+  type ReportPeriod,
+} from "@/lib/operationalMetrics";
 import { formatZAR } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/PageHeader";
@@ -45,7 +50,7 @@ export const Route = createFileRoute("/_app/reports")({
   component: ReportsPage,
 });
 
-type Period = "30" | "90" | "ytd";
+type Period = ReportPeriod;
 const PERIODS: { key: Period; label: string }[] = [
   { key: "30", label: "30 days" },
   { key: "90", label: "90 days" },
@@ -227,42 +232,18 @@ function ReportsPage() {
     };
   }, [txQ.data, invQ.data, ratesQ.data]);
 
-  // ── Operational KPIs (computed from live ops data) ────────────────────────
-  const ops = useMemo(() => {
-    const jobs = whQ.data ?? [];
-    const trips = tripQ.data ?? [];
-    const conts = contQ.data ?? [];
-    const steps = jobs.flatMap((j) => j.checklist);
-    const whUtil = steps.length
-      ? Math.round((steps.filter((s) => s.done).length / steps.length) * 100)
-      : 0;
-    const fleetUtil = trips.length
-      ? Math.round((trips.filter((t) => t.status !== "Scheduled").length / trips.length) * 100)
-      : 0;
-    const avgDwell = conts.length ? conts.reduce((s, c) => s + c.dwellDays, 0) / conts.length : 0;
-    const delivered = trips.filter((t) => t.status === "Delivered");
-    const sla = delivered.length
-      ? Math.round((delivered.filter((t) => t.podUploaded).length / delivered.length) * 100)
-      : 100;
-    return { whUtil, fleetUtil, avgDwell, sla };
-  }, [whQ.data, tripQ.data, contQ.data]);
+  // ── Operational KPIs + productivity (unified across cargo, warehouse, containers) ─
+  const ops = useMemo(
+    () =>
+      computeOperationalKpis(whQ.data ?? [], tripQ.data ?? [], contQ.data ?? [], period),
+    [whQ.data, tripQ.data, contQ.data, period],
+  );
 
-  // Productivity per cargo operation = share handled in good condition.
-  const productivity = useMemo(() => {
-    const ops_ = cargoQ.data ?? [];
-    const AREAS: { area: string; match: string[] }[] = [
-      { area: "Receiving", match: ["Bulk Handling"] },
-      { area: "Destuffing", match: ["Offloading"] },
-      { area: "Palletising", match: ["Palletising"] },
-      { area: "Dispatch", match: ["Loading"] },
-      { area: "Weighbridge", match: ["Weighbridge"] },
-    ];
-    return AREAS.map(({ area, match }) => {
-      const subset = ops_.filter((o) => match.includes(o.operation));
-      const good = subset.filter((o) => o.condition === "Good").length;
-      return { area, v: subset.length ? Math.round((good / subset.length) * 100) : 0 };
-    });
-  }, [cargoQ.data]);
+  const productivity = useMemo(
+    () =>
+      computeProductivityIndex(cargoQ.data ?? [], whQ.data ?? [], contQ.data ?? [], period),
+    [cargoQ.data, whQ.data, contQ.data, period],
+  );
 
   // ── Compliance coverage per area = share of flags resolved (no flags → 100) ─
   const compliance = useMemo(() => {
@@ -641,6 +622,7 @@ function ReportsPage() {
                 ["Fleet utilisation", `${ops.fleetUtil}%`],
                 ["Container turn (days)", ops.avgDwell.toFixed(1)],
                 ["POD compliance", `${ops.sla}%`],
+                ...productivity.map((p) => [`Productivity — ${p.area}`, `${p.v}%`]),
               ],
               meta: [{ label: "Period", value: periodLabel }],
             })}
@@ -671,7 +653,7 @@ function ReportsPage() {
               <h4 className="mb-3 font-display font-semibold">
                 Productivity index{" "}
                 <span className="text-xs font-normal text-muted-foreground">
-                  (share handled in good condition)
+                  (cargo condition · warehouse steps · container integrity)
                 </span>
               </h4>
               <ResponsiveContainer width="100%" height={260}>
