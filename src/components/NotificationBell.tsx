@@ -12,7 +12,7 @@ import { Bell } from "lucide-react";
 const DROPDOWN_LIMIT = 5;
 
 export function NotificationBell() {
-  const { items, unreadCount, markOne, markAll } = useNotifications({ enableToast: true });
+  const { items, unreadCount, isLoading, markOne, markAll } = useNotifications({ enableToast: true });
   const recent = items.slice(0, DROPDOWN_LIMIT);
 
   return (
@@ -46,7 +46,9 @@ export function NotificationBell() {
           )}
         </div>
         <div className="max-h-80 overflow-auto">
-          {recent.length === 0 ? (
+          {isLoading ? (
+            <div className="px-3 py-8 text-center text-sm text-muted-foreground">Loading…</div>
+          ) : recent.length === 0 ? (
             <div className="px-3 py-8 text-center text-sm text-muted-foreground">
               You&apos;re all caught up.
             </div>

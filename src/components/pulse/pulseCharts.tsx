@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 import type { DotProps } from "recharts";
 import {
   Area,
+  Bar,
+  BarChart,
+  Cell,
   ComposedChart,
   CartesianGrid,
   Line,
@@ -14,7 +17,7 @@ import {
 } from "recharts";
 import { formatZAR } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { LaneTrendPoint } from "@/lib/pulse";
+import type { LaneSupplierPoint, LaneTrendPoint } from "@/lib/pulse";
 
 /** Pulse chart palette — TradingView-inspired on Vantage dark tokens. */
 export const PULSE = {
@@ -113,6 +116,13 @@ export function supplierBarGradientId(
   if (priceZAR <= median) return `url(#${prefix}-barOk)`;
   if (priceZAR <= median * 1.08) return `url(#${prefix}-barBrand)`;
   return `url(#${prefix}-barWarn)`;
+}
+
+/** Solid fills — reliable on dark chart wells (gradient url() can render invisible). */
+export function supplierBarFill(priceZAR: number, median: number): string {
+  if (priceZAR <= median) return PULSE.ok;
+  if (priceZAR <= median * 1.08) return PULSE.brand;
+  return PULSE.warn;
 }
 
 export function truncateProvider(name: string, max = 16): string {
@@ -274,6 +284,141 @@ export function ChartLegend({
 }
 
 const Y_AXIS = "pulse-price";
+
+/** Horizontal supplier bars on the Pulse dark chart well. */
+export function PulseSupplierChart({
+  suppliers,
+  laneMedian,
+  yDomain,
+}: {
+  suppliers: LaneSupplierPoint[];
+  laneMedian: number;
+  yDomain: [number, number];
+}) {
+  const chartHeight = Math.min(320, Math.max(200, suppliers.length * 44 + 72));
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-lg border border-border/40"
+      style={{ background: PULSE.chartWell }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 50% 0%, color-mix(in oklab, var(--color-brand) 12%, transparent), transparent 55%)",
+        }}
+        aria-hidden
+      />
+      <div className="relative px-1 pb-1 pt-2" style={{ height: chartHeight }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={suppliers}
+            layout="vertical"
+            margin={{ top: 8, right: 56, left: 4, bottom: 8 }}
+            barCategoryGap="18%"
+          >
+            <CartesianGrid stroke={PULSE.grid} strokeDasharray="2 6" horizontal={false} />
+            <XAxis
+              type="number"
+              domain={yDomain}
+              tick={{ fontSize: 10, fill: PULSE.axis }}
+              tickLine={false}
+              axisLine={{ stroke: PULSE.gridStrong, strokeWidth: 1 }}
+              tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
+            />
+            <YAxis
+              type="category"
+              dataKey="provider"
+              width={108}
+              tick={{ fontSize: 10, fill: PULSE.axis }}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => truncateProvider(String(v), 14)}
+            />
+            <Tooltip
+              content={<PulseSupplierTooltip />}
+              cursor={{ fill: "rgba(74, 128, 255, 0.08)", radius: 6 }}
+            />
+            <ReferenceLine
+              x={laneMedian}
+              stroke={PULSE.brand}
+              strokeDasharray="5 5"
+              strokeOpacity={0.55}
+              label={{
+                value: "Median",
+                position: "insideTopRight",
+                fill: PULSE.axis,
+                fontSize: 10,
+              }}
+            />
+            <Bar dataKey="priceZAR" radius={[0, 8, 8, 0]} barSize={26} minPointSize={4}>
+              {suppliers.map((s) => (
+                <Cell key={s.provider} fill={supplierBarFill(s.priceZAR, laneMedian)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+/** Per-supplier rate blocks below the chart — always readable even if SVG sizing fails. */
+export function PulseSupplierBlocks({
+  suppliers,
+  laneMedian,
+}: {
+  suppliers: LaneSupplierPoint[];
+  laneMedian: number;
+}) {
+  return (
+    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      {suppliers.map((s) => {
+        const favorable = s.priceZAR <= laneMedian;
+        const near = s.priceZAR > laneMedian && s.priceZAR <= laneMedian * 1.08;
+        return (
+          <div
+            key={s.provider}
+            className={cn(
+              "rounded-xl border px-3 py-2.5",
+              favorable
+                ? "border-ok-bd/60 bg-ok-bg/20"
+                : near
+                  ? "border-brand/30 bg-brand/10"
+                  : "border-warn-bd/60 bg-warn-bg/15",
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="min-w-0 truncate text-xs font-medium" title={s.provider}>
+                {s.provider}
+              </p>
+              <span
+                className={cn(
+                  "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums",
+                  favorable
+                    ? "border-ok-bd bg-ok-bg text-ok"
+                    : near
+                      ? "border-brand/40 bg-brand/15 text-brand"
+                      : "border-warn-bd bg-warn-bg text-warn",
+                )}
+              >
+                {s.vsMedianPct >= 0 ? "+" : ""}
+                {s.vsMedianPct.toFixed(1)}%
+              </span>
+            </div>
+            <p className="mt-1 font-display text-base font-semibold tabular-nums tracking-tight">
+              {formatZAR(s.priceZAR)}
+            </p>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              {s.samples} quote{s.samples === 1 ? "" : "s"} · median {formatZAR(laneMedian)}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /** TradingView-style mountain line chart for lane median trend. */
 export function PulseTrendChart({

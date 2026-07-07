@@ -1,15 +1,4 @@
 import { useId } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { formatZAR } from "@/lib/format";
 import { buildLaneSuppliers, buildLaneTrend, pulseYDomain } from "@/lib/pulse";
 import { EmptyState } from "@/components/EmptyState";
@@ -20,11 +9,9 @@ import {
   ChartShell,
   ChartStatStrip,
   PULSE,
-  PulseChartDefs,
-  PulseSupplierTooltip,
+  PulseSupplierBlocks,
+  PulseSupplierChart,
   PulseTrendChart,
-  supplierBarGradientId,
-  truncateProvider,
 } from "@/components/pulse/pulseCharts";
 import { cn } from "@/lib/utils";
 import type { LaneRate, RateBenchmark } from "@/types";
@@ -217,65 +204,12 @@ export function PulseLaneInsight({ benchmark, rates, loading }: PulseLaneInsight
                 },
               ]}
             />
-            <div className="h-[240px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={suppliers}
-                  margin={{ top: 12, right: 8, left: -4, bottom: suppliers.length > 2 ? 8 : 4 }}
-                  barCategoryGap="22%"
-                >
-                  <PulseChartDefs id={`${chartId}-bar`} />
-                  <CartesianGrid stroke={PULSE.grid} strokeDasharray="2 6" vertical={false} />
-                  <XAxis
-                    dataKey="provider"
-                    tick={{ fontSize: 10, fill: PULSE.axis }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval={0}
-                    tickFormatter={(v) => truncateProvider(String(v))}
-                    angle={suppliers.length > 2 ? -14 : 0}
-                    textAnchor={suppliers.length > 2 ? "end" : "middle"}
-                    height={suppliers.length > 2 ? 48 : 28}
-                  />
-                  <YAxis
-                    domain={supplierY}
-                    tick={{ fontSize: 11, fill: PULSE.axis }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => `${Math.round(v / 1000)}k`}
-                    width={44}
-                  />
-                  <Tooltip
-                    content={<PulseSupplierTooltip />}
-                    cursor={{ fill: "rgba(74, 128, 255, 0.06)", radius: 8 }}
-                  />
-                  <ReferenceLine
-                    y={supplierSnap.laneMedian}
-                    stroke={PULSE.brand}
-                    strokeDasharray="5 5"
-                    strokeOpacity={0.45}
-                    label={{
-                      value: "Median",
-                      position: "insideTopRight",
-                      fill: PULSE.axis,
-                      fontSize: 10,
-                    }}
-                  />
-                  <Bar dataKey="priceZAR" radius={[10, 10, 4, 4]} maxBarSize={56}>
-                    {suppliers.map((s) => (
-                      <Cell
-                        key={s.provider}
-                        fill={supplierBarGradientId(
-                          s.priceZAR,
-                          supplierSnap.laneMedian,
-                          `${chartId}-bar`,
-                        )}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <PulseSupplierChart
+              suppliers={suppliers}
+              laneMedian={supplierSnap.laneMedian}
+              yDomain={supplierY}
+            />
+            <PulseSupplierBlocks suppliers={suppliers} laneMedian={supplierSnap.laneMedian} />
           </>
         )}
       </ChartShell>

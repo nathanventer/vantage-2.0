@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/services";
 import { subscribeTable } from "@/lib/realtime";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthReady } from "@/hooks/useAuthReady";
 import { toast } from "sonner";
 
 export const NOTIFICATIONS_QUERY_KEY = ["notifications"] as const;
@@ -16,10 +17,17 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   const { enableToast = false } = options;
   const qc = useQueryClient();
   const { user } = useAuth();
+  const authReady = useAuthReady();
   const seenIds = useRef<Set<string>>(new Set());
   const bootstrapped = useRef(false);
 
-  const q = useQuery({ queryKey: [...NOTIFICATIONS_QUERY_KEY], queryFn: api.listNotifications });
+  const q = useQuery({
+    queryKey: [...NOTIFICATIONS_QUERY_KEY, user?.id ?? "anon"],
+    queryFn: api.listNotifications,
+    enabled: authReady && !!user?.id,
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
   const items = q.data ?? [];
   const unreadCount = items.filter((n) => !n.readAt).length;
 
@@ -76,6 +84,8 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     items,
     unreadCount,
     isLoading: q.isLoading,
+    isError: q.isError,
+    refetch: q.refetch,
     markOne,
     markAll,
   };

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 type Filter = "all" | "unread";
 
 export function NotificationsPanel() {
-  const { items, unreadCount, isLoading, markOne, markAll } = useNotifications();
+  const { items, unreadCount, isLoading, isError, refetch, markOne, markAll } = useNotifications();
   const [filter, setFilter] = useState<Filter>("all");
 
   const visible = useMemo(() => {
@@ -52,6 +52,13 @@ export function NotificationsPanel() {
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-16" />
           ))}
+        </div>
+      ) : isError ? (
+        <div className="space-y-3 p-8 text-center">
+          <p className="text-sm text-muted-foreground">Could not load notifications. Sign in again or retry.</p>
+          <Button variant="outline" size="sm" onClick={() => void refetch()}>
+            Retry
+          </Button>
         </div>
       ) : visible.length === 0 ? (
         <div className="p-8">

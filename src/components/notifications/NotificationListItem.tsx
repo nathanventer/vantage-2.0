@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatRelativeTime, initialsFromName } from "@/lib/relativeTime";
@@ -31,6 +31,7 @@ export function NotificationListItem({
   onRead,
   variant = "panel",
 }: NotificationListItemProps) {
+  const navigate = useNavigate();
   const Icon = KIND_ICON[n.kind];
   const senderLabel = n.senderName ?? "System";
   const compact = variant === "dropdown";
@@ -128,9 +129,16 @@ export function NotificationListItem({
   if (n.link) {
     return (
       <li className={cn("border-b border-border/40 last:border-0", !compact && "list-none")}>
-        <Link to={n.link} onClick={onRead} className="block hover:bg-inset/60">
+        <button
+          type="button"
+          className="block w-full text-left hover:bg-inset/60"
+          onClick={() => {
+            onRead();
+            void navigate({ to: n.link! });
+          }}
+        >
           {content}
-        </Link>
+        </button>
       </li>
     );
   }
