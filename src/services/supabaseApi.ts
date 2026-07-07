@@ -1487,16 +1487,14 @@ export const supabaseApi: DataService = {
   // ── Notifications (Phase 2 §8) ──────────────────────────────────────────
   async listNotifications(): Promise<NotificationItem[]> {
     const userId = await currentUserId();
-    const { data, error } = await supabase
-      .from("notifications")
-      .select(
-        "id,title,body,kind,type,link,read_at,created_at,sender_id,metadata,sender:profiles!notifications_sender_id_fkey(full_name)",
-      )
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    fail("listNotifications", error);
-    type Row = {
+    const base = () =>
+      supabase
+        .from("notifications")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+    type ModernRow = {
       id: string;
       title: string;
       body: string | null;
@@ -1507,21 +1505,65 @@ export const supabaseApi: DataService = {
       created_at: string;
       sender_id: string | null;
       metadata: Record<string, unknown> | null;
-      sender: { full_name: string | null } | null;
+      sender?: { full_name: string | null } | null;
     };
-    return ((data ?? []) as unknown as Row[]).map((n) => ({
-      id: n.id,
-      title: n.title,
-      body: n.body ?? undefined,
-      kind: (n.kind as NotificationItem["kind"]) ?? "info",
-      type: (n.type as NotificationItem["type"]) ?? "status_update",
-      link: n.link ?? undefined,
-      readAt: n.read_at ?? undefined,
-      createdAt: n.created_at,
-      senderId: n.sender_id ?? undefined,
-      senderName: n.sender?.full_name ?? undefined,
-      metadata: n.metadata ?? undefined,
-    }));
+    type LegacyRow = {
+      id: string;
+      title: string;
+      body: string | null;
+      link: string | null;
+      read_at: string | null;
+      read?: boolean | null;
+      created_at: string;
+    };
+
+    const mapModern = (rows: ModernRow[]): NotificationItem[] =>
+      rows.map((n) => ({
+        id: n.id,
+        title: n.title,
+        body: n.body ?? undefined,
+        kind: (n.kind as NotificationItem["kind"]) ?? "info",
+        type: (n.type as NotificationItem["type"]) ?? "status_update",
+        link: n.link ?? undefined,
+        readAt: n.read_at ?? undefined,
+        createdAt: n.created_at,
+        senderId: n.sender_id ?? undefined,
+        senderName: n.sender?.full_name ?? undefined,
+        metadata: n.metadata ?? undefined,
+      }));
+
+    const mapLegacy = (rows: LegacyRow[]): NotificationItem[] =>
+      rows.map((n) => ({
+        id: n.id,
+        title: n.title,
+        body: n.body ?? undefined,
+        kind: "info",
+        type: "status_update",
+        link: n.link ?? undefined,
+        readAt: n.read_at ?? (n.read ? n.created_at : undefined),
+        createdAt: n.created_at,
+      }));
+
+    const schemaDrift = (msg: string) =>
+      /does not exist|relationship between/i.test(msg);
+
+    let { data, error } = await base().select(
+      "id,title,body,kind,type,link,read_at,created_at,sender_id,metadata,sender:profiles!notifications_sender_id_fkey(full_name)",
+    );
+    if (error && schemaDrift(error.message)) {
+      ({ data, error } = await base().select(
+        "id,title,body,kind,type,link,read_at,created_at,sender_id,metadata",
+      ));
+    }
+    if (error && schemaDrift(error.message)) {
+      ({ data, error } = await base().select(
+        "id,title,body,link,read_at,read,created_at",
+      ));
+      fail("listNotifications", error);
+      return mapLegacy((data ?? []) as unknown as LegacyRow[]);
+    }
+    fail("listNotifications", error);
+    return mapModern((data ?? []) as unknown as ModernRow[]);
   },
 
   async markNotificationRead(id): Promise<void> {

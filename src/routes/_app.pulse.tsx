@@ -14,6 +14,7 @@ import { PulseLaneInsight } from "@/components/pulse/PulseLaneInsight";
 import { PulsePriceAlerts } from "@/components/pulse/PulsePriceAlerts";
 import { Check, Sparkles, Activity, Layers, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 import type { PulsePlan, TransportMode } from "@/types";
 
 export const Route = createFileRoute("/_app/pulse")({
@@ -42,6 +43,7 @@ const PLANS: { id: PulsePlan; name: string; price: string; features: string[] }[
 ];
 
 function PulsePage() {
+  const { role } = useAuth();
   const subQ = useQuery({ queryKey: ["pulse-sub"], queryFn: api.getRateSubscription });
 
   if (subQ.isLoading) {
@@ -53,7 +55,8 @@ function PulsePage() {
     );
   }
 
-  const active = subQ.data?.status === "active";
+  // Admins/compliance auditors can read lane_rates via RLS; demo Pulse auditor skips paywall.
+  const active = subQ.data?.status === "active" || role === "admin";
   return active ? <PulseDashboard /> : <Paywall />;
 }
 
