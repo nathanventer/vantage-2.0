@@ -54,21 +54,10 @@ function Landing() {
   const [consent, setConsent] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
-  // One-click demo logins exist on local hosts and on the password-protected
-  // tunnel share links (already gated by Basic Auth). On any real production
-  // deployment visitors must type credentials shared with them privately.
-  const [demoLogins, setDemoLogins] = useState(false);
-  useEffect(() => {
-    const h = window.location.hostname;
-    setDemoLogins(
-      h === "localhost" ||
-        h.startsWith("127.") ||
-        h.startsWith("192.168.") ||
-        h.endsWith(".trycloudflare.com") ||
-        h.endsWith(".lhr.life") ||
-        h.endsWith(".serveo.net"),
-    );
-  }, []);
+  // One-click demo logins. This is a demonstration platform, so the quick
+  // account switcher is ON by default (works on the live Vercel deployment).
+  // Set VITE_DEMO_LOGINS="off" to hide it for a real production tenant.
+  const demoLogins = import.meta.env.VITE_DEMO_LOGINS !== "off";
 
   // Already signed in → approved users go to the app, others resume onboarding.
   useEffect(() => {
@@ -218,32 +207,6 @@ function Landing() {
                   {busy ? "Signing in…" : "Sign in to Vantage"}
                 </Button>
               </form>
-
-              {demoLogins && (
-                <>
-                  <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    <div className="h-px flex-1 bg-border" /> Demo — password{" "}
-                    <span className="font-mono normal-case tracking-normal text-foreground">
-                      Demo@123
-                    </span>{" "}
-                    <div className="h-px flex-1 bg-border" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {ROLE_CARDS.map(({ role, icon: I, title }) => (
-                      <button
-                        key={role}
-                        type="button"
-                        onClick={() => enterAs(role)}
-                        disabled={busy}
-                        className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <I className="h-4 w-4 text-brand" />
-                        <span className="text-xs font-semibold">{title}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
             </>
           ) : (
             <>
@@ -307,6 +270,38 @@ function Landing() {
                   {busy ? "Creating…" : "Create account"}
                 </Button>
               </form>
+            </>
+          )}
+
+          {/* Demo account switcher — one click to enter each role. Available on
+              both the sign-in and sign-up tabs (live demo product). */}
+          {demoLogins && (
+            <>
+              <div className="my-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                <div className="h-px flex-1 bg-border" /> Explore a demo account · password{" "}
+                <span className="font-mono normal-case tracking-normal text-foreground">
+                  Demo@123
+                </span>{" "}
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {ROLE_CARDS.map(({ role, icon: I, title }) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => enterAs(role)}
+                    disabled={busy}
+                    className="group flex flex-col items-center gap-1.5 rounded-xl border bg-surface p-3 text-center transition hover:border-brand hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    title={`Sign in as the ${title} demo account`}
+                  >
+                    <I className="h-4 w-4 text-brand" />
+                    <span className="text-xs font-semibold">{title}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-center text-[11px] text-muted-foreground">
+                One click switches you straight into that account.
+              </p>
             </>
           )}
         </div>
