@@ -1,5 +1,41 @@
 export type Role = "demand" | "source" | "admin";
 
+/** The authenticated user as the UI consumes it (derived from a profile row). */
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  companyId?: string;
+  companyName?: string;
+  /** Whether the user's company has been approved (drives the onboarding gate). */
+  companyApproved: boolean;
+  /** Persisted 8-step onboarding position so users resume where they left off. */
+  onboardingStep: number;
+}
+
+/** New shipment / RFQ payload captured on the New Shipment page (Section F). */
+export interface NewShipmentInput {
+  origin: string;
+  destination: string;
+  cargo: string;
+  weightTons: number;
+  containerType?: string;
+  valueZAR?: number;
+}
+
+/** Company create/update payload captured during onboarding (Step 2). */
+export interface CompanyInput {
+  name: string;
+  type: "demand" | "source";
+  registrationNumber?: string;
+  vatNumber?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  subType?: string;
+}
+
 export type Status = "success" | "pending" | "error" | "info" | "neutral";
 
 /**
@@ -36,7 +72,7 @@ export type StatusLabel =
 /* ── Per-domain status types ───────────────────────────────────────────── */
 export type TransactionStatus = "Open" | "In Progress" | "Closed";
 export type RequestStatus = "Open" | "Quoted" | "Accepted" | "Confirmed";
-export type QuoteStatus = "Quoted" | "Accepted";
+export type QuoteStatus = "Quoted" | "Accepted" | "Rejected";
 export type LifecycleStatus = "Completed" | "In Progress" | "Pending";
 export type WarehouseStatus = "Open" | "In Progress" | "Completed";
 export type ContainerStatus = "Open" | "In Progress" | "Completed";
@@ -47,7 +83,20 @@ export type PaymentStatus = "Verified" | "Pending";
 export type ComplianceStatus = "Open" | "Under Review" | "Closed";
 export type RegistrationStatus = "Under Review" | "Approved" | "Pending" | "Rejected";
 export type GovernanceStatus = "Verified" | "Pending" | "Failed";
-export type UserStatus = "Active" | "Pending" | "Rejected";
+export type UserStatus = "Active" | "Pending" | "Rejected" | "Suspended";
+
+/**
+ * Granular platform roles (Phase 2 §7). The app gates capabilities by the broad
+ * User.role (Demand/Source/Admin); these map onto it for display + DB RLS.
+ */
+export type PlatformRole =
+  | "super_admin"
+  | "operations_admin"
+  | "finance_admin"
+  | "compliance_admin"
+  | "demand_user"
+  | "source_user"
+  | "subscriber";
 
 /* ── Organisation entities (master lists) ──────────────────────────────── */
 export type OrgCategory = "Demand" | "Source";
@@ -89,6 +138,12 @@ export interface Registration {
   submittedAt: string;
   status: RegistrationStatus;
   governance: GovernanceCheck[];
+  /** Admin manual-verification checklist (item -> confirmed). */
+  verificationChecklist?: Record<string, boolean>;
+  rejectionReason?: string;
+  /** Uploaded compliance docs vs required count (for the completeness badge). */
+  docCount?: number;
+  docTotal?: number;
 }
 
 export interface GovernanceCheck {
@@ -104,6 +159,21 @@ export interface Quote {
   priceZAR: number;
   etaDays: number;
   status: QuoteStatus;
+  /** Present when status is Rejected (mandatory reason, FIX 5). */
+  rejectionReason?: string;
+  rejectedAt?: string;
+}
+
+/** Source-side quote submission (FIX 1/3 — Demand↔Source handoff). */
+export interface NewQuoteInput {
+  shipmentId: string;
+  freightCostZAR: number;
+  customsCostZAR: number;
+  warehouseCostZAR: number;
+  transportCostZAR: number;
+  otherCostZAR: number;
+  transitDays: number;
+  validityDate?: string;
 }
 
 export interface LifecycleStep {
@@ -126,6 +196,10 @@ export interface Transaction {
   destination: string;
   vessel?: string;
   containerNo?: string;
+  /** Vessel tracking (FIX 8) — drives the VesselFinder link. */
+  vesselImo?: string;
+  vesselMmsi?: string;
+  vesselfinderUrl?: string;
   cargo: string;
   valueZAR: number;
   status: TransactionStatus;
@@ -160,6 +234,9 @@ export interface WarehouseJob {
   location: string;
   status: WarehouseStatus;
   checklist: { step: string; done: boolean }[];
+  /** Linked shipment reference (live backend). */
+  shipmentRef?: string;
+  createdAt?: string;
 }
 
 export interface ContainerJob {
@@ -170,6 +247,9 @@ export interface ContainerJob {
   dwellDays: number;
   damage: boolean;
   status: ContainerStatus;
+  /** Linked shipment reference (live backend). */
+  shipmentRef?: string;
+  createdAt?: string;
 }
 
 export interface CargoHandling {
@@ -179,6 +259,8 @@ export interface CargoHandling {
   weightKg: number;
   condition: "Good" | "Damaged" | "Pending Inspection";
   timestamp: string;
+  /** Linked shipment reference (live backend). */
+  shipmentRef?: string;
 }
 
 export interface Trip {
@@ -193,11 +275,59 @@ export interface Trip {
   podUploaded: boolean;
   lat: number;
   lng: number;
+  /** Linked shipment + client (populated on the live backend). */
+  shipmentRef?: string;
+  cargo?: string;
+  clientCompanyId?: string;
+  client?: string;
+  createdAt?: string;
+  etaAt?: string;
+}
+
+/** GPS breadcrumb along a trip's route (telemetry history). */
+export interface TripWaypoint {
+  seq: number;
+  lat: number;
+  lng: number;
+  label?: string;
+  recordedAt: string;
+}
+
+/** Rich company/client profile for detail views (drawn RLS-scoped). */
+export interface CompanyProfile {
+  id: string;
+  name: string;
+  type: "Demand" | "Source";
+  registrationNumber?: string;
+  vatNumber?: string;
+  city?: string;
+  country?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  riskRating?: string;
+  approvalStatus: string;
+  memberSince: string;
+  stats: {
+    shipments: number;
+    invoicesTotalZAR: number;
+    invoicesOutstandingZAR: number;
+    complianceDocs: number;
+    complianceVerified: number;
+  };
 }
 
 export type DocumentType =
+  | "RFQ"
+  | "Source Selection"
+  | "Formal Quote"
   | "Purchase Order"
+  | "Pro-forma Invoice"
   | "Commercial Invoice"
+  | "Tax Invoice"
+  | "Packing List"
+  | "Import Permit"
+  | "Insurance Certificate"
   | "Bill of Lading"
   | "Customs Declaration"
   | "Delivery Note"
@@ -209,10 +339,21 @@ export type DocumentType =
   | "Proof of Payment"
   | "Transaction Summary";
 
+/** Structured document body persisted to shipment_documents.payload (jsonb). */
+export interface DocumentPayload {
+  counterparty?: string;
+  amountZAR?: number;
+  issuedDate?: string;
+  notes?: string;
+  [key: string]: unknown;
+}
+
 export interface DocumentRecord {
   id: string;
   type: DocumentType;
   transactionRef: string;
+  /** FK into shipments (when known) for grouping + write-paths. */
+  shipmentId?: string;
   /** FK into companies/providers; `uploadedBy` is the denormalized display name. */
   uploadedById: string;
   uploadedBy: string;
@@ -221,6 +362,158 @@ export interface DocumentRecord {
   signed: boolean;
   sarsVerified: boolean;
   version: number;
+  /** Structured form body (versioned). */
+  payload?: DocumentPayload;
+  /** E-signature stamp (SignatureProvider). */
+  signedBy?: string;
+  signedAt?: string;
+  signatureToken?: string;
+}
+
+/** Create payload for a new document from a template (Section C). */
+export interface NewDocumentInput {
+  type: DocumentType;
+  transactionRef: string;
+  shipmentId?: string;
+  payload?: DocumentPayload;
+}
+
+/** ── Logistics operations execution (Phase 2 §1) ───────────────────────── */
+export type ShipmentEventType =
+  | "milestone"
+  | "step_advanced"
+  | "transport_scheduled"
+  | "pod_recorded"
+  | "message"
+  | "task_assigned"
+  | "warehouse_receipt"
+  | "container_update"
+  | "gps_ping"
+  | "exception";
+
+export interface ShipmentEvent {
+  id: string;
+  shipmentId: string;
+  reference: string;
+  eventType: ShipmentEventType;
+  /** 1–16 lifecycle step this event relates to (when applicable). */
+  step?: number;
+  note?: string;
+  payload?: Record<string, unknown>;
+  actor: string;
+  createdAt: string;
+}
+
+export interface NewOpEventInput {
+  shipmentId: string;
+  eventType: ShipmentEventType;
+  note?: string;
+  /** When set, also advance the shipment to this step. */
+  step?: number;
+  payload?: Record<string, unknown>;
+}
+
+export interface ScheduleTransportInput {
+  shipmentId: string;
+  vehicle: string;
+  driver: string;
+  etd?: string;
+  eta?: string;
+}
+
+/** ── Notifications (Phase 2 §8) ─────────────────────────────────────────── */
+export type NotificationKind = "info" | "success" | "warning" | "error";
+
+export type NotificationType =
+  | "task_assigned"
+  | "message"
+  | "status_update"
+  | "approval_request";
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body?: string;
+  kind: NotificationKind;
+  type: NotificationType;
+  link?: string;
+  readAt?: string;
+  createdAt: string;
+  senderId?: string;
+  senderName?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type NotificationEvent =
+  | "registration"
+  | "quote"
+  | "payment"
+  | "shipment"
+  | "document"
+  | "exception";
+
+export type NotificationPreferences = Record<NotificationEvent, { inApp: boolean; email: boolean }>;
+
+/** ── Pulse / Rate & Price Intelligence (Phase 2 §5) ─────────────────────── */
+export type TransportMode = "Sea" | "Air" | "Road" | "Rail";
+
+export interface LaneRate {
+  id: string;
+  origin: string;
+  destination: string;
+  mode: TransportMode;
+  /** YYYY-MM */
+  period: string;
+  providerName: string;
+  priceZAR: number;
+  transitDays: number;
+}
+
+export interface RateBenchmark {
+  lane: string;
+  origin: string;
+  destination: string;
+  mode: TransportMode;
+  medianZAR: number;
+  lowZAR: number;
+  highZAR: number;
+  samples: number;
+  /** Month-over-month median change, %. */
+  momChangePct: number;
+}
+
+export type SubscriptionStatus = "none" | "active" | "canceled";
+export type PulsePlan = "standard" | "pro";
+
+export interface RateSubscription {
+  status: SubscriptionStatus;
+  plan?: PulsePlan;
+  currentPeriodEnd?: string;
+}
+
+export interface PriceAlert {
+  id: string;
+  lane: string;
+  mode: TransportMode;
+  thresholdZAR: number;
+  direction: "above" | "below";
+  createdAt: string;
+}
+
+export interface NewPriceAlertInput {
+  lane: string;
+  mode: TransportMode;
+  thresholdZAR: number;
+  direction: "above" | "below";
+}
+
+/** POPIA data-subject access export (Section I). */
+export interface DataSubjectExport {
+  generatedAt: string;
+  subject: { id: string; email: string; fullName: string; role: string } | null;
+  transactions: Transaction[];
+  documents: DocumentRecord[];
+  invoices: Invoice[];
 }
 
 export interface Invoice {
@@ -267,4 +560,21 @@ export interface AuditEvent {
   action: string;
   entity: string;
   timestamp: string;
+}
+
+/* ── Dashboard analytics series ─────────────────────────────────────────── */
+export interface MonthlySpendPoint {
+  month: string;
+  spendZAR: number;
+  shipments: number;
+}
+
+export interface RouteCostPoint {
+  route: string;
+  costZAR: number;
+}
+
+export interface DashboardSeries {
+  monthlySpend: MonthlySpendPoint[];
+  routeCosts: RouteCostPoint[];
 }

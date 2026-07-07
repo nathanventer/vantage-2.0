@@ -2,7 +2,11 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function StatCard({
-  label, value, delta, icon: Icon, tone = "default",
+  label,
+  value,
+  delta,
+  icon: Icon,
+  tone = "default",
 }: {
   label: string;
   value: string | number;
@@ -20,9 +24,13 @@ export function StatCard({
     <div className="group flex min-h-[124px] flex-col justify-between rounded-lg border bg-card p-5 shadow-xs transition hover:shadow-md">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
-          <div className="mt-2 font-display text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums">{value}</div>
-          {delta && <div className="mt-2 line-clamp-1 text-xs text-muted-foreground">{delta}</div>}
+          <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+            {label}
+          </div>
+          <div className="mt-2 font-display text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums">
+            {value}
+          </div>
+          {delta && <div className="mt-2 text-xs text-muted-foreground">{delta}</div>}
         </div>
         {Icon && (
           <div className={cn("shrink-0 rounded-xl p-2.5", toneClasses)}>

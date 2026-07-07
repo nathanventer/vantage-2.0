@@ -36,12 +36,22 @@ export function MacroJourney({ current }: { current: MacroStage }) {
                 >
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className={cn("text-xs font-medium", active ? "text-primary-foreground" : "text-primary-foreground/70")}>
+                <span
+                  className={cn(
+                    "text-xs font-medium",
+                    active ? "text-primary-foreground" : "text-primary-foreground/70",
+                  )}
+                >
                   {s.key}
                 </span>
               </div>
               {i < STAGES.length - 1 && (
-                <div className={cn("mx-2 h-px flex-1", done ? "bg-accent" : "bg-primary-foreground/20")} />
+                <div
+                  className={cn(
+                    "mx-2 h-px flex-1",
+                    done ? "bg-accent" : "bg-primary-foreground/20",
+                  )}
+                />
               )}
             </div>
           );

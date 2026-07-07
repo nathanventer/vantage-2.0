@@ -23,20 +23,36 @@ export function LifecycleStepper({ steps }: { steps: LifecycleStep[] }) {
               className={cn(
                 "z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-background",
                 done && "bg-success text-success-foreground",
-                active && "bg-warning text-warning-foreground animate-pulse",
+                active && "bg-warning text-warning-foreground",
                 !done && !active && "bg-muted text-muted-foreground",
               )}
             >
-              {done ? <Check className="h-4 w-4" /> : active ? <Clock className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              {done ? (
+                <Check className="h-4 w-4" />
+              ) : active ? (
+                <Clock className="h-4 w-4" />
+              ) : (
+                <Circle className="h-3 w-3" />
+              )}
             </div>
             <div className="flex-1 pt-1">
               <div className="flex items-center justify-between gap-3">
-                <p className={cn("font-medium", done && "text-foreground", active && "text-foreground", !done && !active && "text-muted-foreground")}>
+                <p
+                  className={cn(
+                    "font-medium",
+                    done && "text-foreground",
+                    active && "text-foreground",
+                    !done && !active && "text-muted-foreground",
+                  )}
+                >
                   {s.index}. {s.label}
                 </p>
                 {s.timestamp && (
                   <span className="text-xs text-muted-foreground">
-                    {new Date(s.timestamp).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
+                    {new Date(s.timestamp).toLocaleDateString("en-ZA", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
                   </span>
                 )}
               </div>

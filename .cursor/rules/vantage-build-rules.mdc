@@ -1,0 +1,30 @@
+---
+description: Vantage project brain + engineering guardrails
+alwaysApply: true
+---
+# Vantage — build rules
+
+Vantage = Integrated Trade & Logistics Platform (Southern Africa).
+Stack: Vite + React 19 + TS + Tailwind v4 (DARK-ONLY) + shadcn/ui + Recharts + TanStack + Bun.
+Backend: Supabase (project ref qzckmlhaoehsngxjlgfk). Branch: feat/supabase-backbone (Lovable —
+never rewrite pushed history). Demo logins: Demo@123. Backend switch: VITE_DATA_BACKEND (mock|supabase).
+
+## The brain (read for context before non-trivial work)
+Project knowledge lives in the Obsidian vault "VANTAGE 2.0". Key notes:
+Vantage — Home · Product Overview · Accounts & Roles · Platform Workflow · Architecture ·
+Roadmap & Phases · Demo Readiness. Keep these updated as the build changes.
+
+## Non-negotiable invariants (do NOT regress)
+- All data via src/services/{DataService,mockApi,supabaseApi,index}.ts; auth via
+  src/adapters/auth.ts. ZERO raw supabase.from()/supabase.auth in components/pages.
+- mockApi must keep working; VITE_DATA_BACKEND toggles both ways.
+- is_admin()/my_company() stay SECURITY DEFINER; shipments↔quotes policies use SECURITY
+  DEFINER helpers (no RLS recursion). handle_new_user() keeps `set search_path=''` +
+  inserts public.profiles. audit_logs append-only; every business write → audit row.
+- Money numeric(14,2)+currency, tabular-nums, never float. Service-role key NEVER in client.
+  No localStorage in app code (supabase auth session excepted). Migrations idempotent + committed.
+- Dark-only design tokens + StatusChip + formatZAR + anti-overflow everywhere.
+
+## Working style
+Small committed increments; typecheck + build after each. If a change needs a secret/paid
+resource or a product decision, STOP and ask. Verify with evidence, don't assert.

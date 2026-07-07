@@ -17,15 +17,20 @@ import { Route as AppTransportRouteImport } from './routes/_app.transport'
 import { Route as AppTransactionsRouteImport } from './routes/_app.transactions'
 import { Route as AppRequestsRouteImport } from './routes/_app.requests'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppPulseRouteImport } from './routes/_app.pulse'
+import { Route as AppPrivacyRouteImport } from './routes/_app.privacy'
 import { Route as AppPaymentsRouteImport } from './routes/_app.payments'
+import { Route as AppNotificationsRouteImport } from './routes/_app.notifications'
 import { Route as AppDocumentsRouteImport } from './routes/_app.documents'
 import { Route as AppDashboardRouteImport } from './routes/_app.dashboard'
 import { Route as AppContainersRouteImport } from './routes/_app.containers'
 import { Route as AppCargoRouteImport } from './routes/_app.cargo'
 import { Route as AppAdminRouteImport } from './routes/_app.admin'
 import { Route as AppTransactionsIndexRouteImport } from './routes/_app.transactions.index'
+import { Route as AppTrackingIndexRouteImport } from './routes/_app.tracking.index'
 import { Route as AppTransactionsNewRouteImport } from './routes/_app.transactions.new'
 import { Route as AppTransactionsIdRouteImport } from './routes/_app.transactions.$id'
+import { Route as AppTrackingTripIdRouteImport } from './routes/_app.tracking.$tripId'
 import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
 import { Route as AppAdminRegistrationsRouteImport } from './routes/_app.admin.registrations'
 import { Route as AppAdminComplianceRouteImport } from './routes/_app.admin.compliance'
@@ -70,9 +75,24 @@ const AppReportsRoute = AppReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPulseRoute = AppPulseRouteImport.update({
+  id: '/pulse',
+  path: '/pulse',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPrivacyRoute = AppPrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPaymentsRoute = AppPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNotificationsRoute = AppNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDocumentsRoute = AppDocumentsRouteImport.update({
@@ -105,6 +125,11 @@ const AppTransactionsIndexRoute = AppTransactionsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppTransactionsRoute,
 } as any)
+const AppTrackingIndexRoute = AppTrackingIndexRouteImport.update({
+  id: '/tracking/',
+  path: '/tracking/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTransactionsNewRoute = AppTransactionsNewRouteImport.update({
   id: '/new',
   path: '/new',
@@ -114,6 +139,11 @@ const AppTransactionsIdRoute = AppTransactionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => AppTransactionsRoute,
+} as any)
+const AppTrackingTripIdRoute = AppTrackingTripIdRouteImport.update({
+  id: '/tracking/$tripId',
+  path: '/tracking/$tripId',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
@@ -144,7 +174,10 @@ export interface FileRoutesByFullPath {
   '/containers': typeof AppContainersRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
+  '/notifications': typeof AppNotificationsRoute
   '/payments': typeof AppPaymentsRoute
+  '/privacy': typeof AppPrivacyRoute
+  '/pulse': typeof AppPulseRoute
   '/reports': typeof AppReportsRoute
   '/requests': typeof AppRequestsRoute
   '/transactions': typeof AppTransactionsRouteWithChildren
@@ -154,8 +187,10 @@ export interface FileRoutesByFullPath {
   '/admin/compliance': typeof AppAdminComplianceRoute
   '/admin/registrations': typeof AppAdminRegistrationsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/tracking/$tripId': typeof AppTrackingTripIdRoute
   '/transactions/$id': typeof AppTransactionsIdRoute
   '/transactions/new': typeof AppTransactionsNewRoute
+  '/tracking/': typeof AppTrackingIndexRoute
   '/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -166,7 +201,10 @@ export interface FileRoutesByTo {
   '/containers': typeof AppContainersRoute
   '/dashboard': typeof AppDashboardRoute
   '/documents': typeof AppDocumentsRoute
+  '/notifications': typeof AppNotificationsRoute
   '/payments': typeof AppPaymentsRoute
+  '/privacy': typeof AppPrivacyRoute
+  '/pulse': typeof AppPulseRoute
   '/reports': typeof AppReportsRoute
   '/requests': typeof AppRequestsRoute
   '/transport': typeof AppTransportRoute
@@ -175,8 +213,10 @@ export interface FileRoutesByTo {
   '/admin/compliance': typeof AppAdminComplianceRoute
   '/admin/registrations': typeof AppAdminRegistrationsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/tracking/$tripId': typeof AppTrackingTripIdRoute
   '/transactions/$id': typeof AppTransactionsIdRoute
   '/transactions/new': typeof AppTransactionsNewRoute
+  '/tracking': typeof AppTrackingIndexRoute
   '/transactions': typeof AppTransactionsIndexRoute
 }
 export interface FileRoutesById {
@@ -189,7 +229,10 @@ export interface FileRoutesById {
   '/_app/containers': typeof AppContainersRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/documents': typeof AppDocumentsRoute
+  '/_app/notifications': typeof AppNotificationsRoute
   '/_app/payments': typeof AppPaymentsRoute
+  '/_app/privacy': typeof AppPrivacyRoute
+  '/_app/pulse': typeof AppPulseRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/requests': typeof AppRequestsRoute
   '/_app/transactions': typeof AppTransactionsRouteWithChildren
@@ -199,8 +242,10 @@ export interface FileRoutesById {
   '/_app/admin/compliance': typeof AppAdminComplianceRoute
   '/_app/admin/registrations': typeof AppAdminRegistrationsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/tracking/$tripId': typeof AppTrackingTripIdRoute
   '/_app/transactions/$id': typeof AppTransactionsIdRoute
   '/_app/transactions/new': typeof AppTransactionsNewRoute
+  '/_app/tracking/': typeof AppTrackingIndexRoute
   '/_app/transactions/': typeof AppTransactionsIndexRoute
 }
 export interface FileRouteTypes {
@@ -213,7 +258,10 @@ export interface FileRouteTypes {
     | '/containers'
     | '/dashboard'
     | '/documents'
+    | '/notifications'
     | '/payments'
+    | '/privacy'
+    | '/pulse'
     | '/reports'
     | '/requests'
     | '/transactions'
@@ -223,8 +271,10 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/registrations'
     | '/admin/users'
+    | '/tracking/$tripId'
     | '/transactions/$id'
     | '/transactions/new'
+    | '/tracking/'
     | '/transactions/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -235,7 +285,10 @@ export interface FileRouteTypes {
     | '/containers'
     | '/dashboard'
     | '/documents'
+    | '/notifications'
     | '/payments'
+    | '/privacy'
+    | '/pulse'
     | '/reports'
     | '/requests'
     | '/transport'
@@ -244,8 +297,10 @@ export interface FileRouteTypes {
     | '/admin/compliance'
     | '/admin/registrations'
     | '/admin/users'
+    | '/tracking/$tripId'
     | '/transactions/$id'
     | '/transactions/new'
+    | '/tracking'
     | '/transactions'
   id:
     | '__root__'
@@ -257,7 +312,10 @@ export interface FileRouteTypes {
     | '/_app/containers'
     | '/_app/dashboard'
     | '/_app/documents'
+    | '/_app/notifications'
     | '/_app/payments'
+    | '/_app/privacy'
+    | '/_app/pulse'
     | '/_app/reports'
     | '/_app/requests'
     | '/_app/transactions'
@@ -267,8 +325,10 @@ export interface FileRouteTypes {
     | '/_app/admin/compliance'
     | '/_app/admin/registrations'
     | '/_app/admin/users'
+    | '/_app/tracking/$tripId'
     | '/_app/transactions/$id'
     | '/_app/transactions/new'
+    | '/_app/tracking/'
     | '/_app/transactions/'
   fileRoutesById: FileRoutesById
 }
@@ -336,11 +396,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReportsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pulse': {
+      id: '/_app/pulse'
+      path: '/pulse'
+      fullPath: '/pulse'
+      preLoaderRoute: typeof AppPulseRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/privacy': {
+      id: '/_app/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof AppPrivacyRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/payments': {
       id: '/_app/payments'
       path: '/payments'
       fullPath: '/payments'
       preLoaderRoute: typeof AppPaymentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/notifications': {
+      id: '/_app/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof AppNotificationsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/documents': {
@@ -385,6 +466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionsIndexRouteImport
       parentRoute: typeof AppTransactionsRoute
     }
+    '/_app/tracking/': {
+      id: '/_app/tracking/'
+      path: '/tracking'
+      fullPath: '/tracking/'
+      preLoaderRoute: typeof AppTrackingIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/transactions/new': {
       id: '/_app/transactions/new'
       path: '/new'
@@ -398,6 +486,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/transactions/$id'
       preLoaderRoute: typeof AppTransactionsIdRouteImport
       parentRoute: typeof AppTransactionsRoute
+    }
+    '/_app/tracking/$tripId': {
+      id: '/_app/tracking/$tripId'
+      path: '/tracking/$tripId'
+      fullPath: '/tracking/$tripId'
+      preLoaderRoute: typeof AppTrackingTripIdRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/admin/users': {
       id: '/_app/admin/users'
@@ -470,12 +565,17 @@ interface AppRouteChildren {
   AppContainersRoute: typeof AppContainersRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocumentsRoute: typeof AppDocumentsRoute
+  AppNotificationsRoute: typeof AppNotificationsRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
+  AppPrivacyRoute: typeof AppPrivacyRoute
+  AppPulseRoute: typeof AppPulseRoute
   AppReportsRoute: typeof AppReportsRoute
   AppRequestsRoute: typeof AppRequestsRoute
   AppTransactionsRoute: typeof AppTransactionsRouteWithChildren
   AppTransportRoute: typeof AppTransportRoute
   AppWarehouseRoute: typeof AppWarehouseRoute
+  AppTrackingTripIdRoute: typeof AppTrackingTripIdRoute
+  AppTrackingIndexRoute: typeof AppTrackingIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -484,12 +584,17 @@ const AppRouteChildren: AppRouteChildren = {
   AppContainersRoute: AppContainersRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDocumentsRoute: AppDocumentsRoute,
+  AppNotificationsRoute: AppNotificationsRoute,
   AppPaymentsRoute: AppPaymentsRoute,
+  AppPrivacyRoute: AppPrivacyRoute,
+  AppPulseRoute: AppPulseRoute,
   AppReportsRoute: AppReportsRoute,
   AppRequestsRoute: AppRequestsRoute,
   AppTransactionsRoute: AppTransactionsRouteWithChildren,
   AppTransportRoute: AppTransportRoute,
   AppWarehouseRoute: AppWarehouseRoute,
+  AppTrackingTripIdRoute: AppTrackingTripIdRoute,
+  AppTrackingIndexRoute: AppTrackingIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -502,3 +607,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

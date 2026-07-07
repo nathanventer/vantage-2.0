@@ -1,23 +1,48 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, FileBox, Inbox, Warehouse, Container, Boxes,
-  Truck, FileText, CreditCard, BarChart3, ShieldCheck, ScrollText, UserCheck, Users,
+  LayoutDashboard,
+  FileBox,
+  Inbox,
+  Warehouse,
+  Container,
+  Boxes,
+  Truck,
+  FileText,
+  CreditCard,
+  BarChart3,
+  TrendingUp,
+  ShieldCheck,
+  ScrollText,
+  UserCheck,
+  Users,
+  Radar,
 } from "lucide-react";
 import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useRole } from "@/contexts/RoleContext";
-import logoAsset from "@/assets/vantage-logo.png.asset.json";
+import { VantageLogo } from "@/components/VantageLogo";
+import { cn } from "@/lib/utils";
 
 type Item = { title: string; url: string; icon: typeof LayoutDashboard };
 
 const COMMON: Item[] = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Transactions", url: "/transactions", icon: FileBox },
+  { title: "Tracking", url: "/tracking", icon: Radar },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Payments", url: "/payments", icon: CreditCard },
   { title: "Reports", url: "/reports", icon: BarChart3 },
+  { title: "Pulse", url: "/pulse", icon: TrendingUp },
 ];
 
 const SOURCE: Item[] = [
@@ -44,15 +69,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <Link to="/dashboard" className="flex items-center gap-2 px-2 py-2">
-          <img src={logoAsset.url} alt="Vantage" className="mx-auto h-8 w-8 shrink-0 rounded bg-white object-contain p-0.5" />
-          {!collapsed && (
-            <div className="flex flex-col leading-tight">
-              <span className="font-display text-base font-bold text-sidebar-foreground">VANTAGE</span>
-              <span className="text-[10px] uppercase tracking-wider text-sidebar-foreground/60">Trade & Logistics</span>
-            </div>
+      <SidebarHeader className="border-b border-sidebar-border px-2 py-3.5">
+        <Link
+          to="/dashboard"
+          className={cn(
+            "flex items-center overflow-hidden",
+            collapsed ? "justify-center px-0.5" : "justify-start px-1.5",
           )}
+        >
+          <VantageLogo size={collapsed ? "sm" : "md"} tone="sidebar" compact={collapsed} />
         </Link>
       </SidebarHeader>
 

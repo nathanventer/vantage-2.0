@@ -16,6 +16,11 @@ dist-ssr
 .nitro
 *.local
 
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
@@ -30,3 +35,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Vercel CLI link metadata (local only)
+.vercel

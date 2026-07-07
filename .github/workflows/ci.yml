@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [feat/supabase-backbone, main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Install Playwright browser
+        run: bunx playwright install chromium --with-deps
+
+      - name: E2E tests (mock backend)
+        run: bun run test:e2e mock-smoke
+        env:
+          VITE_DATA_BACKEND: mock
+          CI: true
+          PLAYWRIGHT_DEV_HOST: 127.0.0.1
+          PLAYWRIGHT_DEV_PORT: "8080"
+
+      - name: Build
+        run: bun run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'http://localhost:54321' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'anon-key-placeholder' }}
+          VITE_DATA_BACKEND: mock
