@@ -33,11 +33,11 @@ function WarehousePage() {
           <TabsContent key={t} value={t} className="mt-4">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {jobs.filter(j => j.warehouseType === t).map((j) => (
-                <div key={j.id} className="rounded-xl border bg-card p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-display font-semibold">{j.reference}</div>
-                      <div className="text-xs text-muted-foreground">{j.client} · {j.location}</div>
+                <div key={j.id} className="min-w-0 rounded-xl border bg-card p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate font-display font-semibold">{j.reference}</div>
+                      <div className="truncate text-xs text-muted-foreground">{j.client} · {j.location}</div>
                     </div>
                     <StatusBadge status={j.status} />
                   </div>

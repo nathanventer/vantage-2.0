@@ -40,28 +40,30 @@ function CompPage() {
             {flags.length === 0 ? (
               <EmptyState title="No flags raised" description="Compliance issues will appear here for triage." icon={ShieldCheck} />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Entity</TableHead>
-                    <TableHead>Area</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Noted</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {flags.map((f) => (
-                    <TableRow key={f.id} className="h-14">
-                      <TableCell className="font-medium">{f.entity}</TableCell>
-                      <TableCell>{f.area}</TableCell>
-                      <TableCell><StatusBadge status={f.severity === "High" ? "Failed" : f.severity === "Medium" ? "Pending" : "Verified"} /></TableCell>
-                      <TableCell className="text-muted-foreground tabular-nums">{new Date(f.notedAt).toLocaleDateString("en-ZA")}</TableCell>
-                      <TableCell><StatusBadge status={f.status} /></TableCell>
+              <div className="w-full overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Entity</TableHead>
+                      <TableHead>Area</TableHead>
+                      <TableHead className="w-px">Severity</TableHead>
+                      <TableHead>Noted</TableHead>
+                      <TableHead className="w-px">Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {flags.map((f) => (
+                      <TableRow key={f.id} className="h-14">
+                        <TableCell className="font-medium">{f.entity}</TableCell>
+                        <TableCell>{f.area}</TableCell>
+                        <TableCell><StatusBadge status={f.severity === "High" ? "Failed" : f.severity === "Medium" ? "Pending" : "Verified"} /></TableCell>
+                        <TableCell className="text-muted-foreground tabular-nums">{new Date(f.notedAt).toLocaleDateString("en-ZA")}</TableCell>
+                        <TableCell><StatusBadge status={f.status} /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </div>
         </TabsContent>

@@ -22,10 +22,10 @@ export function StatCard({
         <div className="min-w-0">
           <div className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
           <div className="mt-2 font-display text-[1.75rem] font-semibold leading-none tracking-tight tabular-nums">{value}</div>
-          {delta && <div className="mt-2 text-xs text-muted-foreground">{delta}</div>}
+          {delta && <div className="mt-2 line-clamp-1 text-xs text-muted-foreground">{delta}</div>}
         </div>
         {Icon && (
-          <div className={cn("rounded-xl p-2.5", toneClasses)}>
+          <div className={cn("shrink-0 rounded-xl p-2.5", toneClasses)}>
             <Icon className="h-4 w-4" />
           </div>
         )}
