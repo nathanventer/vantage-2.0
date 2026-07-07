@@ -33,7 +33,7 @@ export function StatCard({
           {delta && <div className="mt-2 text-xs text-muted-foreground">{delta}</div>}
         </div>
         {Icon && (
-          <div className={cn("rounded-xl p-2.5", toneClasses)}>
+          <div className={cn("shrink-0 rounded-xl p-2.5", toneClasses)}>
             <Icon className="h-4 w-4" />
           </div>
         )}

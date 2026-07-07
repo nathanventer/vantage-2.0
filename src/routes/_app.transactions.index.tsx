@@ -127,9 +127,24 @@ function TxList() {
                     <StatusBadge status={t.status} />
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((t) => (
+                  <TableRow key={t.id} className="h-14 cursor-pointer hover:bg-muted/40">
+                    <TableCell className="font-medium">
+                      <Link to="/transactions/$id" params={{ id: t.id }} className="text-accent hover:underline">{t.reference}</Link>
+                    </TableCell>
+                    <TableCell>{t.demandCompany}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.sourceProvider}</TableCell>
+                    <TableCell className="text-muted-foreground">{t.origin} → {t.destination}</TableCell>
+                    <TableCell><StatusBadge status={t.currentStage} /></TableCell>
+                    <TableCell className="text-right tabular-nums">{fmt(t.valueZAR)}</TableCell>
+                    <TableCell><StatusBadge status={t.status} /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>

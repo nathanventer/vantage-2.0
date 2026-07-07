@@ -67,9 +67,21 @@ function ContainersPage() {
                   <StatusBadge status={x.status} />
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {c.map((x) => (
+                <TableRow key={x.id}>
+                  <TableCell className="font-medium">{x.containerNo}</TableCell>
+                  <TableCell>{x.type}</TableCell>
+                  <TableCell className="text-muted-foreground">{x.vessel}</TableCell>
+                  <TableCell>{x.dwellDays} d</TableCell>
+                  <TableCell>{x.damage ? <StatusBadge status="Failed" /> : <StatusBadge status="Verified" />}</TableCell>
+                  <TableCell><StatusBadge status={x.status} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );

@@ -59,9 +59,22 @@ function CargoPage() {
                   {new Date(c.timestamp).toLocaleString("en-ZA")}
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {(data ?? []).map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.reference}</TableCell>
+                  <TableCell>{c.operation}</TableCell>
+                  <TableCell>{c.weightKg.toLocaleString("en-ZA")} kg</TableCell>
+                  <TableCell>
+                    <StatusBadge status={c.condition === "Good" ? "Verified" : c.condition === "Damaged" ? "Failed" : "Pending"} />
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{new Date(c.timestamp).toLocaleString("en-ZA")}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
